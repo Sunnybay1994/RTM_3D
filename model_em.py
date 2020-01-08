@@ -9,11 +9,11 @@ import glob
 
 #logger
 logger = logging.getLogger('model_em')
-logger.setLevel(logging.DEBUG) #CRITICAL>ERROR>WARNING>INFO>DEBUG》NOTSET
+logger.setLevel(logging.INFO) #CRITICAL>ERROR>WARNING>INFO>DEBUG》NOTSET
 fh = logging.FileHandler(os.path.join('log','model_em.log'))
-fh.setLevel(logging.DEBUG)
+fh.setLevel(logging.INFO)
 ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
+ch.setLevel(logging.INFO)
 formatter = logging.Formatter('(%(process)5d)%(asctime)s-%(levelname)s: %(message)s')
 fh.setFormatter(formatter)
 ch.setFormatter(formatter)
@@ -26,45 +26,50 @@ def cp(f1,f2):
         # logger.debug('cp %s %s'%(f,f2))
         shutil.copy(f,f2)
 
-def src_rec(dnx_src,dny_src=False,nz_src=False,dnx_rec=False,dny_rec=False,nz_rec=False,nshift=0):
+def src_rec(dnx_src,dny_src=False,nx_src=False,ny_src=False,nzp_src=False,dnx_rec=False,dny_rec=False,nx_rec=False,ny_rec=False,nzp_rec=False,nshift=0):
     logger.info('adding source and receiver...')
     if not dny_src:
         dny_src = dnx_src
-    if not nz_src:
-        nz_src = nz_air - 2
+    if not nzp_src:
+        nzp_src = nz_air - 1
     if not dnx_rec:
         dnx_rec = dnx_src
-    if not dny_rec:
-        dny_rec = dnx_rec
-    if not nz_rec:
-        nz_rec = nz_src
+        if not dny_rec:
+            dny_rec = dny_src
+    else:
+        if not dny_rec:
+            dny_rec = dnx_rec
+    if not nzp_rec:
+        nzp_rec = nzp_src
 
     global src, rec
-    def ant_pos(dnx_ant,dny_ant,nz_ant,nshift=0):
+    def ant_pos(dnx_ant,dny_ant,nz_pos,nx_ant=False,ny_ant=False,nshift=0):
         ant = []
         dnx_ant = int(dnx_ant)
         dny_ant = int(dny_ant)
-        nz_ant = int(nz_ant)
+        nz_pos = int(nz_pos)
 
-        nx_ant = (nx - 2*npmlx) // dnx_ant
-        ny_ant = (ny - 2*npmly) // dny_ant
-        if nx_ant % 2 == 0:
-            nx_ant -= 1
-        if ny_ant % 2 == 0:
-            ny_ant -= 1
+        if not nx_ant:
+            nx_ant = (nx - 2*npmlx) // dnx_ant
+            if nx_ant % 2 == 0:
+                nx_ant -= 1
+        if not ny_ant:
+            ny_ant = (ny - 2*npmly) // dny_ant
+            if ny_ant % 2 == 0:
+                ny_ant -= 1
         
         for i in range(-(nx_ant-1)//2,(nx_ant+1)//2):
             dumx = nx0 + i*dnx_ant
             for j in range(-(ny_ant-1)//2,(ny_ant+1)//2):
                 dumy = ny0 + j*dny_ant
-                ant.append([dumx + nshift, dumy + nshift, nz_ant, 'Ey', 1])
+                ant.append([dumx + nshift, dumy + nshift, nz_pos, 'Ey', 1])
         return ant
 
-    src = ant_pos(dnx_src,dny_src,nz_src,nshift)
+    src = ant_pos(dnx_src,dny_src,nzp_src,nx_src,ny_src,nshift)
     nsrc = len(src)
     logger.info("nsrc: %d"%nsrc) 
 
-    rec = ant_pos(dnx_rec,dny_rec,nz_rec,nshift)
+    rec = ant_pos(dnx_rec,dny_rec,nzp_rec,nx_rec,ny_rec,nshift)
     nrec = len(rec)
     logger.info("nrec: %d"%nrec) 
 
@@ -100,11 +105,12 @@ def src_rec(dnx_src,dny_src=False,nz_src=False,dnx_rec=False,dny_rec=False,nz_re
     return 0
 
 
-def eps_sig_mu(model,depths,half_thickness=5,atype='ep'):
+def eps_sig_mu(model=False,modelname=False,depths=False,half_thickness=5,atype='ep'):
     logger.info('Generating model...')
 
-    model_em = plt.imread(model)[:, :, 0]
-    model_em = model_em.T
+    if model=='pic':
+        model_em = plt.imread(modelname)[:, :, 0]
+        model_em = model_em.T
 
     for ii in range(NUM_OF_PROCESS):
 
@@ -143,24 +149,68 @@ def eps_sig_mu(model,depths,half_thickness=5,atype='ep'):
             for j in range(ny):
                 eps[j, 0:nz_air] = 1.0
                 eps[j, nz_air:] = 9.0
-                if 'ep' in atype:
-                    for depth in depths:
-                        bottom = depth - half_thickness
-                        top =depth + half_thickness
-                        eps[model_em[dumx,:] != 1, bottom:top] = 15
-                eps_STD[j, 0:nz_air] = 1.0
-                eps_STD[j, nz_air:] = 9.0
 
                 sig[j, 0:nz_air] = 1e-5
                 sig[j, nz_air:] = 1e-5
-                if 'ep' in atype:
-                    for depth in depths:
-                        bottom = depth - half_thickness
-                        top =depth + half_thickness
-                        sig[model_em[dumx,:] != 1, bottom:top] = 15
+
+                eps_STD[j, 0:nz_air] = 1.0
+                eps_STD[j, nz_air:] = 9.0
 
                 sig_STD[j, 0:nz_air] = 1e-5
                 sig_STD[j, nz_air:] = 1e-5
+
+                if model=='pic':
+                    if 'ep' in atype:
+                        for depth in depths:
+                            bottom = depth - half_thickness
+                            top =depth + half_thickness
+                            eps[model_em[dumx,:] != 1, bottom:top] = 15
+
+                    if 'sig' in atype:
+                        for depth in depths:
+                            bottom = depth - half_thickness
+                            top =depth + half_thickness
+                            sig[model_em[dumx,:] != 1, bottom:top] = 10
+                else:
+                    i = dumx
+                    depth = depths[0]
+                    if model=='dots':
+                        ## 6 dots model
+                        r = int(0.1/dx)
+                        nx1 = nx0 - int(0.64/dx)
+                        nx2 = nx0
+                        nx3 = nx0 + int(0.64/dx)
+                        ny1 = ny0 - int(dy_src/dy)
+                        ny2 = ny0
+                        ny3 = ny0 + int(dy_src/dy)
+                        npdh = int(0.16/dx) 
+                        for k in range(nz_air+5,nz):
+                            if distance(i,j,k,nx1-npdh,ny1,depth) < r or distance(i,j,k,nx2-npdh,ny2,depth) < r or distance(i,j,k,nx2-npdh,ny2,depth) < r:
+                                eps[j,k] = 3
+                                logger.debug('ep(%.2f,%.2f,%.2f)=3'%((i-nx0)*dx,(j-ny0)*dy,(k-nz_air)*dz))
+                            elif distance(i,j,k,nx1+npdh,ny1,depth) < r or distance(i,j,k,nx2+npdh,ny2,depth) < r or distance(i,j,k,nx2+npdh,ny2,depth) < r:
+                                eps[j,k] = 15
+                                logger.debug('ep(%.2f,%.2f,%.2f)=15'%((i-nx0)*dx,(j-ny0)*dy,(k-nz_air)*dz))
+                    elif model == 'surface':
+                        ## model: x/6 + y/6 + z/2 = 1
+                        for k in range(nz_air+5,nz):
+                            if abs(i/300 + j/300 + (k-nz_air)/100 - 1) < 0.01:
+                                logger.debug('eps(%d,%d,%d)=15, %f'%(i,j,k,i/300 + j/300 + (k-nz_air)/100))
+                                eps[j,k] = 15
+                    elif model == 'checkbox':
+                        ## checkbox model
+                        nlbox = 30 #0.6m
+                        ep1 = 6
+                        ep2 = 12
+                        for k in range(nz_air,nz):
+                            if (i // nlbox + j // nlbox + (k - nz_air) // nlbox) % 2 == 0:
+                                eps[j,k] = ep1
+                                # logger.debug('eps(%d,%d,%d)=%d'%(i,j,k,ep1))
+                            else:
+                                eps[j,k] = ep2
+                                # logger.debug('eps(%d,%d,%d)=%d'%(i,j,k,ep2))
+
+
 
             # if dumx == 0:
             #     plt.figure()
@@ -209,7 +259,7 @@ def finddt(epmin, mumin, dx, dy, dz):
     mumin = mumin * mu0
     dtmax = 6.0 / 7.0 * \
         sqrt(epmin * mumin / (1.0 / dx ** 2 + 1.0 / dy ** 2 + 1.0 / dz ** 2))
-    logger.info("dt max = %e"%dtmax) 
+    logger.info("dt max = %fns"%(dtmax/1e-9)) 
     return dtmax
 
 
@@ -267,6 +317,7 @@ def check_dx(srcpulse):
     fmax2 = max(freqs[W > max(W) / 10.0])
     logger.info("!!check dx again:") 
     finddx(epmax, mumax, fmax2)
+    logger.info("Src's max frequency: %fMHz" % (freqs[argmax(W)]/1e6))
     plt.figure()
     plt.plot(freqs, W)
     plt.title('frequency spectrum of source')
@@ -402,7 +453,7 @@ def cleanfiles(paths):
 ##############################################################################
 if __name__ == '__main__':
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "zm:d:", ["zero-offset","model=","workdir="])
+        opts, args = getopt.getopt(sys.argv[1:], "zm:p:d:", ["zero-offset","model=","modelpic=","workdir="])
     except getopt.GetoptError as err:
         # print help information and exit:
         logger.error(err)  # will print something like "option -a not recognized"
@@ -410,7 +461,8 @@ if __name__ == '__main__':
         sys.exit(2)
 
     is_zRTM = False
-    model = os.path.join('Model','EM300.png')
+    model = False # os.path.join('Model','EM300.png')
+    modelpic = False
     workdir = os.path.join('tasks','default')
     for o, a in opts:
         if o in ('-z','--zero-offset'):
@@ -420,8 +472,8 @@ if __name__ == '__main__':
             model = a
             if model == '0':
                 logger.info("Don't generate model.")
-            else:
-                model = os.path.join('Model',a)
+        elif o in ('-p','--modelpic'):
+            modelpic = os.path.join('Model',a)
         elif o in ('-d','--workdir'):
             workdir = os.path.join('tasks',a)
         else:
@@ -440,38 +492,38 @@ if __name__ == '__main__':
     mumin = 1.0
     epmax = 15.0
     mumax = 1.0
-    fmax = 300e6  # Hz
+    fmax = 300*1e6  #Hz
     ### parameter ###
 
     ### gird  parameter ###
-    npmlx = 12
+    npmlx = 9
     npmly = npmlx
     npmlz = npmlx
 
     dx_max = finddx(epmax, mumax, fmax)
-    dx = 0.02
+    dx = 0.1
     dy = dx
     dz = dx
     logger.info("dx=%f, dy=%f, dz=%f"%(dx, dy, dz)) 
 
-    nx0 = 150
-    ny0 = 150
-    nx = 300
-    ny = 300
-    nz_air = 20
+    nx = 100
+    ny = 100
+    nx0 = nx/2
+    ny0 = ny/2
+    nz_air = 10
     nz0 = nz_air 
-    nz = nz0 + 100
+    nz = nz0 + 60
     logger.info('nx=%d, ny=%d, nz=%d'%(nx, ny, nz))
 
     dt_max = finddt(epmin, mumin, dx, dy, dz)
-    dt = 3e-11
-    nt = 1200
-    logger.info("dt: %e"%dt) 
+    dt = 1e-10
+    nt = 1000 #100ns
+    logger.info("dt: %fns"%(dt/1e-9)) 
     ### gird paraeter ###
 
     ### source ###
-    srcpulse = blackharrispulse(fmax, dt)
-    # srcpulse = ricker(fmax,4*1/fmax,dt)
+    # srcpulse = blackharrispulse(fmax, dt)
+    srcpulse = ricker(fmax,4*1/fmax,dt)
     nt_src = len(srcpulse)
     logger.info("nt=%d, nt_src=%d"%(nt, nt_src)) 
     check_dx(srcpulse)
@@ -506,26 +558,34 @@ if __name__ == '__main__':
     ob_nz = [int(nz_air+z/dz) for z in obstacle_depth]
     logger.info('obstacle_depth: %s (nz=%s)'%(obstacle_depth,ob_nz))
 
+    if is_zRTM:
+        dx_src = 0.2
+        dy_src = 0.5
+        dnx_src = int(dx_src/dx)
+        dny_src = int(dy_src/dy)
+        nx_src = 25
+        ny_src = 7
+        src_rec(dnx_src,dny_src,nx_src=nx_src,ny_src=ny_src,nx_rec=nx_src,ny_rec=ny_src)
+    else:
+        dx_src = 0.6
+        dx_rec = 0.3
+        dnx_src = int(dx_src/dx)
+        dnx_rec = int(dx_rec/dx)
+        src_rec(dnx_src=dnx_src, dnx_rec=dnx_rec)
+
     if not model == '0':
         NUM_OF_PROCESS = 8
         order = 2 # num of interchange layers of each process
         logger.info("NUM_OF_PROCESS: %d"%NUM_OF_PROCESS) 
         rangex, nxSize = X_partition(nx, NUM_OF_PROCESS)
-        eps_sig_mu(model,ob_nz)
+        eps_sig_mu(model,modelname=modelpic,depths=ob_nz)
 
-    if is_zRTM:
-        dx_src = 1.6#0.3
-        dnx_src = int(dx_src/dx)
-        src_rec(dnx_src)
-    else:
-        dx_src = 3#1
-        dx_rec = 0.2
-        dnx_src = int(dx_src/dx)
-        dnx_rec = int(dx_rec/dx)
-        src_rec(dnx_src=dnx_src, dnx_rec=dnx_rec)
 
     par()
-    islice(nx0+dnx_src//2,ny0+dnx_src//2,ob_nz)
+    islice(nx0-1,ny0-1,ob_nz)
 
     # clean file
     cleanfiles([outdir,std_outdir,rtm_outdir])
+
+    # backup this file
+    cp('model_em.py', workdir)
