@@ -146,11 +146,13 @@ if __name__ == "__main__":
     if check:
         check_s,check_w = check_file(isrc)
         if check_s == True:
-            clean_slice(isrc)
+            clean_slice(isrc,workdir)
+        else:
+            logger.warning("src%d: No slices deleted, as results are not complete!"%isrc)
         if check_w == True:
-            clean_wavefield(isrc)
-        if not (check_s and check_w):
-            logger.warning("src%d: Not all files deleted for results are not complete!"%isrc)
+            clean_wavefield(isrc,workdir)
+        else:
+            logger.warning("src%d: Not wavefield deleted, as results are not complete!"%isrc)
     else:
         clean_slice(isrc,workdir)
         clean_wavefield(isrc,workdir)

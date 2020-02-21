@@ -217,7 +217,7 @@ if __name__ == "__main__":
 
     isrc = int(args[0])
 
-    idir = 'Result'
+    idir = os.path.join(workdir,'Result')
     if not os.path.exists(idir):
         os.mkdir(idir)
 
