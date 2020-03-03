@@ -112,7 +112,8 @@ echo "Computing is started at $(date)."
 echo "Current Directory = $WORKPATHSTD"
 ~/software/openmpi-4.0.1/bin/mpiexec -np $NSLOTS -wdir $WORKPATHSTD $WORKPATHSTD/FDTD_MPI_geop '''+ str(isrc) +'''
 echo "Current Directory = $WORKPATH"
-~/software/openmpi-4.0.1/bin/mpiexec -np 1 -wdir $WORKPATH $PYPATH/clean.py -f '''+ str(isrc) +'''
+#~/software/openmpi-4.0.1/bin/mpiexec -np 1 -wdir $WORKPATH $PYPATH/clean.py -f '''+ str(isrc) +'''
+python $PYPATH/post_put.py -t ''' + dirname + ' -z ' + str(isrc) +'''
 '''
         else:
             text = '''
@@ -127,6 +128,7 @@ echo "Current Directory = $WORKPATHRTM"
 #~/software/openmpi-4.0.1/bin/mpiexec -np 1 -wdir $WORKPATH $PYPATH/corr_RTM_wavefield_sub.py '''+ str(isrc) +'''
 #~/software/openmpi-4.0.1/bin/mpiexec -np 1 -wdir $WORKPATH $PYPATH/corr_RTM_slice_sub.py '''+ str(isrc) +'''
 #~/software/openmpi-4.0.1/bin/mpiexec -np 1 -wdir $WORKPATH $PYPATH/clean.py '''+ str(isrc) +'''
+python $PYPATH/post_put.py -t ''' + dirname + ' ' + str(isrc) +'''
 '''
 
         text_tail = '''
@@ -136,55 +138,62 @@ qsub ''' + fname_next + '''
         if is_zRTM:
             if isrc == list_src[-1]:
                 text_tail += 'cd ..\nsh sub_0offset.sh\n'
-        else:
-            text_tail += 'qsub %s'%fname_post
+        # else:
+        #     text_tail += 'qsub %s'%fname_post
         text_tail += '\nexit 0\n'
 
         with open(fname, 'w') as fp:
             fp.write(text_head+text+text_tail)
 
-
-        if not is_zRTM:
-            with open(os.path.join(workpath,'log',fname_post), 'w') as fp:
-                fp.write('''#!/bin/sh
-
-# Lines begin with "#$" are parameters of qsub.
-# Lines begin with "#" except "#!" and "#$" are comments.
-
-# Useage: qsub openmpi.sh
-# Output: <JOB_NAME>.o<JOB_ID>
-
-#$ -cwd
-#$ -m beas
-#$ -j y
-#$ -S /bin/sh
-#$ -v PATH,LD_LIBRARY_PATH
-
-######### set the name of this job
-#$ -N rtm'''+ str(isrc) +'''_post
-
-echo "PATH = $PATH"
-echo "LD_LIBRARY_PATH = $LD_LIBRARY_PATH"
-PYPATH="''' + pypath + '''"
-DIRNAME="''' + dirname + '''"
-WORKPATH="''' + workpath + '''"
-echo "Current Directory = $WORKPATH"
-echo 
-
-#########  execute PROGRAM_NAME
-echo "Computing is started at $(date)."
-
-cd $WORKPATH
-python $PYPATH/corr_RTM_wavefield_sub.py '''+ str(isrc) +'''
-python $PYPATH/corr_RTM_slice_sub.py '''+ str(isrc) +'''
-python $PYPATH/clean.py '''+ str(isrc) +'''
-
-echo "Computing is stopped at $(date)."
+########################### rtm_post ######################
+#
+#  depicted because of high I/O cost.
+#  replaced by post_master.py & post_put.py
+#
+###########################################################
 
 
-exit 0
-''')
+#         if not is_zRTM:
+#             with open(os.path.join(workpath,'log',fname_post), 'w') as fp:
+#                 fp.write('''#!/bin/sh
 
+# # Lines begin with "#$" are parameters of qsub.
+# # Lines begin with "#" except "#!" and "#$" are comments.
+
+# # Useage: qsub openmpi.sh
+# # Output: <JOB_NAME>.o<JOB_ID>
+
+# #$ -cwd
+# #$ -m beas
+# #$ -j y
+# #$ -S /bin/sh
+# #$ -v PATH,LD_LIBRARY_PATH
+
+# ######### set the name of this job
+# #$ -N rtm'''+ str(isrc) +'''_post
+
+# echo "PATH = $PATH"
+# echo "LD_LIBRARY_PATH = $LD_LIBRARY_PATH"
+# PYPATH="''' + pypath + '''"
+# DIRNAME="''' + dirname + '''"
+# WORKPATH="''' + workpath + '''"
+# echo "Current Directory = $WORKPATH"
+# echo 
+
+# #########  execute PROGRAM_NAME
+# echo "Computing is started at $(date)."
+
+# cd $WORKPATH
+# python $PYPATH/corr_RTM_wavefield_sub.py '''+ str(isrc) +'''
+# python $PYPATH/corr_RTM_slice_sub.py '''+ str(isrc) +'''
+# python $PYPATH/clean.py '''+ str(isrc) +'''
+
+# echo "Computing is stopped at $(date)."
+
+
+# exit 0
+# ''')
+###########################################################
 
 
 if __name__ == '__main__':
@@ -202,7 +211,7 @@ if __name__ == '__main__':
     proc_num = 8
     for o, a in opts:
         if o in ('-z','--zero-offset'):
-            print('Zero-offset Mode.')
+            logger.info('Zero-offset Mode.')
             is_zRTM = True
         elif o in ('-s','--src_num'):
             src_num = int(a)
