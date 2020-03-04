@@ -1,5 +1,3 @@
-# task_worker.py
-
 import time, sys, queue, os, time, logging, datetime
 from multiprocessing.managers import BaseManager
 # from multiprocessing import Pool
@@ -8,7 +6,7 @@ from multiprocessing.managers import BaseManager
 today = datetime.date.today()
 logger = logging.getLogger('post')
 logger.setLevel(logging.DEBUG) #CRITICAL>ERROR>WARNING>INFO>DEBUG》NOTSET
-fh = logging.FileHandler(os.path.join('log','post-' + today.strftime('%Y%m%d') + '.log'))
+fh = logging.FileHandler(os.path.join('log','post_master-' + today.strftime('%Y%m%d') + '.log'))
 fh.setLevel(logging.DEBUG)
 ch = logging.StreamHandler()
 ch.setLevel(logging.INFO)
@@ -32,17 +30,12 @@ class QueueManager(BaseManager):
 QueueManager.register('get_task_queue', callable=lambda: task_queue)
 QueueManager.register('get_result_queue', callable=lambda: result_queue)
 # 绑定端口5000, 设置验证码'abc':
-manager = QueueManager(address=('', 5555), authkey=b'rtm')
+manager = QueueManager(address=('', 5678), authkey=b'rtm')
 
 
 
 if __name__ == '__main__':
     cwd = os.getcwd()
-
-    pypath = cwd
-    py1 = os.path.join(pypath,'corr_RTM_wavefield_sub.py')
-    py2 = os.path.join(pypath,'corr_RTM_slice_sub.py')
-    py3 = os.path.join(pypath,'clean.py')
     
     logger.info('Current folder: %s'%cwd)
     # 启动Queue:
@@ -51,35 +44,59 @@ if __name__ == '__main__':
     task = manager.get_task_queue()
     result = manager.get_result_queue()
 
-############## jobs here ##############
+############# master here #############
+    jobs_processing = {} # processing list(dict): {[taskname,isrc,is_zRTM]:[p_status,start_time]}
     while 1:
         try:
-            [taskname,isrc,is_zRTM] = task.get(timeout=1800)
+            (taskname,isrc,is_zRTM,p_status) = result.get(timeout=1800)
+            # print(taskname)
+            # end master 
+            if taskname.lower().strip() == 'end_master':
+                logger.info("'end_master' instruction detected, closing manager.")
+                if jobs_processing and not task.empty():
+                    task.put((taskname,isrc,is_zRTM))
+                    logger.warning("Queue NOT empty or still processing, waiting to close.")
+                    continue
+                else:
+                    break
         except Exception as e:
-            print('(%s)Listening... %s'%(time.strftime("%H:%M:%S", time.localtime(time.time())),e))
-            continue
-
-        if taskname.lower().strip() == 'end':
-            logger.warning("'end' instruction detected, closing manager.")
-            if task.empty():
-                break
-            else:
-                logger.warning("Queue NOT empty, manager didn't close.")
-                continue
-
-        task_str = '%s-src%d'%(taskname,isrc)
-        logger.info('Processing %s'%task_str)
-        start_time = time.time()
-
-        workpath = os.path.join(cwd,'tasks',taskname)
-        if is_zRTM:
-            p_status = os.system('cd %s;python %s -f %d'%(workpath,py3,isrc))
+            print('(%s)Waiting for results... %s'%(time.strftime("%H:%M:%S", time.localtime(time.time())),e))
         else:
-            p_status = os.system('cd %s;python %s %d;python %s %d;python %s %d'%(workpath,py1,isrc,py2,isrc,py3,isrc))
-        logger.info('os.system status: %s'%str(p_status))
+            # useful variable
+            task_str = '%s-src%d'%(taskname,isrc)
+            time_now = time.time()
+            # add or remove jobs from processing list
+            if p_status == -1:
+                # assign task
+                logger.info('Task assigned: %s'%task_str)
+                jobs_processing[(taskname,isrc,is_zRTM)] = (p_status,time_now)
+            else:
+                # task done: del item from processing list
+                if p_status == 0:
+                    # success
+                    logger.info('Task complete: %s'%task_str)
+                else:
+                    # fail: put task back to task queue
+                    logger.warning('Task not success: %s (return code: %d)'%(task_str,p_status))
+                    task.put((taskname,isrc,is_zRTM))
+                    logger.info('Put task back: %s'%task_str)
+                try:
+                    del(jobs_processing[(taskname,isrc,is_zRTM)])
+                except Exception as e:
+                    logger.warning('Error deleting task in processing list: %s'%e)
+        finally:
+            # put task back if timeout
+            time_now = time.time()
+            timeout = 3600 #1h
+            for k in jobs_processing:
+                lasting_time = time_now - jobs_processing[k][1]
+                if lasting_time > timeout:
+                    task_str = '%s-src%d'%(k[0],k[1])
+                    del(jobs_processing[k])
+                    task.put(k)
+                    logger.warning('task time out: %s (%.2fs)'%(task_str,lasting_time))
 
-        end_time = time.time()
-        logger.info('Job %s done (time cost: %.2fs).'%(task_str, end_time - start_time))
+
 #######################################
 
     # 关闭:

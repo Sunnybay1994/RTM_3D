@@ -513,7 +513,7 @@ if __name__ == '__main__':
     mumin = 1.0
     epmax = 15.0
     mumax = 1.0
-    fmax = 100*1e6  #Hz
+    fmax = 400*1e6  #Hz
     ### parameter ###
 
     ### gird  parameter ###
