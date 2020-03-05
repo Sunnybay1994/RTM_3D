@@ -59,15 +59,16 @@ if __name__ == '__main__':
             logger.info('Processing %s'%task_str)
             result.put((taskname,isrc,is_zRTM,-1)) # -1 represents jobs are processing.
 
-            start_time = time.time()
             workpath = os.path.join(cwd,'tasks',taskname)
+            start_time = time.time()
             if is_zRTM:
                 p_status = os.system('cd %s;python %s -f %d'%(workpath,py3,isrc))
             else:
                 p_status = os.system('cd %s;python %s %d;python %s %d;python %s %d'%(workpath,py1,isrc,py2,isrc,py3,isrc))
             end_time = time.time()
+            logger.info('Job %s done, status code: %d, time cost: %.2fs.'%(task_str, p_status, end_time - start_time))
 
             result.put((taskname,isrc,is_zRTM,p_status)) # p_status==0 means succeed.
 
-            logger.info('Job %s done, status code: %d, time cost: %.2fs.'%(task_str, p_status, end_time - start_time))
+            
 #######################################

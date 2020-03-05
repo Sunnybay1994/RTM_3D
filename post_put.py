@@ -1,4 +1,4 @@
-import time, sys, queue, getopt, logging, datetime
+import time, sys, queue, getopt, os, logging, datetime
 from multiprocessing.managers import BaseManager
 
 
@@ -52,9 +52,19 @@ if __name__ == '__main__':
             is_zRTM = True
         else:
             assert False, "unhandled option"
-    isrc = int(args[0])
 
+    if len(args) == 1:
+        isrc_begin = int(args[0])
+        isrc_end = int(args[0])
+    elif len(args) == 2:
+        isrc_begin = int(args[0])
+        isrc_end = int(args[1])
+    else:
+        isrc_begin = int(args[0])
+        isrc_end = int(args[1])
+        logger.warning('unknown parameter(s): %s'%args[2:])
 
-    task.put((taskname,isrc,is_zRTM))
-    task_str = '%s-src%d'%(taskname,isrc)
-    logger.info('Put task: %s'%task_str)
+    for isrc in range(isrc_begin,isrc_end+1):
+        task.put((taskname,isrc,is_zRTM))
+        task_str = '%s-src%d'%(taskname,isrc)
+        logger.info('Put task: %s'%task_str)

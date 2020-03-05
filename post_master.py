@@ -87,8 +87,8 @@ if __name__ == '__main__':
         finally:
             # put task back if timeout
             time_now = time.time()
-            timeout = 3600 #1h
-            for k in jobs_processing:
+            timeout = 3600*3 #3h
+            for k in jobs_processing.keys():
                 lasting_time = time_now - jobs_processing[k][1]
                 if lasting_time > timeout:
                     task_str = '%s-src%d'%(k[0],k[1])
