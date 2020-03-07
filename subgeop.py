@@ -128,13 +128,15 @@ echo "Current Directory = $WORKPATHRTM"
 #~/software/openmpi-4.0.1/bin/mpiexec -np 1 -wdir $WORKPATH $PYPATH/corr_RTM_wavefield_sub.py '''+ str(isrc) +'''
 #~/software/openmpi-4.0.1/bin/mpiexec -np 1 -wdir $WORKPATH $PYPATH/corr_RTM_slice_sub.py '''+ str(isrc) +'''
 #~/software/openmpi-4.0.1/bin/mpiexec -np 1 -wdir $WORKPATH $PYPATH/clean.py '''+ str(isrc) +'''
-cd $PYPATH
-python post_put.py -t ''' + dirname + ' ' + str(isrc) +'''
 '''
 
         text_tail = '''
 echo "Computing is stopped at $(date)."
+
 qsub ''' + fname_next + '''
+
+cd $PYPATH
+python post_put.py -t ''' + dirname + ' ' + str(isrc) +'''
 '''
         if is_zRTM:
             if isrc == list_src[-1]:

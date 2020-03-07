@@ -65,7 +65,7 @@ def remove_STD(idir,idir_STD,isrc):
     #     gather_RTM[i,:] = gather_RTM[i,:]/max(abs(gather_RTM[i,:]))
     figure()
     imshow(gather_RTM,cmap='gray',origin='lower',extent=(0,nt,0,nt/2))
-    savefig(os.path.join(idir,'gather_without_src'+'_'+str(isrc).zfill(4)+'.png'))
+    savefig(os.path.join(rtmdir,'Input','gather_without_src'+'_'+str(isrc).zfill(4)+'.png'))
 
 
 def prepare_RTM(isrc):
