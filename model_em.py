@@ -29,11 +29,11 @@ def cp(f1,f2):
         # logger.debug('cp %s %s'%(f,f2))
         shutil.copy(f,f2)
 
-def src_rec(dnx_src,dny_src=False,nx_src=False,ny_src=False,nzp_src=False,dnx_rec=False,dny_rec=False,nx_rec=False,ny_rec=False,nzp_rec=False,nshift=0,marginx=0,marginy=0):
+def src_rec(dnx_src,dny_src=False,dnx_rec=False,dny_rec=False,nzp_src=False,nzp_rec=False,nx_src=False,ny_src=False,nx_rec=False,ny_rec=False,nshift=0,marginx=0,marginy=0):
     logger.info('adding source and receiver...')
     if not dny_src:
         dny_src = dnx_src
-    if not nzp_src:
+    if not nzp_src: # z position of src 
         nzp_src = nz_air - 1
     if not dnx_rec:
         dnx_rec = dnx_src
@@ -42,7 +42,7 @@ def src_rec(dnx_src,dny_src=False,nx_src=False,ny_src=False,nzp_src=False,dnx_re
     else:
         if not dny_rec:
             dny_rec = dnx_rec
-    if not nzp_rec:
+    if not nzp_rec: # z position of rec
         nzp_rec = nzp_src
 
     global src, rec
@@ -112,32 +112,25 @@ def src_rec(dnx_src,dny_src=False,nx_src=False,ny_src=False,nzp_src=False,dnx_re
     return 0
 
 
-def eps_sig_mu(model=False,modelname=False,depths=False,half_thickness=5,atype='ep'):
+def eps_sig_mu(meps=1,meps_bg=False,msig=1e-5,msig_bg=False,mmiu=1,mmiu_bg=False):
     logger.info('Generating model...')
-
-    if model=='pic':
-        model_em = plt.imread(modelname)[:, :, 0]
-        model_em = model_em.T
-
-    if model=='mat':
-        logger.info("Reading 'model.mat' file under model directory, and the data should be named as 'ep'.")
-        try:
-            dic_ep_3d = sio.loadmat(os.path.join('Model','model.mat'))
-            cp(os.path.join('Model','model.mat'), workdir)
-            ep_3d = dic_ep_3d['ep']
-        except Exception as e:
-            logger.error(e)
-            raise e
 
     for ii in range(NUM_OF_PROCESS):
 
-        fep_STD = open(os.path.join(std_indir,'eps.in_' + str(ii).zfill(3)), 'w')
-        fsig_STD = open(os.path.join(std_indir,'sig.in_' + str(ii).zfill(3)), 'w')
+        if not isinstance(meps_bg,bool):
+            feps_STD = open(os.path.join(std_indir,'eps.in_' + str(ii).zfill(3)), 'w')
+        if not isinstance(msig_bg,bool):
+            fsig_STD = open(os.path.join(std_indir,'sig.in_' + str(ii).zfill(3)), 'w')
+        if not isinstance(mmiu_bg,bool):
+            fmiu_STD = open(os.path.join(std_indir,'mu.in_' + str(ii).zfill(3)), 'w')
+
 
         feps = open(os.path.join(indir,'eps.in_' + str(ii).zfill(3)), 'w')
         fsig = open(os.path.join(indir,'sig.in_' + str(ii).zfill(3)), 'w')
+        fmiu = open(os.path.join(indir,'mu.in_' + str(ii).zfill(3)), 'w')
 
-        logger.info('file: %s, %s'%(feps,fsig))
+
+        logger.info('file: %s'%(feps))
         logger.info('rangex: %d~%d,%d'%(rangex[ii], rangex[ii + 1], rangex[ii + 1] - rangex[ii]))
         for dumx in np.arange(rangex[ii] - order, rangex[ii + 1] + order):
 
@@ -159,111 +152,73 @@ def eps_sig_mu(model=False,modelname=False,depths=False,half_thickness=5,atype='
 
             # initialize model
             eps = np.ones((ny, nz))
-            eps_STD = np.ones((ny, nz))
             sig = np.ones((ny, nz))
-            sig_STD = np.ones((ny, nz))
+            miu = np.ones((ny, nz))
 
-            sig[:, 0:nz_air] = 1e-5
-            sig[:, nz_air:] = 1e-5
-            eps_STD[:, 0:nz_air] = 1.0
-            eps_STD[:, nz_air:] = 9.0
-            sig_STD[:, 0:nz_air] = 1e-5
-            sig_STD[:, nz_air:] = 1e-5
-
-            if model=='mat':
-                eps = ep_3d[dumx,:,:]
+            if not isinstance(meps,(int,float)):
+                eps = meps[dumx,:,:]
             else:
-                eps[:, 0:nz_air] = 1.0
-                eps[:, nz_air:] = 9.0
-                for j in range(ny):
-                    if model=='pic':
-                        if 'ep' in atype:
-                            for depth in depths:
-                                bottom = depth - half_thickness
-                                top =depth + half_thickness
-                                eps[model_em[dumx,:] != 1, bottom:top] = 15
+                eps[:,:] = meps
+            np.savetxt(feps, eps, fmt='%.3g')
 
-                        if 'sig' in atype:
-                            for depth in depths:
-                                bottom = depth - half_thickness
-                                top =depth + half_thickness
-                                sig[model_em[dumx,:] != 1, bottom:top] = 10
-                    else:
-                        i = dumx
-                        depth = depths[0]
-                        if model=='dots':
-                            ## 6 dots model
-                            r = int(0.1/dx)
-                            nx1 = nx0 - int(0.64/dx)
-                            nx2 = nx0
-                            nx3 = nx0 + int(0.64/dx)
-                            ny1 = ny0 - int(dy_src/dy)
-                            ny2 = ny0
-                            ny3 = ny0 + int(dy_src/dy)
-                            npdh = int(0.16/dx) 
-                            for k in range(nz_air+5,nz):
-                                if distance(i,j,k,nx1-npdh,ny1,depth) < r or distance(i,j,k,nx2-npdh,ny2,depth) < r or distance(i,j,k,nx2-npdh,ny2,depth) < r:
-                                    eps[j,k] = 3
-                                    logger.debug('ep(%.2f,%.2f,%.2f)=3'%((i-nx0)*dx,(j-ny0)*dy,(k-nz_air)*dz))
-                                elif distance(i,j,k,nx1+npdh,ny1,depth) < r or distance(i,j,k,nx2+npdh,ny2,depth) < r or distance(i,j,k,nx2+npdh,ny2,depth) < r:
-                                    eps[j,k] = 15
-                                    logger.debug('ep(%.2f,%.2f,%.2f)=15'%((i-nx0)*dx,(j-ny0)*dy,(k-nz_air)*dz))
-                        elif model == 'surface':
-                            ## model: x/6 + y/6 + z/2 = 1
-                            for k in range(nz_air+5,nz):
-                                if abs(i/300 + j/300 + (k-nz_air)/100 - 1) < 0.01:
-                                    logger.debug('eps(%d,%d,%d)=15, %f'%(i,j,k,i/300 + j/300 + (k-nz_air)/100))
-                                    eps[j,k] = 15
-                        elif model == 'checkbox':
-                            ## checkbox model
-                            nlbox = 10 #1m
-                            ep1 = 6
-                            ep2 = 12
-                            for k in range(nz_air,nz):
-                                if (i // nlbox + j // nlbox + (k - nz_air) // nlbox) % 2 == 0:
-                                    eps[j,k] = ep1
-                                    # logger.debug('eps(%d,%d,%d)=%d'%(i,j,k,ep1))
-                                else:
-                                    eps[j,k] = ep2
-                                    # logger.debug('eps(%d,%d,%d)=%d'%(i,j,k,ep2))
+            if not isinstance(msig,(int,float)):
+                sig = msig[dumx,:,:]
+            else:
+                sig[:,:] = msig
+            np.savetxt(fsig, sig, fmt='%.3g')
 
-            # if dumx == 0:
-            #     plt.figure()
-            #     plt.imshow(fliplr(eps).T)
-            #     plt.show()
-            # np.savetxt(feps, fliplr(eps))
-            # np.savetxt(fep_STD, fliplr(eps_STD))
-            np.savetxt(feps, eps, fmt='%.2e')
-            np.savetxt(fep_STD, eps_STD, fmt='%.2e')
-            np.savetxt(fsig, sig, fmt='%.2e')
-            np.savetxt(fsig_STD, sig_STD, fmt='%.2e')
+            if not isinstance(mmiu,(int,float)):
+                miu = mmiu[dumx,:,:]
+            else:
+                miu[:,:] = mmiu
+            np.savetxt(fmiu, miu, fmt='%.3g')
+
+            if not isinstance(meps_bg,bool):
+                eps_STD = np.ones((ny, nz))
+                if not isinstance(meps_bg,(int,float)):
+                    eps_STD = meps_bg[dumx,:,:]
+                else:
+                    eps_STD[:,:] = meps_bg
+                np.savetxt(feps_STD, eps_STD, fmt='%.3g')
+
+            if not isinstance(msig_bg,bool):
+                sig_STD = np.ones((ny, nz))
+                if not isinstance(msig_bg,(int,float)):
+                    sig_STD = msig_bg[dumx,:,:]
+                else:
+                    sig_STD[:,:] = msig_bg
+                np.savetxt(fsig_STD, sig_STD, fmt='%.3g')
+
+            if not isinstance(mmiu_bg,bool):
+                miu_STD = np.ones((ny, nz))
+                if not isinstance(mmiu_bg,(int,float)):
+                    miu_STD = mmiu_bg[dumx,:,:]
+                else:
+                    miu_STD[:,:] = mmiu_bg
+                np.savetxt(fmiu_STD, miu_STD, fmt='%.3g')
+            
+
         feps.close()
-        fep_STD.close()
         fsig.close()
-        fsig_STD.close()
-
-        # fsig = open('./Input/sig.in_' + str(ii).zfill(3), 'w')
-        # dum_sig = np.zeros((nxSize[ii], ny, nz))
-        # sig_out = dum_sig.reshape(nxSize[ii] * ny * nz)
-        # np.savetxt(fsig, sig_out)
-        # fsig.close()
-
-        fmu = open(os.path.join(indir,'mu.in_' + str(ii).zfill(3)), 'w')
-        # Modified by mbw at 20180607
-        # dum_mu = np.ones((nxSize[ii], ny, nz))
-        dum_mu = np.ones((int(nxSize[ii]), ny, nz))
-        # mu_out = dum_mu.reshape(nxSize[ii] * ny * nz)
-        mu_out = dum_mu.reshape(int(nxSize[ii]) * ny * nz)
-        # End modify
-        np.savetxt(fmu, mu_out, fmt='%d')
-        fmu.close()
+        fmiu.close()
+        if not isinstance(meps_bg,bool):
+            feps_STD.close()
+        if not isinstance(msig_bg,bool):
+            fsig_STD.close()
+        if not isinstance(mmiu_bg,bool):
+            fmiu_STD.close()
 
     
+    if isinstance(meps_bg,bool):
+        cp(os.path.join(indir, 'eps.in*'), std_indir)
+    if isinstance(msig_bg,bool):
+        cp(os.path.join(indir, 'sig.in*'), std_indir)
+    if isinstance(mmiu_bg,bool):
+        cp(os.path.join(indir, 'mu.in*'), std_indir)
+
     cp(os.path.join(std_indir, 'eps.in*'), rtm_indir)
     cp(os.path.join(std_indir, 'sig.in*'), rtm_indir)
-
-    cp(os.path.join(indir, 'mu.in*'), std_indir)
-    cp(os.path.join(indir, 'mu.in*'), rtm_indir)
+    cp(os.path.join(std_indir, 'mu.in*'), rtm_indir)
 
     return 0
 
@@ -474,7 +429,7 @@ def cleanfiles(paths):
 ##############################################################################
 if __name__ == '__main__':
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "zm:p:d:", ["zero-offset","model=","model_name=","workdir="])
+        opts, args = getopt.getopt(sys.argv[1:], "zm:f:", ["zero-offset","model=","freq=","dx_src=","dx_rec=","dy_rec="])
     except getopt.GetoptError as err:
         # print help information and exit:
         logger.error(err)  # will print something like "option -a not recognized"
@@ -482,28 +437,44 @@ if __name__ == '__main__':
         sys.exit(2)
 
     is_zRTM = False
-    model = False # os.path.join('Model','EM300.png')
-    model_name = False
+    model = "model.mat"
     workdir = os.path.join('tasks','default')
+    freq = 400  #MHz
+    dx_src = 0.6
+    dx_rec = 0.2
     for o, a in opts:
         if o in ('-z','--zero-offset'):
             logger.info('Zero-offset Mode.')
             is_zRTM = True
+            dx_src = 0.2
+            dy_src = 0.5
         elif o in ('-m','--model'):
-            model = a
             if model == '0':
                 logger.info("Don't generate model.")
-        elif o in ('-p','--model_name'):
-            model_name = os.path.join('Model',a)
-        elif o in ('-d','--workdir'):
-            workdir = os.path.join('tasks',a)
+            else:
+                model = a
+        elif o in ('-f','--freq'):
+            freq = int(a)  #MHz
+        elif o in ('--dx_src'):
+            dx_src = float(a)
+        elif o in ('--dy_src'):
+            dy_src = float(a)
+        elif o in ('--dx_rec'):
+            dx_rec = float(a)
         else:
             assert False, "unhandled option"
 
-    if not os.path.exists(workdir):
-        os.mkdir(workdir)
-    logger.info('model="%s", workdir="%s"'%(model,workdir))
-
+    ### load model ###
+    try:
+        dic_model = sio.loadmat(os.path.join('Model','model.mat'))
+    except Exception as e:
+        logger.error(e)
+        raise e
+    else:
+        modelname = str(dic_model['modelname'][0])
+    finally:
+        pass
+    ### load model end ###
 
     ### parameter ###
     mu0 = 1.2566370614e-6
@@ -513,34 +484,44 @@ if __name__ == '__main__':
     mumin = 1.0
     epmax = 15.0
     mumax = 1.0
-    fmax = 400*1e6  #Hz
-    ### parameter ###
+    fmax = freq * 1e6 #Hz
+    ### parameter end ###
+
+    ### init workdir ###
+    if is_zRTM:
+        workdir = os.path.join('tasks','%s_%dMHz_0offset_%.1fm_%.1fm'%(modelname,freq,dx_src,dy_src))
+    else:
+        workdir = os.path.join('tasks','%s_%dMHz_%.1fm_%.1fm'%(modelname,freq,dx_src,dx_rec))
+    if not os.path.exists(workdir):
+        os.mkdir(workdir)
+    logger.info('workdir="%s"'%(workdir))
+    ### init workdir end ###
+
 
     ### gird  parameter ###
-    npmlx = 9
+    npmlx = 8
     npmly = npmlx
     npmlz = npmlx
 
     dx_max = finddx(epmax, mumax, fmax)
-    dx = 0.05
-    dy = dx
-    dz = dx
+    dx = float(dic_model['dx'])
+    dy = float(dic_model['dy'])
+    dz = float(dic_model['dz'])
     logger.info("dx=%f, dy=%f, dz=%f"%(dx, dy, dz))
 
-    nx = 280
-    ny = 200
-    nx0 = nx/2
-    ny0 = ny/2
-    nz_air = 10
-    nz0 = nz_air 
-    nz = nz0 + 120
-    logger.info('nx=%d, ny=%d, nz=%d'%(nx, ny, nz))
+    nx = int(dic_model['nx'])
+    ny = int(dic_model['ny'])
+    nx0 = nx/2 # middle nx
+    ny0 = ny/2 # middle ny
+    nz_air = int(dic_model['nz_air'])
+    nz = int(dic_model['nz'])
+    logger.info('nx=%d, ny=%d, nz=%d(include nz_air =%d)'%(nx, ny, nz, nz_air))
 
     dt_max = finddt(epmin, mumin, dx, dy, dz)
     dt = 0.08*1e-9
     nt = 1250 #100ns
     logger.info("dt: %fns"%(dt/1e-9)) 
-    ### gird paraeter ###
+    ### gird paraeter end ###
 
     ### source ###
     # srcpulse = blackharrispulse(fmax, dt)
@@ -549,7 +530,7 @@ if __name__ == '__main__':
     nt_src = len(srcpulse)
     logger.info("nt=%d, nt_src=%d"%(nt, nt_src)) 
     check_dx(srcpulse)
-    ### source ###
+    ### source end ###
 
     outstep_t_wavefield = 5
     outstep_x_wavefield = 2
@@ -574,40 +555,34 @@ if __name__ == '__main__':
     shutil.copy("FDTD_MPI_geop",workdir)
     shutil.copy("FDTD_MPI_geop",std_dir)
     shutil.copy("FDTD_MPI_geop",rtm_dir)
-    ### directories ###
+    ### directories end ###
 
-    obstacle_depth = [1]
-    ob_nz = [int(nz_air+z/dz) for z in obstacle_depth]
-    logger.info('obstacle_depth: %s (nz=%s)'%(obstacle_depth,ob_nz))
-
+    ### generate src & rec ###
     if is_zRTM:
-        dx_src = 0.2
-        dy_src = 0.4
         dnx_src = round(dx_src/dx)
         dny_src = round(dy_src/dy)
-        # nx_src = 25
-        # ny_src = 7
-        src_rec(dnx_src,dny_src,marginx=20, marginy=30)
+        src_rec(dnx_src,dny_src, marginx=10, marginy=10)
     else:
-        dx_src = 0.5
-        dx_rec = 0.1
         dnx_src = round(dx_src/dx)
         dnx_rec = round(dx_rec/dx)
-        src_rec(dnx_src=dnx_src, dnx_rec=dnx_rec, marginx=20, marginy=30)
+        src_rec(dnx_src,dnx_rec=dnx_rec, marginx=10, marginy=10)
+    ### generate src & rec end ###
 
+    ### generate model ###
     if not model == '0':
         NUM_OF_PROCESS = 8
         order = 2 # num of interchange layers of each process
         logger.info("NUM_OF_PROCESS: %d"%NUM_OF_PROCESS) 
         rangex, nxSize = X_partition(nx, NUM_OF_PROCESS)
-        eps_sig_mu(model,modelname=model_name,depths=ob_nz)
-
+        eps_sig_mu(dic_model['ep'],dic_model['ep_bg'])
+    ### generate model end ###
 
     par()
-    islice(nx0-1,ny0-1,ob_nz)
+    islice(dic_model['slicex'][0].tolist(),dic_model['slicey'][0].tolist(),dic_model['slicez'][0].tolist())
 
     # clean file
     cleanfiles([outdir,std_outdir,rtm_outdir])
 
     # backup this file
     cp('model_em.py', workdir)
+    cp(os.path.join('Model','make_model.m'), workdir) # backup model
