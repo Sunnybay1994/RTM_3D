@@ -36,7 +36,7 @@ task = m.get_task_queue()
 result = m.get_result_queue()
 if __name__ == '__main__':
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "t:z:", ["task=",'--zero-offset'])
+        opts, args = getopt.getopt(sys.argv[1:], "t:z:", ["taskname=",'--zero-offset'])
     except getopt.GetoptError as err:
         # print help information and exit:
         logger.error(err)  # will print something like "option -a not recognized"
@@ -67,4 +67,4 @@ if __name__ == '__main__':
     for isrc in range(isrc_begin,isrc_end+1):
         task.put((taskname,isrc,is_zRTM))
         task_str = '%s-src%d'%(taskname,isrc)
-        logger.info('Put task: %s'%task_str)
+        logger.info('Put task: %s. (Tasks in queue: %d)'%(task_str,task.qsize()))

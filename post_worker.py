@@ -52,11 +52,14 @@ if __name__ == '__main__':
             if taskname.lower().strip() == 'end_master':
                 result.put((taskname,isrc,is_zRTM,-1))
                 continue
+        except ConnectionError as e:
+            logger.error('ConnectionError, worker will exit.(Error info: %s)'%e)
+            break
         except Exception as e:
-            print('(%s)Waiting for jobs... %s'%(time.strftime("%H:%M:%S", time.localtime(time.time())),e))
+            print('(%s)Waiting for job... %s'%(time.strftime("%H:%M:%S", time.localtime(time.time())),e))
         else: 
             task_str = '%s-src%d'%(taskname,isrc)
-            logger.info('Processing %s'%task_str)
+            logger.info('Processing %s (Tasks waiting: %d)'%(task_str,task.qsize()))
             result.put((taskname,isrc,is_zRTM,-1)) # -1 represents jobs are processing.
 
             workpath = os.path.join(cwd,'tasks',taskname)
@@ -66,7 +69,7 @@ if __name__ == '__main__':
             else:
                 p_status = os.system('cd %s;python %s %d;python %s %d;python %s %d'%(workpath,py1,isrc,py2,isrc,py3,isrc))
             end_time = time.time()
-            logger.info('Job %s done, status code: %d, time cost: %.2fs.'%(task_str, p_status, end_time - start_time))
+            logger.info('Job %s done, status code: %d, time cost: %.2fs.\n'%(task_str, p_status, end_time - start_time))
 
             result.put((taskname,isrc,is_zRTM,p_status)) # p_status==0 means succeed.
 

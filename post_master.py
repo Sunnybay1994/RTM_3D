@@ -59,8 +59,11 @@ if __name__ == '__main__':
                     continue
                 else:
                     break
+        except ConnectionError as e:
+            logger.error('ConnectionError, master will exit.(Error info: %s)'%e)
+            break
         except Exception as e:
-            print('(%s)Waiting for results... %s'%(time.strftime("%H:%M:%S", time.localtime(time.time())),e))
+            print('(%s)Listening... %s'%(time.strftime("%H:%M:%S",time.localtime(time.time())), e))
         else:
             # useful variable
             task_str = '%s-src%d'%(taskname,isrc)
@@ -85,6 +88,10 @@ if __name__ == '__main__':
                 except Exception as e:
                     logger.warning('Error deleting task in processing list: %s'%e)
         finally:
+            if jobs_processing:
+                logger.info('Processing list:%s (Tasks waiting: %d)'%(list(jobs_processing.keys()),task.qsize()))
+            else:
+                logger.info('No Jobs processing (Tasks waiting: %d)'%(task.qsize()))
             # put task back if timeout
             time_now = time.time()
             timeout = 3600*3 #3h
