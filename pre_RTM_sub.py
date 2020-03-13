@@ -61,8 +61,8 @@ def remove_STD(idir,idir_STD,isrc):
     gather_STD = loadtxt(os.path.join(idir_STD,'merge_gather'+'_'+str(isrc).zfill(4)+'.dat'))
     gather_RTM = gather-gather_STD
     gather_RTM = fliplr(gather_RTM)
-    # for i in range(len(gather_RTM[:,0])):
-    #     gather_RTM[i,:] = gather_RTM[i,:]/max(abs(gather_RTM[i,:]))
+    for i in range(len(gather_RTM[:,0])):
+        gather_RTM[i,:] = gather_RTM[i,:]/max(abs(gather_RTM[i,:]))
     figure()
     imshow(gather_RTM,cmap='gray',origin='lower',extent=(0,nt,0,nt/2))
     savefig(os.path.join(rtmdir,'Input','gather_without_src'+'_'+str(isrc).zfill(4)+'.png'))
