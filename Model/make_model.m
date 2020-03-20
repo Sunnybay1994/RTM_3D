@@ -1,110 +1,70 @@
 %% modelname
-modelname = 'obstacles';
+modelname = 'layers_with_faults';
 
 %% Grid parameter
-dx = 0.05; %m
+dx = 0.1; %m
 dy = dx;
 dz = dx;
 
-nx = 200;
-ny = 200;
-nz_air = 10;
-nz = 120 + nz_air;
+nx = 60;
+ny = 40;
+nz_air = 5;
+nz = 60 + nz_air;
+
+npmlx = 8;
+npmly = npmlx;
+npmlz = 4;
 
 %% background model
 ep_bg = ones(nx,ny,nz) * 9;
 ep_bg(:,:,1:nz_air) = 1; % air layer
+
+% layers
+x = (1:nx)*dx;
+y = (1:ny)*dy;
+z = ((1:nz)-nz_air)*dz;
+surf_ep = [9,6,9,12];
+surf_pos = [0,1.2,2,5]; %m
+for i = 1:length(surf_pos)
+    layer_z_begin = surf_pos(i);
+    if i ~= length(surf_pos)
+        layer_z_end = surf_pos(i+1);
+    else
+        layer_z_end = z(end);
+    end
+    ep_bg(:,:,z >= layer_z_begin & z<=layer_z_end) = surf_ep(i);
+end
 ep = ep_bg;
 
 %% slice
-slicex = [50,150];
-slicey = [50,150];
-slicez = [50 + nz_air];
+slicex = [nx/2];
+slicey = [ny/2];
+slicez = [14 + nz_air];
 
 %%% the parameter names above should be changed togather with those in 'model_em.py' %%%
 
-%% obstacles
-x = (0:(nx-1)) * dx;
-y = (0:(ny-1)) * dy;
-z = ((0:(nz-1)) - nz_air) * dz;
-
-% cuboid
-xm = 2.5;
-ym = 2.5;
-zm = 2.5;
-lx = 2;
-ly = 2;
-lz = 2;
-ep(x>(xm-lx/2)&x<(xm+lx/2),y>(ym-ly/2)&y<(ym+ly/2),z>(zm-lz/2)&z<(zm+lz/2)) = 12;
-
-% sphere
-r = 1;
-xm = 7.5;
-ym = 2.5;
-zm = 2.5;
-for ix = floor((xm-r)/dx):ceil((xm+r)/dx)
-    for iy = floor((ym-r)/dy):ceil((ym+r)/dy)
-        for iz = floor((zm-r)/dz):ceil((zm+r)/dz)
-            if norm([ix*dx,iy*dx,iz*dx] - [xm,ym,zm]) < r
-                ep(ix,iy,iz + nz_air) = 6;
+%% faults model
+dot1 = [2 2 0];
+dot2 = [3 4 0];
+dot3 = [3 2 3];
+dh = 0.4; %m
+idh = round(dh / dz);
+for ix = 1:nx
+    xi = (ix-1)*dx;
+    for iy = 1:ny
+        yi = (iy-1)*dy;
+        for iz = nz:-1:(nz_air+1+idh)
+            zi = (iz-nz_air)*dz;
+            doti = [xi,yi,zi];
+            if dot(cross((dot3-dot1),(dot2-dot1)),(doti-dot1)) > 0
+                ep(ix,iy,iz) = ep(ix,iy,iz-idh);
             end
         end
-    end
-end
-
-% Spherical cavity
-r = 1.2;
-r2 = 0.8;
-xm = 2.5;
-ym = 7.5;
-zm = 2.5;
-for ix = floor((xm-r)/dx):ceil((xm+r)/dx)
-    for iy = floor((ym-r)/dy):ceil((ym+r)/dy)
-        for iz = floor((zm-r)/dz):ceil((zm+r)/dz)
-            if norm([ix*dx,iy*dx,iz*dx] - [xm,ym,zm]) < r2
-                ep(ix,iy,iz + nz_air) = 1;
-            elseif norm([ix*dx,iy*dx,iz*dx] - [xm,ym,zm]) < r
-                ep(ix,iy,iz + nz_air) = 12;
-            end
-        end
-    end
-end
-
-% % regular tetrahedron
-% z_top = 1.5;
-% h = sqrt(6)*2/3;
-% xm = 11;
-% ym = 3;
-% k_yz = sqrt(3)/(sqrt(6)*2/3);
-% k_xy = 2/sqrt(3);
-% for iz = 0:round(h/dz)
-%     y_max = round((iz*dz*k_yz)/dy);
-%     zi = iz + nz_air + round(z_top/dz);
-%     for iy = 0:round(y_max)
-%         yi = iy + round(ym/dy) + round(-2/3*y_max);
-%         x_max = round((k_xy*iy*dy)/dx);
-%         ep((round(-0.5*x_max):round(x_max/2)) + round(xm/dx),yi,zi) = 15;
-%     end
-% end
-% reverse regular tetrahedron
-z_top = 1.5;
-h = sqrt(6)*2/3;
-xm = 7.5;
-ym = 7.5;
-k_yz = sqrt(3)/(sqrt(6)*2/3);
-k_xy = 2/sqrt(3);
-for iz = 0:round(h/dz)
-    y_max = round(((round(h/dz)-iz)*dz*k_yz)/dy);
-    zi = iz + nz_air + round(z_top/dz);
-    for iy = 0:round(y_max)
-        yi = iy + round(ym/dy) + round(-2/3*y_max);
-        x_max = round((k_xy*iy*dy)/dx);
-        ep((round(-0.5*x_max):round(x_max/2)) + round(xm/dx),yi,zi) = 12;
     end
 end
 
 %%
-save('model.mat','modelname','dx','dy','dz','nx','ny','nz','nz_air','slicex','slicey','slicez','ep_bg','ep');
+save('model.mat','modelname','dx','dy','dz','nx','ny','nz','nz_air','npmlx','npmly','npmlz','slicex','slicey','slicez','ep_bg','ep');
 
 % %% y slice view
 % for i = 1:length(y)
