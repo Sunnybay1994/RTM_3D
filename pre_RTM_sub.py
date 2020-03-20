@@ -53,7 +53,7 @@ def merge_gather(idir, isrc):
     with open(os.path.join(idir, 'merge_gather'+'_'+str(isrc).zfill(4)+'.dat'),'w') as fp:
         savetxt(fp,isum)
     for fname in ilist:
-        os.remove(fname)
+        os.remove(fname.strip('\n'))
 
 
 def remove_STD(idir,idir_STD,isrc):

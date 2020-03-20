@@ -113,7 +113,6 @@ echo "Current Directory = $WORKPATHSTD"
 ~/software/openmpi-4.0.1/bin/mpiexec -np $NSLOTS -wdir $WORKPATHSTD $WORKPATHSTD/FDTD_MPI_geop '''+ str(isrc) +'''
 echo "Current Directory = $WORKPATH"
 #~/software/openmpi-4.0.1/bin/mpiexec -np 1 -wdir $WORKPATH $PYPATH/clean.py -f '''+ str(isrc) +'''
-python $PYPATH/post_put.py -t ''' + dirname + ' -z ' + str(isrc) +'''
 '''
         else:
             text = '''
@@ -134,15 +133,20 @@ echo "Current Directory = $WORKPATHRTM"
 echo "Computing is stopped at $(date)."
 
 qsub ''' + fname_next + '''
+'''
 
+        if is_zRTM:
+            if isrc == list_src[-1]:
+                text_tail += '\ncd ..\nsh sub_0offset.sh\n'
+            text_tail += '''
+cd $PYPATH
+python post_put.py -z -t ''' + dirname + ' ' + str(isrc) +'''
+'''
+        else:
+            text_tail += '''
 cd $PYPATH
 python post_put.py -t ''' + dirname + ' ' + str(isrc) +'''
 '''
-        if is_zRTM:
-            if isrc == list_src[-1]:
-                text_tail += 'cd ..\nsh sub_0offset.sh\n'
-        # else:
-        #     text_tail += 'qsub %s'%fname_post
         text_tail += '\nexit 0\n'
 
         with open(fname, 'w') as fp:
@@ -214,7 +218,7 @@ if __name__ == '__main__':
     proc_num = 8
     for o, a in opts:
         if o in ('-z','--zero-offset'):
-            logger.info('Zero-offset Mode.')
+            print('Zero-offset Mode.')
             is_zRTM = True
         elif o in ('-s','--src_num'):
             src_num = int(a)

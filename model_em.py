@@ -57,13 +57,13 @@ def src_rec(dnx_src,dny_src=False,dnx_rec=False,dny_rec=False,nzp_src=False,nzp_
                 marginx = npmlx
             nx_ant = (nx - 2*marginx) // dnx_ant
             if nx_ant % 2 == 0:
-                nx_ant -= 1
+                nx_ant += 1
         if not ny_ant:
             if marginy < npmly:
                 marginy = npmly
             ny_ant = (ny - 2*marginy) // dny_ant
             if ny_ant % 2 == 0:
-                ny_ant -= 1
+                ny_ant += 1
         
         for i in range(-(nx_ant-1)//2,(nx_ant+1)//2):
             dumx = nx0 + i*dnx_ant
@@ -76,7 +76,7 @@ def src_rec(dnx_src,dny_src=False,dnx_rec=False,dny_rec=False,nzp_src=False,nzp_
     nsrc = len(src)
     logger.info("nsrc: %d"%nsrc) 
 
-    rec = ant_pos(dnx_rec,dny_rec,nzp_rec,nx_rec,ny_rec,nshift,0,0)
+    rec = ant_pos(dnx_rec,dny_rec,nzp_rec,nx_rec,ny_rec,nshift,marginx,marginy)
     nrec = len(rec)
     logger.info("nrec: %d"%nrec) 
 
@@ -439,7 +439,7 @@ if __name__ == '__main__':
     is_zRTM = False
     model = "model.mat"
     workdir = os.path.join('tasks','default')
-    freq = 400  #MHz
+    freq = 300  #MHz
     dx_src = 0.6
     dx_rec = 0.2
     for o, a in opts:
@@ -499,9 +499,9 @@ if __name__ == '__main__':
 
 
     ### gird  parameter ###
-    npmlx = 8
-    npmly = npmlx
-    npmlz = npmlx
+    npmlx = dic_model['npmlx']
+    npmly = dic_model['npmly']
+    npmlz = dic_model['npmlz']
 
     dx_max = finddx(epmax, mumax, fmax)
     dx = float(dic_model['dx'])
