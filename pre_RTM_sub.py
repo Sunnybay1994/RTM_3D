@@ -8,11 +8,11 @@ from par_RTM import *
 
 #logger
 logger = logging.getLogger('pre_RTM_sub')
-logger.setLevel(logging.DEBUG) #CRITICAL>ERROR>WARNING>INFO>DEBUG》NOTSET
+logger.setLevel(logging.INFO) #CRITICAL>ERROR>WARNING>INFO>DEBUG》NOTSET
 fh = logging.FileHandler('log/pre_RTM_sub.log')
-fh.setLevel(logging.DEBUG)
+# fh.setLevel(logging.DEBUG)
 ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
+# ch.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s(%(process)d-%(processName)s): (%(levelname)s) %(message)s')
 fh.setFormatter(formatter)
 ch.setFormatter(formatter)
@@ -20,9 +20,8 @@ logger.addHandler(fh)
 logger.addHandler(ch)
 
 def merge_gather(idir, isrc):
-    logger.info("merging gather: %s-src%d"%(idir,isrc)) 
-    global isum
-    global iloc
+    # global isum
+    # global iloc
     if 'win' in sys.platform:
         ilist = os.popen('dir/b/on '+ os.path.join(idir,'gather*dat'+'_'+str(isrc).zfill(4))).readlines()
         logger.debug(ilist)
@@ -35,83 +34,83 @@ def merge_gather(idir, isrc):
         return 0
     isum = []
     iloc = []
-    for name in ilist:
-        gather = loadtxt(name.strip('\n'))
-        if shape(gather)[0] == 0:
-            continue
-        if shape(shape(gather))[0] == 1:
-            iloc.append(gather[:3])
-            isum.append(gather[3:])
-        else:
-            for i in range(len(gather[:,0])):
-                iloc.append(gather[i,:3])
-                isum.append(gather[i,3:])
-    figure()
-    for i in range(len(isum)):
-        plot(isum[i]/max(abs(isum[i]))+i)
-    savefig(os.path.join(idir, 'merge_gather'+'_'+str(isrc).zfill(4)+'.png'))
-    with open(os.path.join(idir, 'merge_gather'+'_'+str(isrc).zfill(4)+'.dat'),'w') as fp:
-        savetxt(fp,isum)
-    for fname in ilist:
-        os.remove(fname.strip('\n'))
+    if ilist:
+        logger.info("merging gather for %d files: %s-src%d"%(len(ilist),idir,isrc)) 
+        for name in ilist:
+            gather = loadtxt(name.strip('\n'))
+            if shape(gather)[0] == 0:
+                continue
+            if shape(shape(gather))[0] == 1:
+                iloc.append(gather[:3])
+                isum.append(gather[3:])
+            else:
+                for i in range(len(gather[:,0])):
+                    iloc.append(gather[i,:3])
+                    isum.append(gather[i,3:])
+        figure()
+        for i in range(len(isum)):
+            plot(isum[i]/max(abs(isum[i]))+i)
+        savefig(os.path.join(idir, 'merge_gather_'+str(isrc).zfill(4)+'.png'))
+        with open(os.path.join(idir, 'merge_gather_'+str(isrc).zfill(4)+'.dat'),'w') as fp:
+            savetxt(fp,isum)
+        with open(os.path.join(idir, 'merge_gather_loc_'+str(isrc).zfill(4)+'.dat'),'w') as fp:
+            savetxt(fp,iloc)
+        # for fname in ilist:
+        #     os.remove(fname.strip('\n'))
+    else:
+        logger.info("merging gather: No files. Loading merge_gather.") 
+        with open(os.path.join(idir, 'merge_gather_'+str(isrc).zfill(4)+'.dat'),'w') as fp:
+            isum = loadtxt(fp)
+        with open(os.path.join(idir, 'merge_gather_loc_'+str(isrc).zfill(4)+'.dat'),'w') as fp:
+            iloc = loadtxt(fp)
+    return isum,iloc
 
 
-def remove_STD(idir,idir_STD,isrc):
+def remove_STD(gather,gather_std,isrc):
+    # global gather_RTM
     logger.info("removing source: src%d"%isrc) 
-    global gather_RTM
-    gather = loadtxt(os.path.join(idir,'merge_gather'+'_'+str(isrc).zfill(4)+'.dat'))
-    gather_STD = loadtxt(os.path.join(idir_STD,'merge_gather'+'_'+str(isrc).zfill(4)+'.dat'))
-    gather_RTM = gather-gather_STD
-    gather_RTM = fliplr(gather_RTM)
+    gather_RTM = fliplr(array(gather) - array(gather_std))
     # for i in range(len(gather_RTM[:,0])):
     #     gather_RTM[i,:] = gather_RTM[i,:]/max(abs(gather_RTM[i,:]))
     figure()
     imshow(gather_RTM,cmap='gray',origin='lower',extent=(0,nt,0,nt/2))
     savefig(os.path.join(rtmdir,'Input','gather_without_src'+'_'+str(isrc).zfill(4)+'.png'))
+    return gather_RTM
 
 
-def prepare_RTM(isrc):
+def prepare_RTM(isum,iloc,isum_std,iloc_std,gather_rtm,isrc):
     logger.info("preparing RTM: src%d"%isrc) 
-    # with file('rec.in','r') as frec:
-    with open(os.path.join("Input","rec.in"),"r") as fp:
-        nrec = int(fp.readline().split()[0])
+    with open("./Input/rec.in","r") as fp:
+        nrec0 = int(fp.readline().split()[0])
         component = fp.readline().split()[3]
-    nrec_rtm = len(iloc)
-    # nrec = int(frec.readline().split()[0])
-    if nrec != nrec_rtm:
-        logger.warning("nrec not equal! %d-%d"%(nrec,nrec_rtm)) 
-    nt_rtm = len(isum[0])
-    if int(nt) != nt_rtm:
-        logger.warning("nt not equal! %d-%d"%(nt,nt_rtm) )
+    nrec = len(iloc)
+    nrec_std = len(iloc_std)
+    if nrec != nrec_std or nrec0!=nrec:
+        logger.warning("nrec not equal! %d(%d)-%d"%(nrec,nrec0,nrec_std)) 
+    nt = len(isum[0])
+    nt_std = len(isum_std[0])
+    if int(nt) != nt_std:
+        logger.warning("nt not equal! %d-%d"%(nt,nt_std) )
 
     if mode == 1:
         with open(os.path.join(rtmdir,'Input','src.in'+'_'+str(isrc).zfill(4)),'w') as fsrc:
-            fsrc.write("%d %d\n" % (nrec_rtm, nt_rtm))
-            # fsrc.close()
-            # fsrc=open('./RTM/src.in','a')
-            for i in range(nrec_rtm):
+            fsrc.write("%d %d\n" % (nrec_std, nt_std))
+            for i in range(nrec_std):
                 fsrc.write("%d %d %d %s\n"%(iloc[i][0],iloc[i][1],iloc[i][2],component))
-            savetxt(fsrc,gather_RTM)
+            savetxt(fsrc,gather_rtm)
 
     if mode == 0:
         fn_src = os.path.join('Input','src.in_'+str(isrc).zfill(4))
         with open(fn_src) as fo:
             fo.readline()
             srcinfo = fo.readline()
-            [srcx,srcy] = [int(n) for n in srcinfo.split(' ')[:-2]]
-        for irec in range(nrec_rtm):
+            [srcx, srcy] = [int(n) for n in srcinfo.split(' ')[:-2]]
+        for irec in range(nrec):
+            assert (iloc[irec] == iloc_std[irec]).all(), logger.warning("Position NOT correct for 'OUTPUT'(%s) and 'STD/OUTPUT'(%s)"%(iloc(irec),iloc_std(irec)))
             if iloc[irec][0] == srcx and iloc[irec][1] == srcy:
                 logger.debug('src%d:(%d,%d); rec%d:(%d,%d)'%(isrc,srcx,srcy,irec,iloc[irec][0],iloc[irec][1]))
-                gather0 = gather_RTM[irec,:]
-                return nrec_rtm,nt_rtm,iloc,component,gather0
-    #             with open(os.path.join('RTM','Input','srcloc.in'),'a+') as floc:
-    #                 if isrc == 0:
-    #                     floc.write("%d %d\n" % (nrec_rtm, nt_rtm))
-    #                 floc.write("%d %d %d %s\n"%(iloc[irec][0],iloc[irec][1],iloc[irec][2],component))
-    #             with open(os.path.join('RTM','Input','srcdat.in'),'a+') as fsrc:
-    #                 savetxt(fsrc,transpose([gather_RTM[irec,:]]), newline=' ')
-    #                 fsrc.write('\n')
-    # ## muilti-process writing file may cause unpredicted problem ##
+                gather0 = gather_rtm[irec,:]
+                return nrec,nt,iloc,component,gather0
                 break
 
 
@@ -121,26 +120,25 @@ def pre_RTM(list_src):
         dats = []
 
     for i in list_src:#range(nsrc)
-        merge_gather(os.path.join(workdir,'Output'),i)
-        merge_gather(os.path.join(workdir,'STD','Output'),i)
-        remove_STD(os.path.join(workdir,'Output'),os.path.join(workdir,'STD','Output'),i)
+        isum,iloc=merge_gather(os.path.join(workdir,'Output'),i)
+        isum_std,iloc_std=merge_gather(os.path.join(workdir,'STD','Output'),i)
+        gather_rtm=remove_STD(isum,isum_std,i)
         
         if mode == 0:
-            nrec_rtm,nt_rtm,iloc,component,gather0 = prepare_RTM(i)
+            nrec,nt,iloc,component,gather0 = prepare_RTM(isum,iloc,isum_std,iloc_std,gather_rtm,i)
             locs += "%d %d %d %s\n"%(iloc[i][0],iloc[i][1],iloc[i][2],component)
             dats.append(gather0)
             if i == list_src[-1]:
                 logger.info('Writing zero-offset source data...')
                 with open(os.path.join(rtmdir,'Input','src.in_0000'),'w') as fsrc:
-                    fsrc.write("%d %d\n" % (nrec_rtm, nt_rtm))
+                    fsrc.write("%d %d\n" % (nrec, nt))
                     fsrc.write(locs)
                     savetxt(fsrc,dats)
                 logger.info('All Done.')
         else:
-            prepare_RTM(i)
+            prepare_RTM(isum,iloc,isum_std,iloc_std,gather_rtm,i)
 
-        logger.info('Done prepareing RTM: src%d'%i)
-
+        logger.info('Done: src%d\n'%i)
 
 
 if __name__ == "__main__":
