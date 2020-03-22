@@ -2,6 +2,15 @@
 ﻿## special
 sub_00*.sh
 test.py
+*.mat
+.*
+@*
+*Thumbs.db
+tasks/*/
+*.png
+*.psd
+FDTD_MPI_geop
+
 
 ## C++
 # Prerequisites
