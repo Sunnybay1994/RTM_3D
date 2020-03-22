@@ -430,7 +430,7 @@ def cleanfiles(paths):
 ##############################################################################
 if __name__ == '__main__':
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "zm:f:", ["zero-offset","model=","freq=","dx_src=","dx_rec=","dy_rec="])
+        opts, args = getopt.getopt(sys.argv[1:], "zm:f:", ["zero-offset","model=","freq=","dx_src=","dx_rec=","dy_rec=","no_gen_model"])
     except getopt.GetoptError as err:
         # print help information and exit:
         logger.error(err)  # will print something like "option -a not recognized"
@@ -439,6 +439,7 @@ if __name__ == '__main__':
 
     is_zRTM = False
     model = "model.mat"
+    gen_model = True
     workdir = os.path.join('tasks','default')
     freq = 300  #MHz
     dx_src = 0.6
@@ -450,10 +451,7 @@ if __name__ == '__main__':
             dx_src = 0.2
             dy_src = 0.5
         elif o in ('-m','--model'):
-            if a == '0':
-                logger.info("Don't generate model.")
-            else:
-                model = a
+            model = a
         elif o in ('-f','--freq'):
             freq = int(a)  #MHz
         elif o in ('--dx_src'):
@@ -462,6 +460,8 @@ if __name__ == '__main__':
             dy_src = float(a)
         elif o in ('--dx_rec'):
             dx_rec = float(a)
+        elif o in ('--no_gen_model'):
+            gen_model = False
         else:
             assert False, "unhandled option"
 
@@ -573,7 +573,7 @@ if __name__ == '__main__':
     ### generate src & rec end ###
 
     ### generate model ###
-    if not model == '0':
+    if gen_model:
         NUM_OF_PROCESS = 8
         order = 2 # num of interchange layers of each process
         logger.info("NUM_OF_PROCESS: %d"%NUM_OF_PROCESS) 
