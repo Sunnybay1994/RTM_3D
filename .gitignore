@@ -3,9 +3,9 @@
 sub_00*.sh
 test.py
 *.mat
-.*
 @*
 *Thumbs.db
+*.DS_Store
 tasks/*/
 *.png
 *.psd
