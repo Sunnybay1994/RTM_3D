@@ -109,7 +109,7 @@ def src_rec(dnx_src,dny_src=False,dnx_rec=False,dny_rec=False,nzp_src=False,nzp_
         fo.write('%d %d %d Ey\n'%(nx0,ny0,nz_air-2))
     # else:
         # os.system("cp ./Input/rec.in ./RTM/Input/rec.in")
-    return 0
+    return nsrc,nrec
 
 
 def eps_sig_mu(meps=1,meps_bg=False,msig=1e-5,msig_bg=False,mmiu=1,mmiu_bg=False):
@@ -229,7 +229,7 @@ def finddt(epmin, mumin, dx, dy, dz):
     mumin = mumin * mu0
     dtmax = 6.0 / 7.0 * \
         np.sqrt(epmin * mumin / (1.0 / dx ** 2 + 1.0 / dy ** 2 + 1.0 / dz ** 2))
-    logger.info("dt max = %fns"%(dtmax/1e-9)) 
+    logger.info("max dt = %fns"%(dtmax/1e-9)) 
     return dtmax
 
 
@@ -238,7 +238,7 @@ def finddx(epmax, mumax, fmax):
     mumax = mumax * mu0
     wlmin = 1 / (fmax * np.sqrt(epmax * mumax))
     dxmax = wlmin
-    logger.info("max dx = %f"%dxmax) 
+    logger.info("max dx = %fm"%dxmax) 
     return dxmax
 
 
@@ -246,14 +246,14 @@ def blackharrispulse(fmax, dt):
     a = [0.35322222, -0.488, 0.145, -0.010222222]
     T = 1.14 / fmax
     t = np.arange(0, T, dt)
-    window = np.zeros(size(t))
+    window = np.zeros(np.size(t))
     for n in range(4):
-        window = window + a[n] * cos(2 * n * pi * t / T)
+        window = window + a[n] * np.cos(2 * n * np.pi * t / T)
 
     window[t >= T] = 0
     p = window
-    p = window[:] - append(0, window[:-1])
-    p = p / max(abs(p))
+    p = window[:] - np.append(0, window[:-1])
+    p = p / np.max(np.abs(p))
     plt.plot(p)
     plt.savefig(os.path.join(workdir,'blackharrispulse.png'))
     return p
@@ -289,9 +289,9 @@ def check_dx(srcpulse):
     sp = np.fft.rfft(srcpulse, n) / n
     W = abs(sp)
     fmax2 = max(freqs[W > max(W) / 10.0])
-    logger.info("!!check dx again:") 
-    finddx(epmax, mumax, fmax2)
     logger.info("Src's max frequency: %fMHz" % (freqs[np.argmax(W)]/1e6))
+    # logger.info("!!check dx again (src_fmax(within 90%% of max amplitude)=%fMHz):"%(fmax2/1e6)) 
+    dx_max = finddx(epmax, mumax, fmax2)
     try:
         plt.figure()
         plt.plot(freqs, W)
@@ -299,6 +299,7 @@ def check_dx(srcpulse):
         plt.savefig(os.path.join(workdir,'spectral_src.png'))
     except Exception as e:
         logger.error(e)
+    return dx_max
 
 def distance(x, y, z, x0, y0, z0):
     return np.sqrt((x - x0) ** 2 + (y - y0) ** 2 + (z - z0) ** 2)
@@ -449,7 +450,7 @@ if __name__ == '__main__':
             dx_src = 0.2
             dy_src = 0.5
         elif o in ('-m','--model'):
-            if model == '0':
+            if a == '0':
                 logger.info("Don't generate model.")
             else:
                 model = a
@@ -489,9 +490,10 @@ if __name__ == '__main__':
 
     ### init workdir ###
     if is_zRTM:
-        workdir = os.path.join('tasks','%s_%dMHz_0offset_%.1fm_%.1fm'%(modelname,freq,dx_src,dy_src))
+        dirname = '%s_%dMHz_0offset_%.1fm_%.1fm'%(modelname,freq,dx_src,dy_src)
     else:
-        workdir = os.path.join('tasks','%s_%dMHz_%.1fm_%.1fm'%(modelname,freq,dx_src,dx_rec))
+        dirname = '%s_%dMHz_%.1fm_%.1fm'%(modelname,freq,dx_src,dx_rec)
+    workdir = os.path.join('tasks',dirname)
     if not os.path.exists(workdir):
         os.mkdir(workdir)
     logger.info('workdir="%s"'%(workdir))
@@ -508,6 +510,7 @@ if __name__ == '__main__':
     dy = float(dic_model['dy'])
     dz = float(dic_model['dz'])
     logger.info("dx=%f, dy=%f, dz=%f"%(dx, dy, dz))
+    assert np.max([dx,dy,dz]) < dx_max, 'dx,dy,dz too big!!!'
 
     nx = int(dic_model['nx'])
     ny = int(dic_model['ny'])
@@ -518,23 +521,24 @@ if __name__ == '__main__':
     logger.info('nx=%d, ny=%d, nz=%d(include nz_air =%d)'%(nx, ny, nz, nz_air))
 
     dt_max = finddt(epmin, mumin, dx, dy, dz)
-    dt = 0.08*1e-9
-    nt = 1250 #100ns
+    dt = 0.06*1e-9
+    nt = 1333 #80ns
     logger.info("dt: %fns"%(dt/1e-9)) 
+    assert dt < dt_max, 'dt too big!!! (%f>%f)'%(dt,dt_max)
     ### gird paraeter end ###
 
     ### source ###
-    # srcpulse = blackharrispulse(fmax, dt)
+    srcpulse = blackharrispulse(fmax, dt)
     # srcpulse = ricker(fmax,4*1/fmax,dt)
-    srcpulse = ricker(fmax,2*1/fmax,dt)
     nt_src = len(srcpulse)
     logger.info("nt=%d, nt_src=%d"%(nt, nt_src)) 
-    check_dx(srcpulse)
+    dx_max = check_dx(srcpulse)
+    assert np.max([dx,dy,dz]) < dx_max, 'dx,dy,dz too big!!!'
     ### source end ###
 
-    outstep_t_wavefield = 5
-    outstep_x_wavefield = 2
-    outstep_slice = 5
+    outstep_t_wavefield = dic_model['outstep_t_wavefield']
+    outstep_x_wavefield = dic_model['outstep_x_wavefield']
+    outstep_slice = dic_model['outstep_slice']
 
     ### directories ###
     indir = os.path.join(workdir,'Input')
@@ -561,11 +565,11 @@ if __name__ == '__main__':
     if is_zRTM:
         dnx_src = round(dx_src/dx)
         dny_src = round(dy_src/dy)
-        src_rec(dnx_src,dny_src, marginx=10, marginy=10)
+        [nsrc,nrec] = src_rec(dnx_src,dny_src, marginx=10, marginy=10)
     else:
         dnx_src = round(dx_src/dx)
         dnx_rec = round(dx_rec/dx)
-        src_rec(dnx_src,dnx_rec=dnx_rec, marginx=10, marginy=10)
+        [nsrc,nrec] = src_rec(dnx_src,dnx_rec=dnx_rec, marginx=10, marginy=10)
     ### generate src & rec end ###
 
     ### generate model ###
@@ -586,3 +590,8 @@ if __name__ == '__main__':
     # backup this file
     cp('model_em.py', workdir)
     cp(os.path.join('Model','make_model.m'), workdir) # backup model
+
+    subtxt = 'python subgeop.py -d %s -s %d'%(dirname,nsrc)
+    if is_zRTM:
+        subtxt += ' -z'
+    os.system(subtxt)
