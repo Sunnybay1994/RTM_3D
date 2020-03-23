@@ -55,8 +55,8 @@ def merge_gather(idir, isrc):
             savetxt(fp,isum)
         with open(os.path.join(idir, 'merge_gather_loc_'+str(isrc).zfill(4)+'.dat'),'w') as fp:
             savetxt(fp,iloc)
-        # for fname in ilist:
-        #     os.remove(fname.strip('\n'))
+        for fname in ilist:
+            os.remove(fname.strip('\n'))
     else:
         logger.info("merging gather: No files. Loading merge_gather.") 
         with open(os.path.join(idir, 'merge_gather_'+str(isrc).zfill(4)+'.dat'),'w') as fp:
