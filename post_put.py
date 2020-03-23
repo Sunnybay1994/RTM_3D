@@ -58,7 +58,7 @@ if __name__ == '__main__':
     elif len(args) == 2:
         isrc_begin = int(args[0])
         isrc_end = int(args[1])
-        isrcs = range(isrc_begin,isrc_end+1):
+        isrcs = range(isrc_begin,isrc_end+1)
     else:
         isrcs = [int(i) for i in args]
 
