@@ -29,7 +29,7 @@ def cp(f1,f2):
         # logger.debug('cp %s %s'%(f,f2))
         shutil.copy(f,f2)
 
-def src_rec(dnx_src,dny_src=False,dnx_rec=False,dny_rec=False,nzp_src=False,nzp_rec=False,nx_src=False,ny_src=False,nx_rec=False,ny_rec=False,nshift=0,marginx=0,marginy=0):
+def src_rec(dnx_src,dny_src=False,dnx_rec=False,dny_rec=False,nzp_src=False,nzp_rec=False,nx_src=False,ny_src=False,nx_rec=False,ny_rec=False,nshift=0,marginx=0,marginy=False,marginx_rec=False,marginy_rec=False):
     logger.info('adding source and receiver...')
     if not dny_src:
         dny_src = dnx_src
@@ -44,6 +44,12 @@ def src_rec(dnx_src,dny_src=False,dnx_rec=False,dny_rec=False,nzp_src=False,nzp_
             dny_rec = dnx_rec
     if not nzp_rec: # z position of rec
         nzp_rec = nzp_src
+    if not marginy:
+        marginy = marginx
+    if not marginx_rec:
+        marginx_rec = marginx
+    if not marginy_rec:
+        marginy_rec = marginx_rec
 
     global src, rec
     def ant_pos(dnx_ant,dny_ant,nz_pos,nx_ant,ny_ant,nshift,marginx,marginy):
@@ -53,14 +59,10 @@ def src_rec(dnx_src,dny_src=False,dnx_rec=False,dny_rec=False,nzp_src=False,nzp_
         nz_pos = int(nz_pos)
 
         if not nx_ant:
-            if marginx < npmlx:
-                marginx = npmlx
             nx_ant = (nx - 2*marginx) // dnx_ant
             if nx_ant % 2 == 0:
                 nx_ant += 1
         if not ny_ant:
-            if marginy < npmly:
-                marginy = npmly
             ny_ant = (ny - 2*marginy) // dny_ant
             if ny_ant % 2 == 0:
                 ny_ant += 1
@@ -76,7 +78,7 @@ def src_rec(dnx_src,dny_src=False,dnx_rec=False,dny_rec=False,nzp_src=False,nzp_
     nsrc = len(src)
     logger.info("nsrc: %d"%nsrc) 
 
-    rec = ant_pos(dnx_rec,dny_rec,nzp_rec,nx_rec,ny_rec,nshift,marginx,marginy)
+    rec = ant_pos(dnx_rec,dny_rec,nzp_rec,nx_rec,ny_rec,nshift,marginx_rec,marginy_rec)
     nrec = len(rec)
     logger.info("nrec: %d"%nrec) 
 
@@ -289,8 +291,8 @@ def check_dx(srcpulse):
     sp = np.fft.rfft(srcpulse, n) / n
     W = abs(sp)
     fmax2 = max(freqs[W > max(W) / 10.0])
-    logger.info("Src's max frequency: %fMHz" % (freqs[np.argmax(W)]/1e6))
-    # logger.info("!!check dx again (src_fmax(within 90%% of max amplitude)=%fMHz):"%(fmax2/1e6)) 
+    logger.info("Src's main frequency: %fMHz" % (freqs[np.argmax(W)]/1e6))
+    logger.info("!!check dx again (src_fmax(within 90%% of max amplitude)=%fMHz):"%(fmax2/1e6)) 
     dx_max = finddx(epmax, mumax, fmax2)
     try:
         plt.figure()
@@ -467,7 +469,7 @@ if __name__ == '__main__':
 
     ### load model ###
     try:
-        dic_model = sio.loadmat(os.path.join('Model','model.mat'))
+        dic_model = sio.loadmat(os.path.join('Model',model))
     except Exception as e:
         logger.error(e)
         raise e
@@ -521,8 +523,8 @@ if __name__ == '__main__':
     logger.info('nx=%d, ny=%d, nz=%d(include nz_air =%d)'%(nx, ny, nz, nz_air))
 
     dt_max = finddt(epmin, mumin, dx, dy, dz)
-    dt = 0.06*1e-9
-    nt = 1333 #80ns
+    dt = float(dic_model['dt'])
+    nt = round(float(dic_model['T'])/dt)
     logger.info("dt: %fns"%(dt/1e-9)) 
     assert dt < dt_max, 'dt too big!!! (%f>%f)'%(dt,dt_max)
     ### gird paraeter end ###
@@ -565,11 +567,11 @@ if __name__ == '__main__':
     if is_zRTM:
         dnx_src = round(dx_src/dx)
         dny_src = round(dy_src/dy)
-        [nsrc,nrec] = src_rec(dnx_src,dny_src, marginx=10, marginy=10)
+        [nsrc,nrec] = src_rec(dnx_src,dny_src, marginx=round(0.4/dx), marginy=round(0.4/dy))
     else:
         dnx_src = round(dx_src/dx)
         dnx_rec = round(dx_rec/dx)
-        [nsrc,nrec] = src_rec(dnx_src,dnx_rec=dnx_rec, marginx=10, marginy=10)
+        [nsrc,nrec] = src_rec(dnx_src,dnx_rec=dnx_rec, marginx=round(0.4/dx), marginx_rec=round(0.2/dy))
     ### generate src & rec end ###
 
     ### generate model ###
@@ -589,7 +591,8 @@ if __name__ == '__main__':
 
     # backup this file
     cp('model_em.py', workdir)
-    cp(os.path.join('Model','make_model.m'), workdir) # backup model
+    cp(os.path.join('Model',model), workdir) # backup model
+    cp(os.path.join('Model','make_model.m'), workdir) # backup make_model
 
     subtxt = 'python subgeop.py -d %s -s %d'%(dirname,nsrc)
     if is_zRTM:
