@@ -99,9 +99,9 @@ if __name__ == '__main__':
                 lasting_time = time_now - jobs_processing[k][1]
                 if lasting_time > timeout:
                     task_str = '%s-src%d'%(k[0],k[1])
-                    del(jobs_processing[k])
-                    task.put(k)
-                    logger.warning('task time out: %s (%.2fs)'%(task_str,lasting_time))
+                    # del(jobs_processing[k]) # error here
+                    # task.put(k)
+                    logger.warning('task lasts too long: %s (%.2fs)'%(task_str,lasting_time))
 
 
 #######################################
