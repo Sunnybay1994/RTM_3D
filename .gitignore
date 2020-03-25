@@ -9,7 +9,6 @@ test.py
 tasks/*/
 *.png
 *.psd
-FDTD_MPI_geop
 
 
 ## C++
