@@ -145,7 +145,7 @@ int main(int argc, char *argv[])
 
 
         record_gather();
-		if ( it % output_step_of_slice == 0 && it != 0) 		// Check point
+		if ( it % output_step_of_slice == 0) 		// Check point
 		{
 
             //MPI_Gatherv(Ey,scounts[myRank],MPI_DOUBLE,E_total,scounts,displs,MPI_DOUBLE,0,MPI_COMM_WORLD);
@@ -163,7 +163,7 @@ int main(int argc, char *argv[])
 
 		}
 
-		if (it % output_step_t_of_wavefield == 0 && it != 0)
+		if (it % output_step_t_of_wavefield == 0)
         {
             //MPI_Gatherv(Hx,scounts[myRank],MPI_DOUBLE,E_total,scounts,displs,MPI_DOUBLE,0,MPI_COMM_WORLD);
             if(rec[0].component == Ex || rec[0].component == Hx) MPI_X();

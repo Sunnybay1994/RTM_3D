@@ -532,10 +532,15 @@ if __name__ == '__main__':
     shutil.copy("FDTD_MPI_geop",rtm_dir)
     ### directories end ###
 
+
     ### gird  parameter ###
     npmlx = dic_model['npmlx']
     npmly = dic_model['npmly']
     npmlz = dic_model['npmlz']
+
+    outstep_t_wavefield = dic_model['outstep_t_wavefield']
+    outstep_x_wavefield = dic_model['outstep_x_wavefield']
+    outstep_slice = dic_model['outstep_slice']
 
     dx_max = finddx(epmax, mumax, fmax)
     dx = float(dic_model['dx'])
@@ -555,6 +560,9 @@ if __name__ == '__main__':
     dt_max = finddt(epmin, mumin, dx, dy, dz)
     dt = float(dic_model['dt'])
     nt = round(float(dic_model['T'])/dt)
+    # nt better be k*outstep_t_wavefield+1(k is integer), so that forward wavefield and 
+    # backward wavefield will coincide perfectly when doing cross-correlation.
+    nt += outstep_t_wavefield + 1 - nt%outstep_t_wavefield
     logger.info("dt: %fns"%(dt/1e-9)) 
     assert dt < dt_max, 'dt too big!!! (%f>%f)'%(dt,dt_max)
     ### gird paraeter end ###
@@ -567,10 +575,6 @@ if __name__ == '__main__':
     dx_max = check_dx(srcpulse)
     assert np.max([dx,dy,dz]) < dx_max, 'dx,dy,dz too big!!!'
     ### source end ###
-
-    outstep_t_wavefield = dic_model['outstep_t_wavefield']
-    outstep_x_wavefield = dic_model['outstep_x_wavefield']
-    outstep_slice = dic_model['outstep_slice']
 
     ### generate src & rec ###
     if is_zRTM:
