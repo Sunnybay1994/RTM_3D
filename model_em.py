@@ -401,6 +401,12 @@ def islice(sxl,syl,szl):
 def cleanfiles(paths):
 
     def cleanChoice(path):
+        if not paths:
+            choice = input('Clear %s? Y/(N)'%path).lower()
+            if choice in ['yes','y']:
+                return 1
+            else:
+                return 0
         choice = input('Clear %s? A/Y/(N)'%path).lower()
         if choice in ['all', 'a']:
             confirm = input("Clear all files in '%s'? Y/(N)" % "' & '".join(paths+[path])).lower()
@@ -496,11 +502,35 @@ if __name__ == '__main__':
     else:
         dirname = '%s_%dMHz_%.1fm_%.1fm'%(modelname,freq,dx_src,dx_rec)
     workdir = os.path.join('tasks',dirname)
-    if not os.path.exists(workdir):
-        os.mkdir(workdir)
     logger.info('workdir="%s"'%(workdir))
     ### init workdir end ###
 
+    ### directories ###
+    indir = os.path.join(workdir,'Input')
+    outdir = os.path.join(workdir,'Output')
+    std_dir = os.path.join(workdir,'STD')
+    std_indir = os.path.join(std_dir,'Input')
+    std_outdir = os.path.join(std_dir,'Output')
+    rtm_dir = os.path.join(workdir,'RTM')
+    rtm_indir = os.path.join(rtm_dir,'Input')
+    rtm_outdir = os.path.join(rtm_dir,'Output')
+    dirlist1 = [workdir,std_dir,rtm_dir]
+    dirlist2 = [indir,std_indir,rtm_indir]
+    dirlist3 = [outdir,std_outdir,rtm_outdir]
+
+    cleanlist = []
+    for dirlist in [dirlist1,dirlist2,dirlist3]:
+        for idir in dirlist:
+            if not os.path.exists(idir):
+                os.mkdir(idir)
+            elif not idir in dirlist1:
+                cleanlist += [idir]
+    cleanfiles(cleanlist)
+
+    shutil.copy("FDTD_MPI_geop",workdir)
+    shutil.copy("FDTD_MPI_geop",std_dir)
+    shutil.copy("FDTD_MPI_geop",rtm_dir)
+    ### directories end ###
 
     ### gird  parameter ###
     npmlx = dic_model['npmlx']
@@ -542,27 +572,6 @@ if __name__ == '__main__':
     outstep_x_wavefield = dic_model['outstep_x_wavefield']
     outstep_slice = dic_model['outstep_slice']
 
-    ### directories ###
-    indir = os.path.join(workdir,'Input')
-    outdir = os.path.join(workdir,'Output')
-    std_dir = os.path.join(workdir,'STD')
-    std_indir = os.path.join(std_dir,'Input')
-    std_outdir = os.path.join(std_dir,'Output')
-    rtm_dir = os.path.join(workdir,'RTM')
-    rtm_indir = os.path.join(rtm_dir,'Input')
-    rtm_outdir = os.path.join(rtm_dir,'Output')
-    dirlist = [indir,outdir,std_dir,std_indir,std_outdir,rtm_dir,rtm_indir,rtm_outdir]
-
-    for idir in dirlist:
-        if not os.path.exists(idir):
-            os.mkdir(idir)
-
-    cleanfiles([indir,std_indir,rtm_indir])
-    shutil.copy("FDTD_MPI_geop",workdir)
-    shutil.copy("FDTD_MPI_geop",std_dir)
-    shutil.copy("FDTD_MPI_geop",rtm_dir)
-    ### directories end ###
-
     ### generate src & rec ###
     if is_zRTM:
         dnx_src = round(dx_src/dx)
@@ -585,9 +594,6 @@ if __name__ == '__main__':
 
     par()
     islice(dic_model['slicex'][0].tolist(),dic_model['slicey'][0].tolist(),dic_model['slicez'][0].tolist())
-
-    # clean file
-    cleanfiles([outdir,std_outdir,rtm_outdir])
 
     # backup this file
     cp('model_em.py', workdir)
