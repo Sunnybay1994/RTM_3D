@@ -130,7 +130,7 @@ def pre_RTM(list_src):
             dats.append(gather0)
             if i == list_src[-1]:
                 logger.info('Writing zero-offset source data...')
-                with open(os.path.join(rtmdir,'Input','src.in_0000'),'w') as fsrc:
+                with open(os.path.join(rtm0dir,'Input','src.in_0000'),'w') as fsrc:
                     fsrc.write("%d %d\n" % (nrec, nt))
                     fsrc.write(locs)
                     savetxt(fsrc,dats)
@@ -173,7 +173,9 @@ if __name__ == "__main__":
             assert False, "unhandled option"
 
 
+    rtm0dir_name = rtmdir_name+'0'
     rtmdir = os.path.join(workdir,rtmdir_name)
+    rtm0dir = os.path.join(workdir,rtm0dir_name)
     read_par
     if mode == 0:
         pre_RTM(range(nsrc))

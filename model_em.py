@@ -105,12 +105,15 @@ def src_rec(dnx_src,dny_src=False,dnx_rec=False,dny_rec=False,nzp_src=False,nzp_
 
     cp(os.path.join(indir,'src.in*'),std_indir)
     cp(os.path.join(indir,'rec.in'),os.path.join(std_indir,'rec.in'))
-    # if is_zRTM:
-    with open(os.path.join(rtm_indir,'rec.in'),'w+') as fo:
-        fo.write('1\n')
-        fo.write('%d %d %d Ey\n'%(nx0,ny0,nz_air-2))
-    # else:
-        # os.system("cp ./Input/rec.in ./RTM/Input/rec.in")
+    if is_zRTM==1 or is_zRTM==2:
+        with open(os.path.join(rtm0_indir,'rec.in'),'w+') as fo:
+            fo.write('1\n')
+            fo.write('%d %d %d Ey\n'%(nx0,ny0,nz_air-2))
+    if is_zRTM==0 or is_zRTM==2:
+        with open(os.path.join(rtm_indir,'rec.in'),'w+') as fo:
+            fo.write('1\n')
+            fo.write('%d %d %d Ey\n'%(nx0,ny0,nz_air-2))
+            
     return nsrc,nrec
 
 
@@ -218,9 +221,14 @@ def eps_sig_mu(meps=1,meps_bg=False,msig=1e-5,msig_bg=False,mmiu=1,mmiu_bg=False
     if isinstance(mmiu_bg,bool):
         cp(os.path.join(indir, 'mu.in*'), std_indir)
 
-    cp(os.path.join(std_indir, 'eps.in*'), rtm_indir)
-    cp(os.path.join(std_indir, 'sig.in*'), rtm_indir)
-    cp(os.path.join(std_indir, 'mu.in*'), rtm_indir)
+    if is_zRTM==1 or is_zRTM==2:
+        cp(os.path.join(std_indir, 'eps.in*'), rtm0_indir)
+        cp(os.path.join(std_indir, 'sig.in*'), rtm0_indir)
+        cp(os.path.join(std_indir, 'mu.in*'), rtm0_indir)
+    if is_zRTM==0 or is_zRTM==2:
+        cp(os.path.join(std_indir, 'eps.in*'), rtm_indir)
+        cp(os.path.join(std_indir, 'sig.in*'), rtm_indir)
+        cp(os.path.join(std_indir, 'mu.in*'), rtm_indir)
 
     return 0
 
@@ -339,11 +347,11 @@ def par():
         fpar.write(''.join(content))
 
     cp(os.path.join(indir, 'par.in'), std_indir)
-    if is_zRTM:
+    if is_zRTM==1 or is_zRTM==2:
         content[1] = "%e %e %e %e\n" % (dx, dy, dz, dt/2)
-        with open(os.path.join(rtm_indir, 'par.in'), 'w') as fpar:
+        with open(os.path.join(rtm0_indir, 'par.in'), 'w') as fpar:
             fpar.write(''.join(content))
-    else:
+    if is_zRTM==0 or is_zRTM==2:
         cp(os.path.join(indir, 'par.in'), rtm_indir)
 
 
@@ -395,7 +403,10 @@ def islice(sxl,syl,szl):
             fslice.write("%d %s\n" % (slicez[i][0], slicez[i][1]))
     
     cp(fn_slice, std_indir)
-    cp(fn_slice, rtm_indir)
+    if is_zRTM==1 or is_zRTM==2:
+        cp(fn_slice, rtm0_indir)
+    if is_zRTM==0 or is_zRTM==2:
+        cp(fn_slice, rtm_indir)
 
 
 def cleanfiles(paths):
@@ -438,26 +449,27 @@ def cleanfiles(paths):
 ##############################################################################
 if __name__ == '__main__':
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "zm:f:", ["zero-offset","model=","freq=","dx_src=","dx_rec=","dy_rec=","no_gen_model"])
+        opts, args = getopt.getopt(sys.argv[1:], "z:m:f:", ["zero-offset=","model=","freq=","dx_src=","dx_rec=","dy_rec=","no_gen_model"])
     except getopt.GetoptError as err:
         # print help information and exit:
         logger.error(err)  # will print something like "option -a not recognized"
         # usage()
         sys.exit(2)
 
-    is_zRTM = False
+    is_zRTM = 0
     model = "model.mat"
     gen_model = True
     workdir = os.path.join('tasks','default')
     freq = 300  #MHz
-    dx_src = 0.6
+    dx_src = 0.4
     dx_rec = 0.2
     for o, a in opts:
         if o in ('-z','--zero-offset'):
-            logger.info('Zero-offset Mode.')
-            is_zRTM = True
-            dx_src = 0.2
-            dy_src = 0.5
+            is_zRTM = int(a)
+            logger.info('Zero-offset Mode: %d'%is_zRTM)
+            if is_zRTM == 1:
+                dx_src = 0.2
+                dy_src = 0.5
         elif o in ('-m','--model'):
             model = a
         elif o in ('-f','--freq'):
@@ -497,8 +509,8 @@ if __name__ == '__main__':
     ### parameter end ###
 
     ### init workdir ###
-    if is_zRTM:
-        dirname = '%s_%dMHz_0offset_%.1fm_%.1fm'%(modelname,freq,dx_src,dy_src)
+    if is_zRTM==1:
+        dirname = '%s_%dMHz_0o_%.1fm_%.1fm'%(modelname,freq,dx_src,dy_src)
     else:
         dirname = '%s_%dMHz_%.1fm_%.1fm'%(modelname,freq,dx_src,dx_rec)
     workdir = os.path.join('tasks',dirname)
@@ -514,9 +526,20 @@ if __name__ == '__main__':
     rtm_dir = os.path.join(workdir,'RTM')
     rtm_indir = os.path.join(rtm_dir,'Input')
     rtm_outdir = os.path.join(rtm_dir,'Output')
-    dirlist1 = [workdir,std_dir,rtm_dir]
-    dirlist2 = [indir,std_indir,rtm_indir]
-    dirlist3 = [outdir,std_outdir,rtm_outdir]
+    rtm0_dir = os.path.join(workdir,'RTM0')
+    rtm0_indir = os.path.join(rtm0_dir,'Input')
+    rtm0_outdir = os.path.join(rtm0_dir,'Output')
+    dirlist1 = [workdir,std_dir]
+    dirlist2 = [indir,std_indir]
+    dirlist3 = [outdir,std_outdir]
+    if is_zRTM == 0 or is_zRTM == 2:
+        dirlist1 += [rtm_dir]
+        dirlist2 += [rtm_indir]
+        dirlist3 += [rtm_outdir]
+    if is_zRTM == 1 or is_zRTM == 2:
+        dirlist1 += [rtm0_dir]
+        dirlist2 += [rtm0_indir]
+        dirlist3 += [rtm0_outdir]
 
     cleanlist = []
     for dirlist in [dirlist1,dirlist2,dirlist3]:
@@ -529,7 +552,10 @@ if __name__ == '__main__':
 
     shutil.copy("FDTD_MPI_geop",workdir)
     shutil.copy("FDTD_MPI_geop",std_dir)
-    shutil.copy("FDTD_MPI_geop",rtm_dir)
+    if is_zRTM == 0 or is_zRTM == 2:
+        shutil.copy("FDTD_MPI_geop",rtm_dir)
+    if is_zRTM == 1 or is_zRTM == 2:
+        shutil.copy("FDTD_MPI_geop",rtm0_dir)
     ### directories end ###
 
 
@@ -577,7 +603,7 @@ if __name__ == '__main__':
     ### source end ###
 
     ### generate src & rec ###
-    if is_zRTM:
+    if is_zRTM == 1:
         dnx_src = round(dx_src/dx)
         dny_src = round(dy_src/dy)
         [nsrc,nrec] = src_rec(dnx_src,dny_src, marginx=round(0.4/dx), marginy=round(0.4/dy))
@@ -604,7 +630,5 @@ if __name__ == '__main__':
     cp(os.path.join('Model',model), workdir) # backup model
     cp(os.path.join('Model','make_model.m'), workdir) # backup make_model
 
-    subtxt = 'python subgeop.py -d %s -s %d'%(dirname,nsrc)
-    if is_zRTM:
-        subtxt += ' -z'
+    subtxt = 'python subgeop.py -d %s -s %d -z %d'%(dirname,nsrc,is_zRTM)
     os.system(subtxt)
