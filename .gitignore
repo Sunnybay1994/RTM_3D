@@ -9,7 +9,7 @@ test.py
 tasks/*/
 *.png
 *.psd
-
+FDTD_MPI*
 
 ## C++
 # Prerequisites

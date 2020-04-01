@@ -550,12 +550,12 @@ if __name__ == '__main__':
                 cleanlist += [idir]
     cleanfiles(cleanlist)
 
-    shutil.copy("FDTD_MPI_geop",workdir)
-    shutil.copy("FDTD_MPI_geop",std_dir)
+    shutil.copy("FDTD_MPI",workdir)
+    shutil.copy("FDTD_MPI",std_dir)
     if is_zRTM == 0 or is_zRTM == 2:
-        shutil.copy("FDTD_MPI_geop",rtm_dir)
+        shutil.copy("FDTD_MPI",rtm_dir)
     if is_zRTM == 1 or is_zRTM == 2:
-        shutil.copy("FDTD_MPI_geop",rtm0_dir)
+        shutil.copy("FDTD_MPI",rtm0_dir)
     ### directories end ###
 
 

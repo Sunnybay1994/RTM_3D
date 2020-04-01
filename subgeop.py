@@ -59,7 +59,7 @@ echo "Computing is started at $(date)."
 
 python $PYPATH/pre_RTM_sub.py -m 0 
 echo "Current Directory = $WORKPATHRTM"
-~/software/openmpi-4.0.3/bin/mpiexec -np $NSLOTS -wdir $WORKPATHRTM $WORKPATHRTM/FDTD_MPI_geop 0
+~/software/openmpi-4.0.3/bin/mpiexec -np $NSLOTS -wdir $WORKPATHRTM $WORKPATHRTM/FDTD_MPI 0
 
 echo "Computing is stopped at $(date)."
 
@@ -111,21 +111,21 @@ echo "Computing is started at $(date)."
 '''
         if is_zRTM==1:
             text = '''
-~/software/openmpi-4.0.3/bin/mpiexec -np $NSLOTS -wdir $WORKPATH $WORKPATH/FDTD_MPI_geop '''+ str(isrc) +'''
+~/software/openmpi-4.0.3/bin/mpiexec -np $NSLOTS -wdir $WORKPATH $WORKPATH/FDTD_MPI '''+ str(isrc) +'''
 echo "Current Directory = $WORKPATHSTD"
-~/software/openmpi-4.0.3/bin/mpiexec -np $NSLOTS -wdir $WORKPATHSTD $WORKPATHSTD/FDTD_MPI_geop '''+ str(isrc) +'''
+~/software/openmpi-4.0.3/bin/mpiexec -np $NSLOTS -wdir $WORKPATHSTD $WORKPATHSTD/FDTD_MPI '''+ str(isrc) +'''
 echo "Current Directory = $WORKPATH"
 #~/software/openmpi-4.0.3/bin/mpiexec -np 1 -wdir $WORKPATH $PYPATH/clean.py -f '''+ str(isrc) +'''
 '''
         else:
             text = '''
-~/software/openmpi-4.0.3/bin/mpiexec -np $NSLOTS -wdir $WORKPATH $WORKPATH/FDTD_MPI_geop '''+ str(isrc) +'''
+~/software/openmpi-4.0.3/bin/mpiexec -np $NSLOTS -wdir $WORKPATH $WORKPATH/FDTD_MPI '''+ str(isrc) +'''
 echo "Current Directory = $WORKPATHSTD"
-~/software/openmpi-4.0.3/bin/mpiexec -np $NSLOTS -wdir $WORKPATHSTD $WORKPATHSTD/FDTD_MPI_geop '''+ str(isrc) +'''
+~/software/openmpi-4.0.3/bin/mpiexec -np $NSLOTS -wdir $WORKPATHSTD $WORKPATHSTD/FDTD_MPI '''+ str(isrc) +'''
 echo "Current Directory = $WORKPATH"
 ~/software/openmpi-4.0.3/bin/mpiexec -np 1 -wdir $WORKPATH $PYPATH/pre_RTM_sub.py '''+ str(isrc) +'''
 echo "Current Directory = $WORKPATHRTM"
-~/software/openmpi-4.0.3/bin/mpiexec -np $NSLOTS -wdir $WORKPATHRTM $WORKPATHRTM/FDTD_MPI_geop '''+ str(isrc) +'''
+~/software/openmpi-4.0.3/bin/mpiexec -np $NSLOTS -wdir $WORKPATHRTM $WORKPATHRTM/FDTD_MPI '''+ str(isrc) +'''
 #echo "Current Directory = $WORKPATH"
 #~/software/openmpi-4.0.3/bin/mpiexec -np 1 -wdir $WORKPATH $PYPATH/corr_RTM_wavefield_sub.py '''+ str(isrc) +'''
 #~/software/openmpi-4.0.3/bin/mpiexec -np 1 -wdir $WORKPATH $PYPATH/corr_RTM_slice_sub.py '''+ str(isrc) +'''
