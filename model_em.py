@@ -614,8 +614,8 @@ if __name__ == '__main__':
     ### generate src & rec end ###
 
     ### generate model ###
+    NUM_OF_PROCESS = 4
     if gen_model:
-        NUM_OF_PROCESS = 8
         order = 2 # num of interchange layers of each process
         logger.info("NUM_OF_PROCESS: %d"%NUM_OF_PROCESS) 
         rangex, nxSize = X_partition(nx, NUM_OF_PROCESS)
@@ -630,5 +630,5 @@ if __name__ == '__main__':
     cp(os.path.join('Model',model), workdir) # backup model
     cp(os.path.join('Model','make_model.m'), workdir) # backup make_model
 
-    subtxt = 'python subgeop.py -d %s -s %d -z %d'%(dirname,nsrc,is_zRTM)
+    subtxt = 'python subgeop.py -d %s -s %d -p %d -z %d'%(dirname,nsrc,NUM_OF_PROCESS,is_zRTM)
     os.system(subtxt)

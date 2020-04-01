@@ -41,7 +41,7 @@ var1="sub_"; var3=".sh"; for((i=0;i<''' + str(job_cap) + ''';i++)); do var2=`ech
 ######### set Parallel Environment and CORE numbers
 module unload mpi/mpich-x86_64
 module load mpi/openmpi-x86_64
-#$ -pe openmpi 8
+#$ -pe openmpi '''+ str(proc_num) +'''
 
 echo "Got $NSLOTS slots."
 echo "PATH = $PATH"
@@ -210,7 +210,7 @@ python post_put.py -t ''' + dirname + ' ' + str(isrc) +'''
 
 if __name__ == '__main__':
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "z:s:d:c:p", ["zero-offset=","src_num=","workdir=","job_capacity=","proc_num="])
+        opts, args = getopt.getopt(sys.argv[1:], "z:s:d:c:p:", ["zero-offset=","src_num=","workdir=","job_capacity=","proc_num="])
     except getopt.GetoptError as err:
         # print help information and exit:
         print(err)  # will print something like "option -a not recognized"
