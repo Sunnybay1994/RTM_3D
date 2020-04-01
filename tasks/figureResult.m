@@ -1,17 +1,25 @@
 %%
-result_dir = 'Result';
-out_dir = '.';
-f_wavefield_corr = dir(fullfile(result_dir,'result_wavefield_corr.dat*'));
+workdir = 'test1_300MHz_0.6m_0.2m';
+resultdir = fullfile(workdir,'Result');
+outdir = fullfile(workdir,'.');
+f_wavefield_corr = dir(fullfile(resultdir,'result_wavefield_corr.dat*'));
 
-nx_ori = 280;
-ny_ori = 200;
-nz_ori = 130;
-nz_air_ori = 10;
-dx_ori = 0.05;
-dy_ori = 0.05;
-dz_ori = 0.05;
-x_outstep = 2;
-t_outstep = 5;
+modelfiles = dir(fullfile(workdir,'test*.mat'));
+modelfn = fullfile(modelfiles.folder,modelfiles.name);
+m = load(modelfn);
+
+dx_ori = m.dx;
+dy_ori = m.dy;
+dz_ori = m.dz;
+
+nx_ori = m.nx;
+ny_ori =m.ny;
+nz_air_ori = m.nz_air;
+nz_ori = m.nz;
+
+slice_outstop = m.outstep_slice;
+x_outstep = m.outstep_x_wavefield;
+t_outstep = m.outstep_t_wavefield;
 
 nx = nx_ori / x_outstep;
 ny = ny_ori / x_outstep;
@@ -21,114 +29,77 @@ dx = dx_ori * x_outstep;
 dy = dy_ori * x_outstep;
 dz = dz_ori * x_outstep;
 %%
-disp(['Loading 1st file...'])
-wavefield_corr_raw = load(fullfile(result_dir,f_wavefield_corr(1).name));
-for i = 2:length(f_wavefield_corr)
-    disp(['Loading ' num2str(i) 'th file...'])
-    wavefield_corr_raw = wavefield_corr_raw + load(fullfile(result_dir,f_wavefield_corr(i).name));
+result_exist = false;
+if ~result_exist
+    disp(['Loading 1st file...'])
+    wavefield_corr_raw = load(fullfile(resultdir,f_wavefield_corr(1).name));
+    for i = 2:length(f_wavefield_corr)
+        disp(['Loading ' num2str(i) 'th file...'])
+        wavefield_corr_raw = wavefield_corr_raw + load(fullfile(resultdir,f_wavefield_corr(i).name));
+    end
+    wavefield_corr = reshape(wavefield_corr_raw,nz,ny,nx);%z,y,x
+    save(fullfile(resultdir,'result_wavefield_corr'),'wavefield_corr','-v7.3')
+else
+    load(fullfile(resultdir,'result_wavefield_corr'))
 end
 
-
-wavefield_corr = reshape(wavefield_corr_raw,nz,ny,nx);%z,y,x
-save(fullfile(result_dir,'result_wavefield_corr'),'wavefield_corr','-v7.3')
 %%
-result_dir = 'Result';
-load(fullfile(result_dir,'result_wavefield_corr'))
-x = 0:dx:(nx*dx);
-y = 0:dy:(ny*dy);
-z = ((0:nz)-nz_air)*dz;
+x = (1:nx)*dx;
+y = (1:ny)*dy;
+z = ((1:nz)-nz_air)*dz;
 %%
 for i = 1:nz
+    zi = i*dz;
     zslice = squeeze(wavefield_corr(i,:,:));
-    imagesc(x,y,zslice)
+    imagesc(x,y,zslice);colorbar
     title(['zslice at z=' num2str((i-nz_air)*dz) 'm'])
+
+    % outline model, should add manully
     hold on
-    
-    zi = (i-nz_air)*dz;
-    % outline rectangle
-    xm = 3;
-    ym = y(end)/2;
-    zm = 2.5;
-    lx = 3;
-    ly = 6;
-    lz = 1.2;
-    if zi>(zm-lz/2) && zi<(zm+lz/2)
-        xx = xm-lx/2:0.1:xm+lx/2;
-        plot(xx,(ym-ly/2)*ones(size(xx)),'r--',xx,(ym+ly/2)*ones(size(xx)),'r--')
-        yy = ym-ly/2:0.1:ym+ly/2;
-        plot((xm-lx/2)*ones(size(yy)),yy,'r--',(xm+lx/2)*ones(size(yy)),yy,'r--')
+    X = x(end);
+    Y = y(end);
+    Z = z(end);
+    r0 = 0.5;
+    xm = X/2;
+    ym = Y/2;
+    zm = 1.5;
+    if abs(zi-zm)<=r0
+        r = sqrt(r0^2-(zi-zm)^2);
+        alpha = 0:0.1:2*pi;
+        xx = xm + r * sin(alpha);
+        yy = ym + r * cos(alpha);
+        plot(xx,yy,'r--')
     end
-    % outline sphere 
-    r1_0 = 1;
-    r2_0 = 0.4;
-    xm = 7;
-    ym = 3;
-    zm = 2.5;
-    theta = 0:0.1:2*pi;
-    if zi > zm - r1_0 && zi < zm + r1_0
-        r1 = sqrt(r1_0^2-(zi-zm)^2);
-        xx1 = xm + r1 * sin(theta);
-        yy1 = ym + r1 * cos(theta);    
-        plot(xx1,yy1,'r--');
-        if zi > zm - r2_0 && zi < zm + r2_0
-            r2 = sqrt(r2_0^2-(zi-zm)^2);
-            xx2 = xm + r2 * sin(theta);
-            yy2 = ym + r2 * cos(theta);
-            plot(xx2,yy2,'r--');
-        end
-    end
-    % outline cylinder
-    r1 = 1;
-    r2 = 0.4;
-    h = 2;
-    xm = 7;
-    ym = 7;
-    zm = 2.5;
-    theta = 0:0.1:2*pi;
-    if zi>(zm-h/2) && zi<(zm+h/2)
-        xx1 = xm + r1 * sin(theta);
-        yy1 = ym + r1 * cos(theta); 
-        xx2 = xm + r2 * sin(theta);
-        yy2 = ym + r2 * cos(theta);
-        plot(xx1,yy1,'r--',xx2,yy2,'r--');
-    end
-    % outline tetrahedron
-    z_top = 1.5;
-    h = sqrt(6)*2/3;
-    xm = 11;
-    ym = 3;
-    k_yz = sqrt(3)/(sqrt(6)*2/3);
-    k_xy = 2/sqrt(3);
-    if zi > z_top && zi < (z_top + h)
-        y_max = (zi-z_top)*k_yz;
-        yy = (0:0.1:y_max) + ym - 2/3*y_max;
-        yy_end = y_max + ym - 2/3*y_max;
-        x_max = k_xy * (yy-(ym - 2/3*y_max));
-        xx1 = xm - 0.5 * x_max;
-        xx2 = xm + 0.5 * x_max;
-        xx3 = [xx1 xx2];
-        plot(xx1,yy,'r--',xx2,yy,'r--',xx3,yy_end*ones(size(xx3)),'r--')
-    end
-    ym = 7;
-    if zi > z_top && zi < (z_top + h)
-        y_max = (z_top + h - zi) * k_yz;
-        yy = (0:0.1:y_max) + ym - 2/3*y_max;
-        yy_end = y_max + ym - 2/3*y_max;
-        x_max = k_xy * (yy-(ym - 2/3*y_max));
-        xx1 = xm - 0.5 * x_max;
-        xx2 = xm + 0.5 * x_max;
-        xx3 = [xx1 xx2];
-        plot(xx1,yy,'r--',xx2,yy,'r--',xx3,yy_end*ones(size(xx3)),'r--')
-    end
-%     saveas(gcf,['zslice at z=' num2str((i-nz_air)*dz) 'm.png'])
     hold off
+    saveas(gcf,fullfile(outdir,['zslice at z=' num2str((i-nz_air)*dz) 'm.png']))
     pause(0.1)
 end
 %%
 for i = 1:nx
+    xi = i*dx;
     xslice = squeeze(wavefield_corr(:,:,i));
-    imagesc(y,z,xslice)
+    imagesc(y,z,xslice);colorbar
     title(['xslice at x=' num2str(i*dx) 'm'])
+    pause(0.1)
+    
+    % outline model, should add manully
+    hold on
+    X = x(end);
+    Y = y(end);
+    Z = z(end);
+    r0 = 0.5;
+    xm = X/2;
+    ym = Y/2;
+    zm = 1.5;
+    if abs(xi-xm)<=r0
+        r = sqrt(r0^2-(xi-xm)^2);
+        alpha = 0:0.1:2*pi;
+        zz = zm + r * sin(alpha);
+        yy = ym + r * cos(alpha);
+        plot(yy,zz,'r--')
+    end
+    hold off
+    saveas(gcf,fullfile(outdir,['xslice at x=' num2str(i*dx) 'm.png']))
     pause(0.1)
 end
 

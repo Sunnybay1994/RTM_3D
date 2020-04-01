@@ -1,6 +1,6 @@
 %% modelname
-modelname = 'test3';
-fn = 'test3_bigger_T';
+modelname = 'layers_with_fault';
+fn = 'model';
 fn_save = [fn '.mat'];
 fig_save = [fn '.png'];
 
@@ -9,35 +9,36 @@ epr_max = 15;
 epr_min = 1;
 miur_max = 1;
 miur_min = 1;
-fmax = 400*1e6;
+fmax = 300*1e6;
 dxmax = finddx(epr_max, miur_max, fmax);
 disp(['dxmax=' num2str(dxmax) 'm'])
 
-X = 4;
-Y = 4;
+X = 5;
+Y = 5;
 Z = 3;
-T = 120 *1e-9;%s
+T = 60 * 1e-9;%s
 
-dx = 0.05; %m
+dx = 0.02; %m
 dy = dx;
 dz = dx;
 
 nx = round(X/dx);
 ny = round(Y/dy);
-nz_air = 6;
+nz_air = 10;
 nz = round(Z/dz) + nz_air;
 
 npmlx = 8;
 npmly = npmlx;
-npmlz = 5;
+npmlz = 8;
 
 outstep_t_wavefield = 5;
-outstep_x_wavefield = 1;
+outstep_x_wavefield = 2;
 outstep_slice = 5;
 
 dtmax = finddt(epr_min, miur_min, dx, dy, dz);
 disp(['dt_max=' num2str(dtmax/1e-9) 'ns']);
-dt = 0.06 *1e-9;
+dt = 0.03 *1e-9;
+nt = T/dt;
 
 %% background model
 ep_bg = ones(nx,ny,nz) * 9;
@@ -52,21 +53,41 @@ slicez = [round(1.2/dz) + nz_air];
 
 %%% the parameter names above should be changed togather with those in 'model_em.py' %%%
 
-% sphere
-r = 0.5;
-xm = X/2;
-ym = Y/2;
-zm = 1.5;
-for ix = floor((xm-r)/dx):ceil((xm+r)/dx)
-    for iy = floor((ym-r)/dy):ceil((ym+r)/dy)
-        for iz = floor((zm-r)/dz):ceil((zm+r)/dz)
-            if norm([ix*dx,iy*dx,iz*dx] - [xm,ym,zm]) < r
-                ep(ix,iy,iz + nz_air) = 6;
+%% layers
+x = (1:nx)*dx;
+y = (1:ny)*dy;
+z = ((1:nz)-nz_air)*dz;
+surf_ep = [5,9,13];
+surf_pos = [0.8,1.3,2.3]; %m
+for i = 1:length(surf_pos)
+    layer_z_begin = surf_pos(i);
+    if i ~= length(surf_pos)
+        layer_z_end = surf_pos(i+1);
+    else
+        layer_z_end = z(end);
+    end
+    ep(:,:,z >= layer_z_begin & z<=layer_z_end) = surf_ep(i);
+end
+%% faults model
+dot1 = [2 0 0.8];
+dot2 = [2.5 0 2.3];
+dot3 = [3 5 2.3];
+% -6*(x-2)+3*(y-2)+2*z=0
+dh = 0.3; %m
+idh = round(dh / dz);
+for ix = 1:nx
+    xi = (ix-1)*dx;
+    for iy = 1:ny
+        yi = (iy-1)*dy;
+        for iz = nz:-1:(nz_air+1+idh)
+            zi = (iz-nz_air)*dz;
+            doti = [xi,yi,zi];
+            if dot(cross((dot3-dot1),(dot2-dot1)),(doti-dot1)) > 0
+                ep(ix,iy,iz) = ep(ix,iy,iz-idh);
             end
         end
     end
 end
-
 
 
 %%
@@ -133,7 +154,7 @@ lighting gouraud
 
 % place src and rec
 hold on
-dx_src = 0.6;
+dx_src = 0.4;
 dx_rec = 0.2;
 dnx_src = dx_src / dx;
 dnx_rec = dx_rec / dx;
