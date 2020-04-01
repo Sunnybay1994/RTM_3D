@@ -5,7 +5,7 @@ const double pi = 3.14159265358979, eps0=8.8541878176*1.0E-12, mu0=1.2566370614*
 
 char tag[10];
 int ntag;
-int NUM_OF_PROCESS = 32, NUM_OF_THREADS = 64; //x3850: 2(Threads)*8(cores)*4(processors)
+int NUM_OF_PROCESS = 8, NUM_OF_THREADS = 16; //x3850: 2(Threads)*8(cores)*4(processors)
 
 double dx, dy, dz, dt;
 int nx, ny, nz, nxprop, nyprop, nzprop;
@@ -73,6 +73,7 @@ int main(int argc, char *argv[])
     if (myRank == 0) printf("This is Num%s Source\n",tag);
 
     MPI_Init(&argc, &argv);
+    cout << "init" << endl;
     MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
     MPI_Comm_size(MPI_COMM_WORLD, &NUM_OF_PROCESS);
     MPI_Get_processor_name(processor_name, &namelen);
