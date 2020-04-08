@@ -10,6 +10,7 @@ tasks/*/
 *.png
 *.psd
 FDTD_MPI*
+src_rec/*.in_0000
 
 ## C++
 # Prerequisites
