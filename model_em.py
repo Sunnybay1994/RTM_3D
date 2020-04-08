@@ -294,8 +294,8 @@ def ricker(f, length, dt):
 
 
 def check_dx(srcpulse):
-    n = round(2 ** np.ceil(np.log2(len(srcpulse))))
-    freqs = np.linspace(0, 1 / dt / 2, n / 2 + 1)
+    n = int(round(2 ** np.ceil(np.log2(len(srcpulse)))))
+    freqs = np.linspace(0, int(1 / dt / 2), int(n / 2) + 1)
     sp = np.fft.rfft(srcpulse, n) / n
     W = abs(sp)
     fmax2 = max(freqs[W > max(W) / 10.0])

@@ -8,11 +8,11 @@ from par_RTM import *
 
 #logger
 logger = logging.getLogger('pre_RTM_sub')
-logger.setLevel(logging.INFO) #CRITICAL>ERROR>WARNING>INFO>DEBUG》NOTSET
+logger.setLevel(logging.DEBUG) #CRITICAL>ERROR>WARNING>INFO>DEBUG》NOTSET
 fh = logging.FileHandler('log/pre_RTM_sub.log')
-# fh.setLevel(logging.DEBUG)
+fh.setLevel(logging.DEBUG)
 ch = logging.StreamHandler()
-# ch.setLevel(logging.DEBUG)
+ch.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s(%(process)d-%(processName)s): (%(levelname)s) %(message)s')
 fh.setFormatter(formatter)
 ch.setFormatter(formatter)
@@ -41,7 +41,7 @@ def merge_gather(idir, isrc):
             if shape(gather)[0] == 0:
                 continue
             if shape(shape(gather))[0] == 1:
-                iloc.append(gather[:3])
+                iloc.append((int(x) for x in gather[:3]))
                 isum.append(gather[3:])
             else:
                 for i in range(len(gather[:,0])):
@@ -59,9 +59,9 @@ def merge_gather(idir, isrc):
             os.remove(fname.strip('\n'))
     else:
         logger.info("merging gather: No files. Loading merge_gather.") 
-        with open(os.path.join(idir, 'merge_gather_'+str(isrc).zfill(4)+'.dat'),'w') as fp:
+        with open(os.path.join(idir, 'merge_gather_'+str(isrc).zfill(4)+'.dat')) as fp:
             isum = loadtxt(fp)
-        with open(os.path.join(idir, 'merge_gather_loc_'+str(isrc).zfill(4)+'.dat'),'w') as fp:
+        with open(os.path.join(idir, 'merge_gather_loc_'+str(isrc).zfill(4)+'.dat')) as fp:
             iloc = loadtxt(fp)
     return isum,iloc
 
@@ -104,13 +104,13 @@ def prepare_RTM(isum,iloc,isum_std,iloc_std,gather_rtm,isrc):
         with open(fn_src) as fo:
             fo.readline()
             srcinfo = fo.readline()
-            [srcx, srcy] = [int(n) for n in srcinfo.split(' ')[:-2]]
+            [srcx, srcy, srcz] = [int(n) for n in srcinfo.split(' ')[:-1]]
         for irec in range(nrec):
             assert (iloc[irec] == iloc_std[irec]).all(), logger.warning("Position NOT correct for 'OUTPUT'(%s) and 'STD/OUTPUT'(%s)"%(iloc(irec),iloc_std(irec)))
             if iloc[irec][0] == srcx and iloc[irec][1] == srcy:
                 logger.debug('src%d:(%d,%d); rec%d:(%d,%d)'%(isrc,srcx,srcy,irec,iloc[irec][0],iloc[irec][1]))
                 gather0 = gather_rtm[irec,:]
-                return nrec,nt,iloc,component,gather0
+                return nt,[srcx, srcy, srcz],component,gather0
                 break
 
 
@@ -120,18 +120,18 @@ def pre_RTM(list_src):
         dats = []
 
     for i in list_src:#range(nsrc)
-        isum,iloc=merge_gather(os.path.join(workdir,'Output'),i)
-        isum_std,iloc_std=merge_gather(os.path.join(workdir,'STD','Output'),i)
-        gather_rtm=remove_STD(isum,isum_std,i)
+        isum,iloc = merge_gather(os.path.join(workdir,'Output'),i)
+        isum_std,iloc_std = merge_gather(os.path.join(workdir,'STD','Output'),i)
+        gather_rtm = remove_STD(isum,isum_std,i)
         
         if mode == 0:
-            nrec,nt,iloc,component,gather0 = prepare_RTM(isum,iloc,isum_std,iloc_std,gather_rtm,i)
-            locs += "%d %d %d %s\n"%(iloc[i][0],iloc[i][1],iloc[i][2],component)
+            nt,pos,component,gather0 = prepare_RTM(isum,iloc,isum_std,iloc_std,gather_rtm,i)
+            locs += "%d %d %d %s\n"%(pos[0],pos[1],pos[2],component)
             dats.append(gather0)
             if i == list_src[-1]:
                 logger.info('Writing zero-offset source data...')
                 with open(os.path.join(rtm0dir,'Input','src.in_0000'),'w') as fsrc:
-                    fsrc.write("%d %d\n" % (nrec, nt))
+                    fsrc.write("%d %d\n" % (len(list_src), nt))
                     fsrc.write(locs)
                     savetxt(fsrc,dats)
                 logger.info('All Done.')
