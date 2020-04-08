@@ -1,10 +1,10 @@
-%%
-workdir = 'test1_300MHz_0.6m_0.2m';
+%% load files and parameters
+workdir = '.';
 resultdir = fullfile(workdir,'Result');
-outdir = fullfile(workdir,'.');
+outdir = fullfile(workdir,'RTM');
 f_wavefield_corr = dir(fullfile(resultdir,'result_wavefield_corr.dat*'));
 
-modelfiles = dir(fullfile(workdir,'test*.mat'));
+modelfiles = dir(fullfile(workdir,'model.mat'));
 modelfn = fullfile(modelfiles.folder,modelfiles.name);
 m = load(modelfn);
 
@@ -28,8 +28,14 @@ nz_air = nz_air_ori / x_outstep;
 dx = dx_ori * x_outstep;
 dy = dy_ori * x_outstep;
 dz = dz_ori * x_outstep;
+
+%% behavier
+result_exist = true;
+draw_xslice = false;
+draw_yslice = true;
+draw_zslice = false;
+
 %%
-result_exist = false;
 if ~result_exist
     disp(['Loading 1st file...'])
     wavefield_corr_raw = load(fullfile(resultdir,f_wavefield_corr(1).name));
@@ -38,9 +44,9 @@ if ~result_exist
         wavefield_corr_raw = wavefield_corr_raw + load(fullfile(resultdir,f_wavefield_corr(i).name));
     end
     wavefield_corr = reshape(wavefield_corr_raw,nz,ny,nx);%z,y,x
-    save(fullfile(resultdir,'result_wavefield_corr'),'wavefield_corr','-v7.3')
+    save(fullfile(outdir,'result_wavefield_corr'),'wavefield_corr','-v7.3')
 else
-    load(fullfile(resultdir,'result_wavefield_corr'))
+    load(fullfile(outdir,'result_wavefield_corr'))
 end
 
 %%
@@ -48,94 +54,91 @@ x = (1:nx)*dx;
 y = (1:ny)*dy;
 z = ((1:nz)-nz_air)*dz;
 %%
-for i = 1:nz
-    zi = i*dz;
-    zslice = squeeze(wavefield_corr(i,:,:));
-    imagesc(x,y,zslice);colorbar
-    title(['zslice at z=' num2str((i-nz_air)*dz) 'm'])
+if draw_zslice
+    for i = 1:nz
+        zi = (i-nz_air)*dz;
+        zslice = squeeze(wavefield_corr(i,:,:));
+        imagesc(x,y,zslice);colorbar
+        title(['zslice at z=' num2str(zi) 'm'])
 
-    % outline model, should add manully
-    hold on
-    X = x(end);
-    Y = y(end);
-    Z = z(end);
-    r0 = 0.5;
-    xm = X/2;
-    ym = Y/2;
-    zm = 1.5;
-    if abs(zi-zm)<=r0
-        r = sqrt(r0^2-(zi-zm)^2);
-        alpha = 0:0.1:2*pi;
-        xx = xm + r * sin(alpha);
-        yy = ym + r * cos(alpha);
-        plot(xx,yy,'r--')
+        % outline model, should add manully
+        hold on
+        % 7.5*(x-2)-0.75*y-2.5*(z-0.8)=0
+        ym = (7.5*(x-2)-2.5*(zi-0.8))/0.75;
+        plot(x,ym,'r--')
+        hold off
+        
+        saveas(gcf,fullfile(outdir,['zslice at z=' num2str(zi) 'm.png']))
+        pause(0.1)
     end
-    hold off
-    saveas(gcf,fullfile(outdir,['zslice at z=' num2str((i-nz_air)*dz) 'm.png']))
-    pause(0.1)
 end
 %%
-for i = 1:nx
-    xi = i*dx;
-    xslice = squeeze(wavefield_corr(:,:,i));
-    imagesc(y,z,xslice);colorbar
-    title(['xslice at x=' num2str(i*dx) 'm'])
-    pause(0.1)
-    
-    % outline model, should add manully
-    hold on
-    X = x(end);
-    Y = y(end);
-    Z = z(end);
-    r0 = 0.5;
-    xm = X/2;
-    ym = Y/2;
-    zm = 1.5;
-    if abs(xi-xm)<=r0
-        r = sqrt(r0^2-(xi-xm)^2);
-        alpha = 0:0.1:2*pi;
-        zz = zm + r * sin(alpha);
-        yy = ym + r * cos(alpha);
-        plot(yy,zz,'r--')
-    end
-    hold off
-    saveas(gcf,fullfile(outdir,['xslice at x=' num2str(i*dx) 'm.png']))
-    pause(0.1)
-end
+if draw_xslice
+    for i = 1:nx
+        xi = i*dx;
+        xslice = squeeze(wavefield_corr(:,:,i));
+        xslice1 = agc(xslice);
+        imagesc(y,z,xslice1);colorbar
+        title(['xslice at x=' num2str(xi) 'm'])
+        pause(0.1)
 
-% %% figure zslice
-% result_dir = 'Result';
-% load(fullfile(result_dir,'result_wavefield_corr'))
-% x = dx: dx : (dx * nx);
-% y = (1:ny) * dy;
-% z = ((1:nz) - nz_air) * dz;
-% 
-% % z slice
-% zslice1 = squeeze(wavefield_corr(nz_air+round(1/nz),:,:));%1m
-% zslice2 = squeeze(wavefield_corr(nz_air+round(1.6/nz),:,:));%1.6m
-% zslice3 = squeeze(wavefield_corr(nz_air+round(2/nz),:,:));%2m
-% figure(1)
-% imagesc(y,x,zslice1),title('Depth=1m'),xlabel('y(m)'),ylabel('x(m)'),
-% % hold on
-% % plot(x,1.2+0 * x,'r--',x,2.4+0 * x,'r--',x,3.6+0 * x,'r--',x,4.8+0 * x,'r--')
-% % plot(1.2+0 * x,x,'r--',2.4+0 * x,x,'r--',3.6+0 * x,x,'r--',4.8+0 * x,x,'r--')
-% saveas(gca,'zslice_1m.png')
-% figure(2)
-% imagesc(y,x,zslice2),title('Depth=1.6m'),xlabel('y(m)'),ylabel('x(m)'),hold on
-% saveas(gca,'zslice_1.6m.png')
-% figure(3)
-% imagesc(y,x,zslice3),title('Depth=2m'),xlabel('y(m)'),ylabel('x(m)'),
-% % hold on
-% % plot(x,1.2+0 * x,'r--',x,2.4+0 * x,'r--',x,3.6+0 * x,'r--',x,4.8+0 * x,'r--')
-% % plot(1.2+0 * x,x,'r--',2.4+0 * x,x,'r--',3.6+0 * x,x,'r--',4.8+0 * x,x,'r--')
-% saveas(gca,'zslice_2m.png')
-% %%
-% % x Slice
-% xslice1 = squeeze(wavefield_corr(:,:,round(2.4/dx)));%2.4m
-% xslice2 = squeeze(wavefield_corr(:,:,round(3/dx)));%3m
-% figure(4)
-% imagesc(y, z(z > 1),xslice1(z > 1,:)),title('x=2.4m'),xlabel('y(m)'),ylabel('depth(m)'),
-% saveas(gca,'xslice_2.4m.png')
-% figure(5)
-% imagesc(y, z(z > 1),xslice2(z > 1,:)),title('x=3m'),xlabel('y(m)'),ylabel('depth(m)'),
-% saveas(gca,'xslice_3m.png')
+        % outline model, should add manully
+        hold on
+        % 7.5*(x-2)-0.75*y-2.5*(z-0.8)=0
+        zm = (7.5*(xi-2)-0.75*y)/2.5 + 0.8;
+        plot(y,zm,'r--')
+        hold off
+        
+        saveas(gcf,fullfile(outdir,['xslice at x=' num2str(xi) 'm.png']))
+        pause(0.1)
+    end
+end
+%%
+if draw_yslice
+    for i = 1:ny
+        yi = i*dy;
+        yslice = squeeze(wavefield_corr(:,i,:));
+        yslice1 = agc(yslice,1:size(yslice,1),8);
+        imagesc(x,z,yslice1);colorbar
+        title(['yslice at y=' num2str(yi) 'm'])
+
+        % outline model, should add manully
+        hold on
+        % draw layer
+        surf_pos = [0.8,1.3,2.3];
+        zm1 = ones(size(x))*0.8;
+        zm2 = ones(size(x))*1.3;
+        zm3 = ones(size(x))*2.3;
+        
+        % 7.5*(x-2)-0.75*y-2.5*(z-0.8)=0
+        dh = 0.3; %m
+        for i = 1:length(x)
+            xi = x(i);
+            z1i = zm1(i);
+            z2i = zm2(i);
+            z3i = zm3(i);
+            dot1i = [xi,yi,z1i];
+            dot2i = [xi,yi,z2i];
+            dot3i = [xi,yi,z3i];
+            if dot([7.5,-0.75,-2.5],(dot1i-[2 0 0.8])) > 0
+                zm1(i) = zm1(i) + dh; 
+            end
+            if dot([7.5,-0.75,-2.5],(dot2i-[2 0 0.8])) > 0
+                zm2(i) = zm2(i) + dh; 
+            end
+            if dot([7.5,-0.75,-2.5],(dot3i-[2 0 0.8])) > 0
+                zm3(i) = zm3(i) + dh; 
+            end
+        end
+        plot(x,zm1,'r--',x,zm2,'r--',x,zm3,'r--')
+        
+        % draw fault
+        % 7.5*(x-2)-0.75*y-2.5*(z-0.8)=0
+        zm = (7.5*(x-2)-0.75*yi)/2.5 + 0.8;
+        plot(x,zm,'r-.')
+        hold off
+        
+        saveas(gcf,fullfile(outdir,['yslice at y=' num2str(yi) 'm.png']))
+        pause(0.1)
+    end
+end
