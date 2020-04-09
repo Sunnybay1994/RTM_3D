@@ -1,134 +1,98 @@
-%%
-workdir = '400MHz';
+%% files and parameters
+workdir = 'gly_400MHz';
 result_dir = fullfile(workdir,'Output');
-output_dir = fullfile(workdir,'result');
+outdir = fullfile(workdir,'result');
 fxslice = dir(fullfile(result_dir,'xSlice*.dat*'));
 fyslice = dir(fullfile(result_dir,'ySlice*.dat*'));
 fzslice = dir(fullfile(result_dir,'zSlice*.dat*'));
 fwave = dir(fullfile(result_dir,'Wave*.dat*'));
 
-%%
-nx=1220;ny=219;nz=131;nz_air=12;
-dx=0.05;dy=0.05;dz=0.05;
-x = (1:nx)*dx;
-y = ((1:ny)-1)*dy;
-z = ((1:nz)-nz_air)*dz;
+nx0=1220;ny0=220;nz0=130;nz0_air=10;
+dx0=0.05;dy0=0.05;dz0=0.05;
 dt = 0.0587e-9;
 tstep = 4;%wavefiled and xys slice output time step
-wstep = 1;%wavefiled output position step
+wstep = 2;%wavefiled output position step
+nx=nx0/wstep;ny=ny0/wstep;nz=nz0/wstep;nz_air=nz0_air/wstep;
+dx=dx0*wstep;dy=dy0*wstep;dz=dz0*wstep;
+
+%% behavier
+result_exist = True;
+draw_slices = true;
+draw_wavefield_yslice = true;
+draw_3D_view = false;
+
 %%
-xslice={[]};yslice={[]};zslice={[]};wavefield={[]};
-parfor i = 1:length(fyslice)
-    xfid = fopen(fullfile(result_dir,fxslice(i).name));
-    xcell = textscan(xfid,'%f');
-    xslice0 = xcell{1};
-    xslice{i} = reshape(xslice0,[nz,ny]);
-    fclose(xfid);
-    yfid = fopen(fullfile(result_dir,fyslice(i).name));
-    ycell = textscan(yfid,'%f');
-    yslice0 = ycell{1};
-    yslice{i} = reshape(yslice0,[nz,nx]);
-    fclose(yfid);
-    zfid = fopen(fullfile(result_dir,fzslice(i).name));
-    zcell = textscan(zfid,'%f');
-    zslice0 = zcell{1};
-    zslice{i} = reshape(zslice0,[ny,nx]);
-    fclose(zfid);
-    wfid = fopen(fullfile(result_dir,fwave(i).name));
-    wcell = textscan(wfid,'%f');
-    wavefield0 = wcell{1};
-    wavefield{i} = reshape(wavefield0,[nz/wstep,ny/wstep,nx/wstep]);
-    fclose(wfid);
+if ~result_exist
+    xslice={[]};yslice={[]};zslice={[]};wavefield={[]};
+    parfor i = 1:length(fyslice)
+        xfid = fopen(fullfile(result_dir,fxslice(i).name));
+        xcell = textscan(xfid,'%f');
+        xslice0 = xcell{1};
+        xslice{i} = reshape(xslice0,[nz0,ny0]);
+        fclose(xfid);
+        yfid = fopen(fullfile(result_dir,fyslice(i).name));
+        ycell = textscan(yfid,'%f');
+        yslice0 = ycell{1};
+        yslice{i} = reshape(yslice0,[nz0,nx0]);
+        fclose(yfid);
+        zfid = fopen(fullfile(result_dir,fzslice(i).name));
+        zcell = textscan(zfid,'%f');
+        zslice0 = zcell{1};
+        zslice{i} = reshape(zslice0,[ny0,nx0]);
+        fclose(zfid);
+        wfid = fopen(fullfile(result_dir,fwave(i).name));
+        wcell = textscan(wfid,'%f');
+        wavefield0 = wcell{1};
+        wavefield{i} = reshape(wavefield0,[nz,ny,nx]);
+        fclose(wfid);
+    end
+    save(fullfile(outdir,'result'),'xslice','yslice','zslice','wavefield','-v7.3')
+else
+    load(fullfile(outdir,'result'))
 end
-save(workdir,'xslice','yslice','zslice','wavefield','-v7.3')
+    
 %%
-for i =1:length(xslice)
-    figure(11)
-    imagesc(xslice{i});colorbar;
-    xlabel('y');ylabel('z');
-    title(['t=' num2str(dt*(i-1)*tstep) 'ns'])
-    figure(12)
-    imagesc(yslice{i});colorbar;
-    xlabel('x');ylabel('z');
-    title(['t=' num2str(dt*(i-1)*tstep) 'ns'])
-    figure(13)
-    imagesc(zslice{i});colorbar;
-    xlabel('x');ylabel('y');
-    title(['t=' num2str(dt*(i-1)*tstep) 'ns'])
-    pause(0.1)
-end 
-%%
-% for i =1:length(wavefield)
-%     figure(51)
-%     linewf = squeeze(wavefield{i}(:,10,:));
-%     linewf = linewf(:,200:800);
-%     linewf = agc(linewf')';
-%     x=1:size(wavefield{end},3)*0.1;
-%     z=1:size(wavefield{end},1)*0.1;
-%     imagesc(x,z,linewf);colorbar;
-%     xlabel('x(m)');ylabel('z(m)');
-% %     caxis([-1e-1,1e-1])
-%     title(['t=' num2str(i*dt*tstep) 'ns'])
-%     pause()
-% end
-%%
-% figure(52)
-% for i = 1:184
-% sample1=squeeze(wavefield{i}(:,22,:));
-% subplot(2,1,1)
-% plot(sample1(2,:))
-% sample2=pdata{5};
-% subplot(2,1,2)
-% plot(sample2(end-i*5,:))
-% pause(1)
-% end
+if draw_slices
+    x = (1:nx0)*dx0;
+    y = (1:ny0)*dy0;
+    z = ((1:nz0)-nz0_air)*dz0;
+    for i = length(xslice)
+        figure(11)
+        imagesc(y,z,xslice{i});colorbar;
+        xlabel('y/m');ylabel('z/m');
+        title(['xslice t=' num2str(dt*(i-1)) 'ns'])
+        saveas(gca,fullfile(outdir,'xslice.png'))
 
-%% just for the ones EW are reversed
-% wavefield{end}(:,:,:)=wavefield{end}(:,:,end:-1:1);
+        figure(12)
+        imagesc(x,z,agc(yslice{i}')');colorbar;
+        xlabel('x/m');ylabel('z/m');
+        title(['yslice y=5.5m'])
+        saveas(gca,fullfile(outdir,'yslice.png'))
+        
+        figure(13) 
+        imagesc(x,y,zslice{i});colorbar;
+        xlabel('x/m');ylabel('y/m');
+        title(['zslice z=1m'])
+        saveas(gca,fullfile(outdir,'zslice.png'))
+    end
+end
 
 %%
-% for i =1:40
-%     src_cut = 10;
-%     x=(1:size(wavefield{end},3))*0.1;
-%     x = x(200:800);
-%     z=(1:size(wavefield{end},1))*0.1;
-%     linewf0 = squeeze(wavefield{end}(src_cut:end,i,:));
-%     linewf0 = linewf0(:,200:800);
-%     linewf00 = agc(linewf0',z,0.5)';
-%     figure(151)    
-%     imagesc(x,z(src_cut:end),linewf00(src_cut:end,:));colorbar;
-%     xlabel('x(m)');ylabel('z(m)');
-% %     caxis([-5e4,5e4])
-%     s_y = i*0.2;
-%     title(['y=' num2str(s_y)])
-%     saveas(gcf,['result/line=' num2str(i,'%02d') '_3dmig.png']);
-% %     save(['result/line' num2str(i,'%02d') '_3dmig.mat'],'linewf0','x','z');
-% 
-%     
-%     linewf1_h = smooth(mean(abs(hilbert(linewf0)),2));
-%     linewf1 = ones(size(linewf0));
-%     for ii = 1:size(linewf0,2)
-%         linewf1(:,ii) = linewf0(:,ii)./linewf1_h;
-%     end 
-%     
-%     linewf2_tr_amp = mean(abs(linewf1),1);
-% %     plot(linewf1_tr_amp)
-%     linewf2 = ones(size(linewf1));
-%     for ii = 1:size(linewf1,1)
-%         linewf2(ii,:) = linewf1(ii,:);%./linewf2_tr_amp;
-%     end
-%     
-%     linewf = agc(linewf2',z,0.5)';
-%     
-%     figure(152)
-%     imagesc(x,z(src_cut:end),linewf);colorbar;
-%     xlabel('x(m)');ylabel('z(m)');
-% %     caxis([-1e0,1e0])
-%     title(['linenum=' num2str(i)])
-%     saveas(gcf,['result/line' num2str(i,'%02d') '_3dmig_p.png']);
-% %     save(['result/line' num2str(i,'%02d') '_3dmig_p.mat'],'linewf','x','z');
-%     pause(0.1)
-% end 
+if draw_wavefield_yslice
+    x = (1:nx)*dx;
+    y = (1:ny)*dy;
+    z = ((1:nz)-nz_air)*dz;
+    figure(15)
+    for i = 1:ny
+        yi = i*dy;
+        wyslice = squeeze(wavefield{end}(:,i,:));
+        wyslice1 = agc(wyslice,1:size(wyslice,1),8);
+        imagesc(x,z,wyslice1);colorbar
+        title(['yslice at y=' num2str(yi) 'm'])
+        saveas(gcf,fullfile(outdir,['yslice at y=' num2str(yi) 'm.png']))
+        pause(0.1)
+    end
+end
 
 %%
 info = get(0);
@@ -148,7 +112,7 @@ parfor lnum =3:17
     imagesc(xx,zz,d1);colorbar
     title(['3D RTM Result at y=' num2str((lnum-1)/2) 'm'],'fontsize',36)
     xlabel('Distance(m)','fontsize',24);ylabel('Depth(m)','fontsize',24)
-    saveas(h,[output_dir '/line' num2str(lnum,'%02d') '_RTM_result.png']);
+    saveas(h,[outdir '/line' num2str(lnum,'%02d') '_RTM_result.png']);
 % agc (100ns for 200MHz)
     d2 = d1;%agc(d1,zz);
 %     imagesc(xx,zz,d4);colorbar
@@ -160,7 +124,7 @@ parfor lnum =3:17
     plot(d2_tr_amp)
     title(['Mean Amplitude each trace at y=' num2str((lnum-1)/2) 'm'],'fontsize',36)
     xlabel('Trace','fontsize',24);ylabel('Amplitude','fontsize',24)
-    saveas(h,[output_dir '/proc/line' num2str(lnum,'%02d') '_1_AmpTrace.png']);
+    saveas(h,[outdir '/proc/line' num2str(lnum,'%02d') '_1_AmpTrace.png']);
     d3 = ones(size(d1));
     for i = 1:size(d1,1)
         d3(i,:) = d2(i,:)./d2_tr_amp;
@@ -168,18 +132,18 @@ parfor lnum =3:17
     imagesc(xx,zz,d3);colorbar
     title(['3D RTM Result after Trace Equalization at y=' num2str((lnum-1)/2) 'm'],'fontsize',36)
     xlabel('Distance(m)','fontsize',24);ylabel('Depth(m)','fontsize',24)
-    saveas(h,[output_dir '/proc/line' num2str(lnum,'%02d') '_1_result after trace equalization.png']);
+    saveas(h,[outdir '/proc/line' num2str(lnum,'%02d') '_1_result after trace equalization.png']);
  
 % agc (100ns for 200MHz)
     d4 = agc(d3,zz);
     imagesc(xx,zz,d4);colorbar
     title(['3D RTM Result after AGC at y=' num2str((lnum-1)/2) 'm'],'fontsize',36)
     xlabel('Distance(m)','fontsize',24);ylabel('Depth(m)','fontsize',24)
-    saveas(h,[output_dir '/proc/line' num2str(lnum,'%02d') '_2_result after AGC.png']);
-    savefig(h,[output_dir '/proc/line' num2str(lnum,'%02d') '_2_result after AGC']);
+    saveas(h,[outdir '/proc/line' num2str(lnum,'%02d') '_2_result after AGC.png']);
+    savefig(h,[outdir '/proc/line' num2str(lnum,'%02d') '_2_result after AGC']);
     result0(:,:,lnum) = d4;
 end
-save([output_dir '/result0'],'result0')
+save([outdir '/result0'],'result0')
 
 
 

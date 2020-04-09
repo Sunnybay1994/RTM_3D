@@ -33,7 +33,7 @@ dz = dz_ori * x_outstep;
 result_exist = true;
 draw_xslice = false;
 draw_yslice = true;
-draw_zslice = false;
+draw_zslice = true;
 
 %%
 if ~result_exist
@@ -97,9 +97,12 @@ end
 if draw_yslice
     for i = 1:ny
         yi = i*dy;
-        yslice = squeeze(wavefield_corr(:,i,:));
-        yslice1 = agc(yslice,1:size(yslice,1),8);
-        imagesc(x,z,yslice1);colorbar
+        zind = z>0.2;
+        xind = x>0.4&x<5-0.4;
+        yslice = squeeze(wavefield_corr(zind,i,xind));
+        op_length = 8;
+        yslice1 = agc(yslice,1:size(yslice,1),8,op_length/10,0);
+        imagesc(x(xind),z(zind),yslice1);colorbar
         title(['yslice at y=' num2str(yi) 'm'])
 
         % outline model, should add manully
@@ -132,10 +135,10 @@ if draw_yslice
         end
         plot(x,zm1,'r--',x,zm2,'r--',x,zm3,'r--')
         
-        % draw fault
-        % 7.5*(x-2)-0.75*y-2.5*(z-0.8)=0
-        zm = (7.5*(x-2)-0.75*yi)/2.5 + 0.8;
-        plot(x,zm,'r-.')
+%         % draw fault
+%         % 7.5*(x-2)-0.75*y-2.5*(z-0.8)=0
+%         zm = (7.5*(x-2)-0.75*yi)/2.5 + 0.8;
+%         plot(x,zm,'r-.')
         hold off
         
         saveas(gcf,fullfile(outdir,['yslice at y=' num2str(yi) 'm.png']))
