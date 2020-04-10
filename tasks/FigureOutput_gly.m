@@ -2,21 +2,23 @@
 workdir = 'gly_400MHz';
 result_dir = fullfile(workdir,'Output');
 outdir = fullfile(workdir,'result');
+mkdir(outdir)
 fxslice = dir(fullfile(result_dir,'xSlice*.dat*'));
 fyslice = dir(fullfile(result_dir,'ySlice*.dat*'));
 fzslice = dir(fullfile(result_dir,'zSlice*.dat*'));
 fwave = dir(fullfile(result_dir,'Wave*.dat*'));
 
-nx0=1220;ny0=220;nz0=130;nz0_air=10;
-dx0=0.05;dy0=0.05;dz0=0.05;
-dt = 0.0587e-9;
+nx0=320;ny0=29;nz0=130;nz0_air=10;
+dx0=0.2;dy0=0.5;dz0=0.05;
+dt0 = 0.0587e-9;
 tstep = 4;%wavefiled and xys slice output time step
-wstep = 2;%wavefiled output position step
+wstep = 1;%wavefiled output position step
 nx=nx0/wstep;ny=ny0/wstep;nz=nz0/wstep;nz_air=nz0_air/wstep;
 dx=dx0*wstep;dy=dy0*wstep;dz=dz0*wstep;
+dt = dt0 * tstep;
 
 %% behavier
-result_exist = True;
+result_exist = false;
 draw_slices = true;
 draw_wavefield_yslice = true;
 draw_3D_view = false;
@@ -58,13 +60,13 @@ if draw_slices
     z = ((1:nz0)-nz0_air)*dz0;
     for i = length(xslice)
         figure(11)
-        imagesc(y,z,xslice{i});colorbar;
+        imagesc(y,z,agc(xslice{i}));colorbar;
         xlabel('y/m');ylabel('z/m');
-        title(['xslice t=' num2str(dt*(i-1)) 'ns'])
+        title(['xslice t=' num2str(dt*(i-1)*1e9) 'ns'])
         saveas(gca,fullfile(outdir,'xslice.png'))
 
         figure(12)
-        imagesc(x,z,agc(yslice{i}')');colorbar;
+        imagesc(x,z,agc(yslice{i}));colorbar;
         xlabel('x/m');ylabel('z/m');
         title(['yslice y=5.5m'])
         saveas(gca,fullfile(outdir,'yslice.png'))
@@ -78,17 +80,20 @@ if draw_slices
 end
 
 %%
+x = (1:nx)*dx;
+y = (1:ny)*dy;
+z = ((1:nz)-nz_air)*dz;
 if draw_wavefield_yslice
-    x = (1:nx)*dx;
-    y = (1:ny)*dy;
-    z = ((1:nz)-nz_air)*dz;
     figure(15)
     for i = 1:ny
         yi = i*dy;
-        wyslice = squeeze(wavefield{end}(:,i,:));
-        wyslice1 = agc(wyslice,1:size(wyslice,1),8);
-        imagesc(x,z,wyslice1);colorbar
-        title(['yslice at y=' num2str(yi) 'm'])
+        zind = z>0.5;
+        wyslice = squeeze(wavefield{end}(zind,i,:));
+        [wyslice1,envsm] = agc(wyslice);
+        imagesc(x,z(zind),wyslice);colorbar;
+%         figure(2)
+%         plot(envsm)
+%         title(['yslice at y=' num2str(yi) 'm'])
         saveas(gcf,fullfile(outdir,['yslice at y=' num2str(yi) 'm.png']))
         pause(0.1)
     end
@@ -97,13 +102,16 @@ end
 %%
 info = get(0);
 win_size = info.ScreenSize;
-zz = z(z>=0);
-xx = x(x>=1); 
-yy = y(3:17);
-result00 = permute(wavefield{end}(:,3:17,:),[1,3,2]);
-result00 = result00(z>=0,x>=1,:);
-result0 = zeros(length(zz),length(xx),length(y));
-parfor lnum =3:17
+zind = z > 0.1;
+zz = z(zind);
+xind = x > 0.5 & x < x(end) - 0.5;
+xx = x(xind); 
+yind = 5:25;
+yy = y(yind);
+wavefield_p = permute(wavefield{end}(zind,yind,xind),[1,3,2]);
+result0 = zeros(length(zz),length(xx),length(yy));
+parfor iyy = 1:length(yind)
+    lnum = (yind +1)/2
     h = figure(lnum);
     set(h, 'outerposition', win_size);
     d1 = squeeze(wavefield{end}(:,lnum,:));
@@ -141,7 +149,7 @@ parfor lnum =3:17
     xlabel('Distance(m)','fontsize',24);ylabel('Depth(m)','fontsize',24)
     saveas(h,[outdir '/proc/line' num2str(lnum,'%02d') '_2_result after AGC.png']);
     savefig(h,[outdir '/proc/line' num2str(lnum,'%02d') '_2_result after AGC']);
-    result0(:,:,lnum) = d4;
+    result0(:,:,iyy) = d4;
 end
 save([outdir '/result0'],'result0')
 
