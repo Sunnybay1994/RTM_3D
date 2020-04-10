@@ -57,7 +57,7 @@ def cleanfiles(paths):
                 if os.path.isfile(fn):
                     os.remove(fn)
 
-def eps_sig_mu(meps=1,meps_bg=False,msig=1e-5,msig_bg=False,mmiu=1,mmiu_bg=False):
+def eps_sig_mu(meps=1,meps_bg=False,msig=0,msig_bg=False,mmiu=1,mmiu_bg=False):
     logger.info('Generating model...')
 
     for ii in range(NUM_OF_PROCESS):
@@ -389,25 +389,25 @@ if __name__ == '__main__':
     fmax = 800e6  # Hz
 
     dx_max = finddx(epmax, mumax, fmax)
-    dx = 0.05
-    dy = 0.05
+    dx = 0.2
+    dy = 0.5
     dz = 0.05
     logger.info("dx=%f, dy=%f, dz=%f"%(dx, dy, dz)) 
-    assert np.max([dx,dy,dz]) < dx_max, 'dx,dy,dz too big!!!'
+    # assert np.max([dx,dy,dz]) < dx_max, 'dx,dy,dz too big!!!'
 
     # y = arange(yaxis2[0], yaxis1[1], dx)
     # y_axis = y
     # x_axis = arange(0, 5, dx)
     # z_axis = arange(-1, 2.5, dx)
 
-    nx = round(61/dx) # 60m
-    ny = round(11/dx)  # 11m
+    nx = 320
+    ny = 29
     nz_air = 10
     nz = round(6/dx)+ nz_air# 6m
     logger.info('nx=%d, ny=%d, nz=%d'%(nx, ny, nz)) 
 
     npmlx = 8
-    npmly = 8
+    npmly = 4
     npmlz = 8
     nt_src = 50 # useless
 
@@ -424,7 +424,7 @@ if __name__ == '__main__':
     logger.info("dt=%g, nt=%d"%(dt, nt)) 
     assert dt < dt_max, 'dt too big!!! (%f>%f)'%(dt,dt_max)
 
-    NUM_OF_PROCESS = 16
+    NUM_OF_PROCESS = 8
     order = 2 # num of interchange layers of each process
     logger.info("NUM_OF_PROCESS: %d"%(NUM_OF_PROCESS)) 
     if gen_model:
@@ -432,7 +432,7 @@ if __name__ == '__main__':
         eps_sig_mu(epmax)
 
     shutil.copy(os.path.join('src_rec','rec.in'), os.path.join(workdir,'Input'))
-    shutil.copy(os.path.join('src_rec','8src_400MHz.in_0000'), os.path.join(workdir,'Input','src.in_0000'))
+    shutil.copy(os.path.join('src_rec','8src0_400MHz.in_0000'), os.path.join(workdir,'Input','src.in_0000'))
     par()
     islice(round(nx/2),round(ny/2),round(1/dz)+nz_air)
 
