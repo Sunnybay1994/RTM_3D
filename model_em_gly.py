@@ -403,7 +403,7 @@ if __name__ == '__main__':
     nx = 320
     ny = 29
     nz_air = 10
-    nz = round(6/dx)+ nz_air# 6m
+    nz = round(6/dz)+ nz_air# 6m
     logger.info('nx=%d, ny=%d, nz=%d'%(nx, ny, nz)) 
 
     npmlx = 8
@@ -412,7 +412,7 @@ if __name__ == '__main__':
     nt_src = 50 # useless
 
     outstep_t_wavefield = 4
-    outstep_x_wavefield = 2
+    outstep_x_wavefield = 1
     outstep_slice = 4
 
     dt_max = finddt(epmin, mumin, dx, dy, dz)
