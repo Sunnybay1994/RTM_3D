@@ -8,8 +8,8 @@ fyslice = dir(fullfile(result_dir,'ySlice*.dat*'));
 fzslice = dir(fullfile(result_dir,'zSlice*.dat*'));
 fwave = dir(fullfile(result_dir,'Wave*.dat*'));
 
-nx0=320;ny0=29;nz0=130;nz0_air=10;
-dx0=0.2;dy0=0.5;dz0=0.05;
+nx0=320;ny0=29;nz0=310;nz0_air=10;
+dx0=0.2;dy0=0.5;dz0=0.01;
 dt0 = 0.0587e-9;
 tstep = 4;%wavefiled and xys slice output time step
 wstep = 1;%wavefiled output position step
@@ -18,7 +18,7 @@ dx=dx0*wstep;dy=dy0*wstep;dz=dz0*wstep;
 dt = dt0 * tstep;
 
 %% behavier
-result_exist = false;
+result_exist = true;
 draw_slices = true;
 draw_wavefield_yslice = true;
 draw_3D_view = false;
@@ -58,6 +58,7 @@ if draw_slices
     x = (1:nx0)*dx0;
     y = (1:ny0)*dy0;
     z = ((1:nz0)-nz0_air)*dz0;
+    zind = z>0&z<3;
     for i = length(xslice)
         figure(11)
         imagesc(y,z,agc(xslice{i}));colorbar;
@@ -66,9 +67,9 @@ if draw_slices
         saveas(gca,fullfile(outdir,'xslice.png'))
 
         figure(12)
-        imagesc(x,z,agc(yslice{i}));colorbar;
+        imagesc(x(xind),z(zind),agc(yslice{i}(zind,xind)));colorbar;
         xlabel('x/m');ylabel('z/m');
-        title(['yslice y=5.5m'])
+        title(['yslice y=5m'])
         saveas(gca,fullfile(outdir,'yslice.png'))
         
         figure(13) 
@@ -79,25 +80,77 @@ if draw_slices
     end
 end
 
+result0 = wavefield{end};
 %%
-x = (1:nx)*dx;
-y = (1:ny)*dy;
+x = ((1:nx)-10)*dx;
+y = ((1:ny)-5)*dy;
 z = ((1:nz)-nz_air)*dz;
+[Y,Z,X] = meshgrid(y,z,x);
+dxx=dx/4;
+dyy=dy/5;
+xx = x(11):dxx:x(end-10);
+yy = y(5):dyy:y(end-4);
+zz = z(10:end);
+[YY,ZZ,XX] = meshgrid(yy,zz,xx);
+result = interp3(Y,Z,X,result1,YY,ZZ,XX);
+
+
+%%
 if draw_wavefield_yslice
     figure(15)
-    for i = 1:ny
-        yi = i*dy;
-        zind = z>0.5;
-        wyslice = squeeze(wavefield{end}(zind,i,:));
-        [wyslice1,envsm] = agc(wyslice);
-        imagesc(x,z(zind),wyslice);colorbar;
-%         figure(2)
-%         plot(envsm)
-%         title(['yslice at y=' num2str(yi) 'm'])
-        saveas(gcf,fullfile(outdir,['yslice at y=' num2str(yi) 'm.png']))
-        pause(0.1)
+    for i = 1:round(1/dyy):length(yy)
+        wyslice = squeeze(result(:,i,:));
+        wyslice1 = agc(wyslice);
+        imagesc(xx,zz,wyslice1);        
+        set(gca,'fontsize',20);
+        xlabel('x(m)','fontsize',24);ylabel('Depth(m)','fontsize',24)
+        title(['3D RTM Result at y=' num2str(yy(i)) 'm'],'fontsize',30)
+        
+        % for yslice
+        daspect([4 1 1]);
+%         hold on
+%         plot(x,0.9*ones(size(x)),'--r');
+%         hold off
+        saveas(gcf,fullfile(outdir,['yslice at y=' num2str(yy(i)) 'm.png']))
+        
+        % for detail
+%         xlim([22,34]);
+%         daspect([1 1 1]);
+%         saveas(gcf,fullfile(outdir,['detailed yslice at y=' num2str(yy(i)) 'm.png']))
+        
+        pause()
     end
 end
+
+%% z slice
+for z0 = 0.3
+    imagesc(xx,yy,squeeze(result(abs(zz-z0)<0.001,:,:)))
+    xlabel('x(m)','fontsize',24);ylabel('y(m)','fontsize',24)
+    title(['3D RTM Result at z=' num2str(z0) 'm'],'fontsize',36)
+    set(gca,'ydir','normal','FontSize',20)
+    % caxis([-1,1])
+    daspect([1 1 1])
+    pause()
+end
+zx1=atan((30.5-25)/(6.3-1))*360/2/pi;% 100MHz
+zx2=atan((31-26)/(9.4-1))*360/2/pi;% 400MHz
+
+
+
+%% 3D figure
+result = permute(result0,[3,2,1]);
+figure(21)
+slice(xx,y,zz,result,[],[2,4.5,7],[0.9]);
+shading interp;alpha(0.6);
+% caxis([-1e4,1e4]);colorbar
+zlim([0,4]);xlim([10,50]);ylim([1,8]);
+set(gca,'fontsize',20);
+xlabel('x(m)');ylabel('y(m)');zlabel('depth(m)');
+set(gca,'zdir','reverse','FontSize',24)
+
+
+
+
 
 %%
 info = get(0);
@@ -155,45 +208,10 @@ save([outdir '/result0'],'result0')
 
 
 
-%% z slice
-z0 = 0.9;
-imagesc(xx,yy,squeeze(result0(abs(zz-z0)<0.01,:,3:17))')
-xlabel('x(m)','fontsize',24);ylabel('y(m)','fontsize',24)
-title(['3D RTM Result at z=' num2str(z0) 'm'],'fontsize',36)
-set(gca,'ydir','normal','FontSize',20)
-caxis([-1,1])
-daspect([1 1 1])
-zx1=atan((30.5-25)/(6.3-1))*360/2/pi;
-
-%% y slice
-y0 = 4;%3,6
-yslice = result0(:,:,abs(y-y0)<0.1);
-imagesc(xx,zz,yslice)
-set(gca,'fontsize',20);
-xlabel('x(m)','fontsize',24);ylabel('Depth(m)','fontsize',24)
-title(['3D RTM Result at y=' num2str(y0) 'm'],'fontsize',30)
-% caxis([-1e7,1e7]);
-
-% for yslice
-% daspect([2 1 1]);
-% hold on
-% plot(x,0.9*ones(size(x)),'--r');
-% hold off
-
-% for detail
-xlim([22,34]);ylim([0,4]);daspect([1 1 1]);
 
 
-%% 3D figure
-result = permute(result0,[3,2,1]);
-figure(21)
-slice(xx,y,zz,result,[],[2,4.5,7],[0.9]);
-shading interp;alpha(0.6);
-% caxis([-1e4,1e4]);colorbar
-zlim([0,4]);xlim([10,50]);ylim([1,8]);
-set(gca,'fontsize',20);
-xlabel('x(m)');ylabel('y(m)');zlabel('depth(m)');
-set(gca,'zdir','reverse','FontSize',24)
+
+
 
 % %%
 % [X,Y,Z] = meshgrid(xx(xx>20&xx<40),y(3:17),zz(zz>0.5&zz<2.5));

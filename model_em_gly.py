@@ -57,7 +57,7 @@ def cleanfiles(paths):
                 if os.path.isfile(fn):
                     os.remove(fn)
 
-def eps_sig_mu(meps=1,meps_bg=False,msig=0,msig_bg=False,mmiu=1,mmiu_bg=False):
+def eps_sig_mu(meps=1,meps_bg=False,msig=1e-11,msig_bg=False,mmiu=1,mmiu_bg=False):
     logger.info('Generating model...')
 
     for ii in range(NUM_OF_PROCESS):
@@ -391,7 +391,7 @@ if __name__ == '__main__':
     dx_max = finddx(epmax, mumax, fmax)
     dx = 0.2
     dy = 0.5
-    dz = 0.05
+    dz = 0.01
     logger.info("dx=%f, dy=%f, dz=%f"%(dx, dy, dz)) 
     # assert np.max([dx,dy,dz]) < dx_max, 'dx,dy,dz too big!!!'
 
@@ -403,7 +403,7 @@ if __name__ == '__main__':
     nx = 320
     ny = 29
     nz_air = 10
-    nz = round(6/dz)+ nz_air# 6m
+    nz = round(3/dz)+ nz_air# 6m
     logger.info('nx=%d, ny=%d, nz=%d'%(nx, ny, nz)) 
 
     npmlx = 8
@@ -422,9 +422,9 @@ if __name__ == '__main__':
     # backward wavefield will coincide perfectly when doing cross-correlation.
     nt += outstep_t_wavefield + 1 - nt%outstep_t_wavefield #useless
     logger.info("dt=%g, nt=%d"%(dt, nt)) 
-    assert dt < dt_max, 'dt too big!!! (%f>%f)'%(dt,dt_max)
+    assert dt < dt_max, 'dt too big!!! (%g>%g)'%(dt,dt_max)
 
-    NUM_OF_PROCESS = 8
+    NUM_OF_PROCESS = 4
     order = 2 # num of interchange layers of each process
     logger.info("NUM_OF_PROCESS: %d"%(NUM_OF_PROCESS)) 
     if gen_model:
