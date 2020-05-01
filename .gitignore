@@ -9,6 +9,7 @@ test.py
 tasks/*/
 *.png
 *.psd
+*.fig
 FDTD_MPI*
 src_rec/*.in_0000
 

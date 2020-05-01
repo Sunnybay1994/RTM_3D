@@ -42,14 +42,14 @@ nt = T/dt;
 
 %% background model
 ep_bg = ones(nx,ny,nz) * 9;
-% ep_bg(:,:,1:nz_air) = 1; % air layer
+ep_bg(:,:,1:nz_air) = 1; % air layer
 
 ep = ep_bg;
 
 %% slice
 slicex = [nx/2];
 slicey = [ny/2];
-slicez = [round(1.2/dz) + nz_air];
+slicez = [round(1/dz) + nz_air];
 
 %%% the parameter names above should be changed togather with those in 'model_em.py' %%%
 
@@ -57,8 +57,8 @@ slicez = [round(1.2/dz) + nz_air];
 x = (1:nx)*dx;
 y = (1:ny)*dy;
 z = ((1:nz)-nz_air)*dz;
-surf_ep = [5,9,13];
-surf_pos = [0.8,1.3,2.3]; %m
+surf_ep = [3,15,9];
+surf_pos = [0.9,1.5,2.4]; %m
 for i = 1:length(surf_pos)
     layer_z_begin = surf_pos(i);
     if i ~= length(surf_pos)
@@ -72,9 +72,16 @@ end
 dot1 = [2 0 0.8];
 dot2 = [2.5 0 2.3];
 dot3 = [3 5 2.3];
-% -6*(x-2)+3*(y-2)+2*z=0
-dh = 0.3; %m
+% 7.5*(x-2)-0.75*y-2.5*(z-0.8)=0
+
+dh = 0.2; %m
 idh = round(dh / dz);
+
+ep1 = ep;
+for iz = (1+nz_air):nz
+    ep1(:,:,iz) = ep(:,:,iz-idh);
+end
+
 for ix = 1:nx
     xi = (ix-1)*dx;
     for iy = 1:ny
@@ -83,7 +90,7 @@ for ix = 1:nx
             zi = (iz-nz_air)*dz;
             doti = [xi,yi,zi];
             if dot(cross((dot3-dot1),(dot2-dot1)),(doti-dot1)) > 0
-                ep(ix,iy,iz) = ep(ix,iy,iz-idh);
+                ep(ix,iy,iz) = ep1(ix,iy,iz);
             end
         end
     end
@@ -116,23 +123,11 @@ p0 = patch(isosurface(X,Y,Z,ep,1));
 isonormals(X,Y,Z,ep,p0)
 p0.FaceColor = 'black';
 p0.EdgeColor = 'none';
-% p1 = patch(isosurface(X,Y,Z,ep,14.9));
-% isonormals(X,Y,Z,ep,p1)
-% p1.FaceColor = 'yellow';
-% p1.EdgeColor = 'none';
-% p2 = patch(isosurface(X,Y,Z,ep,3));
-% isonormals(X,Y,Z,ep,p2)
-% p2.FaceColor = 'blue';
-% p2.EdgeColor = 'none';
-p3 = patch(isosurface(X,Y,Z,ep,6));
+p3 = patch(isosurface(X,Y,Z,ep,3));
 isonormals(X,Y,Z,ep,p3)
 p3.FaceColor = 'magenta';
 p3.EdgeColor = 'none';
-% p4 = patch(isosurface(X,Y,Z,ep,8.9));
-% isonormals(X,Y,Z,ep,p4)
-% p4.FaceColor = 'black';
-% p4.EdgeColor = 'none';
-p5 = patch(isosurface(X,Y,Z,ep,11.9));
+p5 = patch(isosurface(X,Y,Z,ep,14.9));
 isonormals(X,Y,Z,ep,p5)
 p5.FaceColor = 'blue';
 p5.EdgeColor = 'none';
@@ -168,9 +163,15 @@ if iseven(nx_rec)
 end
 srcx = ((-floor(nx_src/2):floor(nx_src/2)) * dx_src) + nx/2*dx;
 recx = ((-floor(nx_rec/2):floor(nx_rec/2)) * dx_rec) + nx/2*dx;
-srcz = 0-dx;
+srcz = 0-dz;
 [Xs,Ys,Zs] = meshgrid(srcx,srcx,srcz);
 [Xr,Yr,Zr] = meshgrid(recx,recx,srcz);
+srcx = reshape(Xs,1,[]);
+srcy = reshape(Ys,1,[]);
+recx = reshape(Xr,1,[]);
+recy = reshape(Yr,1,[]);
+recz = srcz;
+save([fn,'_sr.mat'],'srcx','srcy','srcz','recx','recy','recz')
 plot3(Xs,Ys,Zs,'r^')
 plot3(Xr,Yr,Zr,'b.')
 % xlim([0 10]);ylim([0 10]);zlim([-0.5 5])

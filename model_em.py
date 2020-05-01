@@ -630,5 +630,5 @@ if __name__ == '__main__':
     cp(os.path.join('Model',model), workdir) # backup model
     cp(os.path.join('Model','make_model.m'), workdir) # backup make_model
 
-    subtxt = 'python subgeop.py -d %s -s %d -p %d -z %d'%(dirname,nsrc,NUM_OF_PROCESS,is_zRTM)
+    subtxt = 'python batchgen_qsub.py -d %s -s %d -p %d -z %d'%(dirname,nsrc,NUM_OF_PROCESS,is_zRTM)
     os.system(subtxt)
