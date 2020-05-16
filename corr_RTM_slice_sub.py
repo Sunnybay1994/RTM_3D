@@ -19,7 +19,7 @@ ch.setFormatter(formatter)
 logger.addHandler(fh)
 logger.addHandler(ch)
 
-def corr_slice(isrc, workdir, dir1 = os.path.join('STD','Output'), dir2 = os.path.join('RTM','Output'), dir3 = 'Result'):
+def corr_slice(isrc, workdir, dir1 = 'Output', dir2 = os.path.join('RTM','Output'), dir3 = 'Result'):
     dir1 = os.path.join(workdir,dir1)
     dir2 = os.path.join(workdir,dir2)
     dir3 = os.path.join(workdir,dir3)

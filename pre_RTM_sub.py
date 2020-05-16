@@ -5,6 +5,8 @@ matplotlib.use('Agg')
 from matplotlib.pyplot import *
 import os,sys,logging,getopt
 from par_RTM import *
+from writesource import *
+# from normal_moveout import trace_normal_moveout_layered
 
 #logger
 logger = logging.getLogger('pre_RTM_sub')
@@ -54,7 +56,7 @@ def merge_gather(idir, isrc):
         with open(os.path.join(idir, 'merge_gather_'+str(isrc).zfill(4)+'.dat'),'w') as fp:
             savetxt(fp,isum)
         with open(os.path.join(idir, 'merge_gather_loc_'+str(isrc).zfill(4)+'.dat'),'w') as fp:
-            savetxt(fp,iloc)
+            savetxt(fp,iloc,'%d')
         for fname in ilist:
             os.remove(fname.strip('\n'))
     else:
@@ -93,11 +95,14 @@ def prepare_RTM(isum,iloc,isum_std,iloc_std,gather_rtm,isrc):
         logger.warning("nt not equal! %d-%d"%(nt,nt_std) )
 
     if mode == 1:
-        with open(os.path.join(rtmdir,'Input','src.in'+'_'+str(isrc).zfill(4)),'w') as fsrc:
-            fsrc.write("%d %d\n" % (nrec_std, nt_std))
-            for i in range(nrec_std):
-                fsrc.write("%d %d %d %s\n"%(iloc[i][0],iloc[i][1],iloc[i][2],component))
-            savetxt(fsrc,gather_rtm)
+        fn = os.path.join(rtmdir,'Input','src.in'+'_'+str(isrc).zfill(4))
+        srcinfos = [item.tolist()+[component] for item in iloc]
+        extend_and_write_sources(fn,srcinfos,gather_rtm)
+        # with open(os.path.join(rtmdir,'Input','src.in'+'_'+str(isrc).zfill(4)),'w') as fsrc:
+        #     fsrc.write("%d %d\n" % (nrec_std, nt_std))
+        #     for i in range(nrec_std):
+        #         fsrc.write("%d %d %d %s\n"%(iloc[i][0],iloc[i][1],iloc[i][2],component))
+        #     savetxt(fsrc,gather_rtm)
 
     if mode == 0:
         fn_src = os.path.join('Input','src.in_'+str(isrc).zfill(4))
@@ -116,7 +121,8 @@ def prepare_RTM(isum,iloc,isum_std,iloc_std,gather_rtm,isrc):
 
 def pre_RTM(list_src):
     if mode == 0:
-        locs = ''
+        # locs = ''
+        locs = []
         dats = []
 
     for i in list_src:#range(nsrc)
@@ -126,14 +132,15 @@ def pre_RTM(list_src):
         
         if mode == 0:
             nt,pos,component,gather0 = prepare_RTM(isum,iloc,isum_std,iloc_std,gather_rtm,i)
-            locs += "%d %d %d %s\n"%(pos[0],pos[1],pos[2],component)
+            # locs += "%d %d %d %s\n"%(pos[0],pos[1],pos[2],component)
+            locs += [pos.append(component)]
             dats.append(gather0)
             if i == list_src[-1]:
                 logger.info('Writing zero-offset source data...')
-                with open(os.path.join(rtm0dir,'Input','src.in_0000'),'w') as fsrc:
-                    fsrc.write("%d %d\n" % (len(list_src), nt))
-                    fsrc.write(locs)
-                    savetxt(fsrc,dats)
+                # with open(os.path.join(rtm0dir,'Input','src.in_0000'),'w') as fsrc:
+                #     fsrc.write("%d %d\n" % (len(list_src), nt))
+                #     fsrc.write(locs)
+                #     savetxt(fsrc,dats)
                 logger.info('All Done.')
         else:
             prepare_RTM(isum,iloc,isum_std,iloc_std,gather_rtm,i)

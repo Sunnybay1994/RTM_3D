@@ -7,6 +7,7 @@ f_wavefield_corr = dir(fullfile(resultdir,'result_wavefield_corr.dat*'));
 modelfiles = dir(fullfile(workdir,'model.mat'));
 modelfn = fullfile(modelfiles.folder,modelfiles.name);
 m = load(modelfn);
+load(fullfile(workdir,'model_sr.mat'))
 
 dx_ori = m.dx;
 dy_ori = m.dy;
@@ -28,36 +29,38 @@ nz_air = nz_air_ori / x_outstep;
 dx = dx_ori * x_outstep;
 dy = dy_ori * x_outstep;
 dz = dz_ori * x_outstep;
+x = (1:nx)*dx;
+y = (1:ny)*dy;
+z = ((1:nz)-nz_air)*dz;
 
 %% behavier
-result_exist = true;
+result_exist = false;
 draw_xslice = false;
 draw_yslice = true;
 draw_zslice = true;
 
 %%
 if ~result_exist
-    disp(['Loading 1st file...'])
-    wavefield_corr_raw = load(fullfile(resultdir,f_wavefield_corr(1).name));
-    for i = 2:length(f_wavefield_corr)
-        disp(['Loading ' num2str(i) 'th file...'])
-        wavefield_corr_raw = wavefield_corr_raw + load(fullfile(resultdir,f_wavefield_corr(i).name));
+    for i = 1:length(f_wavefield_corr)
+        disp(['Loading ' num2str(i) 'th file:' f_wavefield_corr(i).name])
+        wavefield_corr = reshape(load(fullfile(resultdir,f_wavefield_corr(i).name)),nz,ny,nx);
+        wavefield_corr_amp = amp_gain_distance(wavefield_corr,[srcx(i),srcy(i),srcz],x,y,z,4);
+        if i == 1
+            wavefield_corr_sum = wavefield_corr_amp;
+        else
+            wavefield_corr_sum = wavefield_corr_sum + wavefield_corr_amp;
+        end
     end
-    wavefield_corr = reshape(wavefield_corr_raw,nz,ny,nx);%z,y,x
-    save(fullfile(outdir,'result_wavefield_corr'),'wavefield_corr','-v7.3')
+    save(fullfile(outdir,'result_wavefield_corr'),'wavefield_corr_sum','-v7.3')
 else
     load(fullfile(outdir,'result_wavefield_corr'))
 end
 
 %%
-x = (1:nx)*dx;
-y = (1:ny)*dy;
-z = ((1:nz)-nz_air)*dz;
-%%
 if draw_zslice
     for i = 1:nz
         zi = (i-nz_air)*dz;
-        zslice = squeeze(wavefield_corr(i,:,:));
+        zslice = squeeze(wavefield_corr_sum(i,:,:));
         imagesc(x,y,zslice);colorbar
         title(['zslice at z=' num2str(zi) 'm'])
 
@@ -68,7 +71,7 @@ if draw_zslice
         plot(x,ym,'r--')
         hold off
         
-        saveas(gcf,fullfile(outdir,['zslice at z=' num2str(zi) 'm.png']))
+%         saveas(gcf,fullfile(outdir,['zslice at z=' num2str(zi) 'm.png']))
         pause(0.1)
     end
 end
@@ -76,7 +79,7 @@ end
 if draw_xslice
     for i = 1:nx
         xi = i*dx;
-        xslice = squeeze(wavefield_corr(:,:,i));
+        xslice = squeeze(wavefield_corr_sum(:,:,i));
         xslice1 = agc(xslice);
         imagesc(y,z,xslice1);colorbar
         title(['xslice at x=' num2str(xi) 'm'])
@@ -89,20 +92,24 @@ if draw_xslice
         plot(y,zm,'r--')
         hold off
         
-        saveas(gcf,fullfile(outdir,['xslice at x=' num2str(xi) 'm.png']))
+%         saveas(gcf,fullfile(outdir,['xslice at x=' num2str(xi) 'm.png']))
         pause(0.1)
     end
 end
 %%
 if draw_yslice
-    for i = 1:ny
+    i=61;
+%     wavefield_corr = reshape(load(fullfile(resultdir,f_wavefield_corr(i).name)),nz,ny,nx);
+    wavefield_corr_amp = amp_gain_distance(wavefield_corr,[srcx(i),srcy(i),srcz],x,y,z,1,pi/4,2);
+    for i = 1:ny%round(ny/2)
         yi = i*dy;
-        zind = z>0.2;
+        zind = z>0;
         xind = x>0.4&x<5-0.4;
-        yslice = squeeze(wavefield_corr(zind,i,xind));
+        yslice = squeeze(wavefield_corr_amp(zind,i,xind));
         op_length = 8;
-        yslice1 = agc(yslice,1:size(yslice,1),8,op_length/10,0);
-        imagesc(x(xind),z(zind),yslice1);colorbar
+        yslice1 = agc(yslice,1:size(yslice,1),8,op_length/10,1);
+        imagesc(x(xind),z(zind),yslice);colorbar
+%         caxis([-1e-5,1e-5]);
         title(['yslice at y=' num2str(yi) 'm'])
 
         % outline model, should add manully
@@ -141,7 +148,7 @@ if draw_yslice
 %         plot(x,zm,'r-.')
         hold off
         
-        saveas(gcf,fullfile(outdir,['yslice at y=' num2str(yi) 'm.png']))
+%         saveas(gcf,fullfile(outdir,['yslice at y=' num2str(yi) 'm.png']))
         pause(0.1)
     end
 end

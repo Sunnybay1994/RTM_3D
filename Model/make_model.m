@@ -1,5 +1,5 @@
 %% modelname
-modelname = 'layers_with_fault';
+modelname = '3layers_with_0.2m_fault';
 fn = 'model';
 fn_save = [fn '.mat'];
 fig_save = [fn '.png'];
@@ -57,7 +57,7 @@ slicez = [round(1/dz) + nz_air];
 x = (1:nx)*dx;
 y = (1:ny)*dy;
 z = ((1:nz)-nz_air)*dz;
-surf_ep = [3,15,9];
+surf_ep = [6,9,12];
 surf_pos = [0.9,1.5,2.4]; %m
 for i = 1:length(surf_pos)
     layer_z_begin = surf_pos(i);
@@ -119,17 +119,17 @@ x = (1:nx)*dx;
 y = (1:ny)*dy;
 z = ((1:nz)-nz_air)*dz;
 [X,Y,Z] = meshgrid(y,x,z);
-p0 = patch(isosurface(X,Y,Z,ep,1));
+p0 = patch(isosurface(X,Y,Z,ep,8.9));
 isonormals(X,Y,Z,ep,p0)
 p0.FaceColor = 'black';
 p0.EdgeColor = 'none';
-p3 = patch(isosurface(X,Y,Z,ep,3));
-isonormals(X,Y,Z,ep,p3)
-p3.FaceColor = 'magenta';
-p3.EdgeColor = 'none';
-p5 = patch(isosurface(X,Y,Z,ep,14.9));
+% p3 = patch(isosurface(X,Y,Z,ep,6));
+% isonormals(X,Y,Z,ep,p3)
+% p3.FaceColor = 'magenta';
+% p3.EdgeColor = 'none';
+p5 = patch(isosurface(X,Y,Z,ep,11.9));
 isonormals(X,Y,Z,ep,p5)
-p5.FaceColor = 'blue';
+p5.FaceColor = 'black';
 p5.EdgeColor = 'none';
 daspect([1,1,1])
 view(3); alpha(.3);axis tight
@@ -177,4 +177,4 @@ plot3(Xr,Yr,Zr,'b.')
 % xlim([0 10]);ylim([0 10]);zlim([-0.5 5])
 hold off
 
-saveas(gcf,fig_save)
+% saveas(gcf,fig_save)

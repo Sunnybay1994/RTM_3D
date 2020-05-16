@@ -8,6 +8,7 @@ import matplotlib
 matplotlib.use('Agg')
 import os,sys,shutil,logging,getopt,datetime
 import glob
+from writesource import *
 
 #logger
 today = datetime.date.today()
@@ -82,20 +83,9 @@ def src_rec(dnx_src,dny_src=False,dnx_rec=False,dny_rec=False,nzp_src=False,nzp_
     nrec = len(rec)
     logger.info("nrec: %d"%nrec) 
 
-#    nrec = len(rec)
-#    print "nrec: ",nrec
-    # write data
     for i in range(nsrc):
-        # Modified by mbw at 20180607
-        # with open('./Input/src.in_' + str(i + 1).zfill(4), 'w') as fsrc:
-        with open(os.path.join(indir,'src.in_' + str(i).zfill(4)), 'w') as fsrc:
-        # END Modify
-            fsrc.write("%d %d\n" % (1, nt_src))
-            # for i in range(nsrc):
-            fsrc.write("%d %d %d %s\n" %
-                       (src[i][0], src[i][1], src[i][2], src[i][3]))
-            # for i in range(nsrc):
-            np.savetxt(fsrc, np.array([srcpulse]) * src[i][4])
+        fn_src = os.path.join(indir,'src.in_' + str(i).zfill(4))
+        extend_and_write_one_source(fn_src, src[i], srcpulse)
 
     with open(os.path.join(indir,'rec.in'), 'w') as frec:
         frec.write("%d\n" % (nrec))
@@ -614,7 +604,7 @@ if __name__ == '__main__':
     ### generate src & rec end ###
 
     ### generate model ###
-    NUM_OF_PROCESS = 4
+    NUM_OF_PROCESS = 8
     if gen_model:
         order = 2 # num of interchange layers of each process
         logger.info("NUM_OF_PROCESS: %d"%NUM_OF_PROCESS) 
@@ -627,6 +617,7 @@ if __name__ == '__main__':
 
     # backup this file
     cp('model_em.py', workdir)
+    cp(os.path.join('Model',model[:-4]+'_sr'+model[-4:]), workdir) # backup model_sr
     cp(os.path.join('Model',model), workdir) # backup model
     cp(os.path.join('Model','make_model.m'), workdir) # backup make_model
 
