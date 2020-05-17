@@ -1,12 +1,13 @@
 #!/usr/bin/env python
-from numpy import *
+import numpy as np
 import matplotlib
+import scipy.io as sio
 matplotlib.use('Agg')
-from matplotlib.pyplot import *
+import matplotlib.pyplot as plt
 import os,sys,logging,getopt
 from par_RTM import *
 from writesource import *
-# from normal_moveout import trace_normal_moveout_layered
+from normal_moveout import *
 
 #logger
 logger = logging.getLogger('pre_RTM_sub')
@@ -39,10 +40,10 @@ def merge_gather(idir, isrc):
     if ilist:
         logger.info("merging gather for %d files: %s-src%d"%(len(ilist),idir,isrc)) 
         for name in ilist:
-            gather = loadtxt(name.strip('\n'))
-            if shape(gather)[0] == 0:
+            gather = np.loadtxt(name.strip('\n'))
+            if np.shape(gather)[0] == 0:
                 continue
-            if shape(shape(gather))[0] == 1:
+            if np.shape(np.shape(gather))[0] == 1:
                 iloc.append((int(x) for x in gather[:3]))
                 isum.append(gather[3:])
             else:
@@ -54,29 +55,29 @@ def merge_gather(idir, isrc):
             plot(isum[i]/max(abs(isum[i]))+i)
         savefig(os.path.join(idir, 'merge_gather_'+str(isrc).zfill(4)+'.png'))
         with open(os.path.join(idir, 'merge_gather_'+str(isrc).zfill(4)+'.dat'),'w') as fp:
-            savetxt(fp,isum)
+            np.savetxt(fp,isum)
         with open(os.path.join(idir, 'merge_gather_loc_'+str(isrc).zfill(4)+'.dat'),'w') as fp:
-            savetxt(fp,iloc,'%d')
+            np.savetxt(fp,iloc,'%d')
         for fname in ilist:
             os.remove(fname.strip('\n'))
     else:
         logger.info("merging gather: No files. Loading merge_gather.") 
         with open(os.path.join(idir, 'merge_gather_'+str(isrc).zfill(4)+'.dat')) as fp:
-            isum = loadtxt(fp)
+            isum = np.loadtxt(fp)
         with open(os.path.join(idir, 'merge_gather_loc_'+str(isrc).zfill(4)+'.dat')) as fp:
-            iloc = loadtxt(fp)
+            iloc = np.loadtxt(fp)
     return isum,iloc
 
 
 def remove_STD(gather,gather_std,isrc):
     # global gather_RTM
     logger.info("removing source: src%d"%isrc) 
-    gather_RTM = fliplr(array(gather) - array(gather_std))
+    gather_RTM = np.fliplr(np.array(gather) - np.array(gather_std))
     # for i in range(len(gather_RTM[:,0])):
     #     gather_RTM[i,:] = gather_RTM[i,:]/max(abs(gather_RTM[i,:]))
-    figure()
-    imshow(gather_RTM,cmap='gray',origin='lower',extent=(0,nt,0,nt/2))
-    savefig(os.path.join(rtmdir,'Input','gather_without_src'+'_'+str(isrc).zfill(4)+'.png'))
+    plt.figure()
+    plt.imshow(gather_RTM,cmap='gray',origin='lower',extent=(0,nt,0,nt/2))
+    plt.savefig(os.path.join(rtmdir,'Input','gather_without_src'+'_'+str(isrc).zfill(4)+'.png'))
     return gather_RTM
 
 
@@ -102,28 +103,88 @@ def prepare_RTM(isum,iloc,isum_std,iloc_std,gather_rtm,isrc):
         #     fsrc.write("%d %d\n" % (nrec_std, nt_std))
         #     for i in range(nrec_std):
         #         fsrc.write("%d %d %d %s\n"%(iloc[i][0],iloc[i][1],iloc[i][2],component))
-        #     savetxt(fsrc,gather_rtm)
+        #     np.savetxt(fsrc,gather_rtm)
 
     if mode == 0:
-        fn_src = os.path.join('Input','src.in_'+str(isrc).zfill(4))
-        with open(fn_src) as fo:
-            fo.readline()
-            srcinfo = fo.readline()
-            [srcx, srcy, srcz] = [int(n) for n in srcinfo.split(' ')[:-1]]
-        for irec in range(nrec):
-            assert (iloc[irec] == iloc_std[irec]).all(), logger.warning("Position NOT correct for 'OUTPUT'(%s) and 'STD/OUTPUT'(%s)"%(iloc(irec),iloc_std(irec)))
-            if iloc[irec][0] == srcx and iloc[irec][1] == srcy:
-                logger.debug('src%d:(%d,%d); rec%d:(%d,%d)'%(isrc,srcx,srcy,irec,iloc[irec][0],iloc[irec][1]))
-                gather0 = gather_rtm[irec,:]
-                return nt,[srcx, srcy, srcz],component,gather0
-                break
+        
+        tt = []
+        for ig in range(len(gather_rtm)):
+            tt += [np.array(range(len(gather_rtm[ig])))*dt]
+
+        logger.info('Doing NMO...')
+        nmo_results = gen_nmo_gathers(srclocs[isrc], iloc, max_offset, gather_rtm, tt, v[:,:,z>0],z[z>0],dx,dy,dz)
+        return nt,component,nmo_results
+        # for irec in range(nrec):
+        #     assert (iloc[irec] == iloc_std[irec]).all(), logger.warning("Position NOT correct for 'OUTPUT'(%s) and 'STD/OUTPUT'(%s)"%(iloc(irec),iloc_std(irec)))
+        #     if iloc[irec][0] == srcx and iloc[irec][1] == srcy:
+        #         logger.debug('src%d:(%d,%d); rec%d:(%d,%d)'%(isrc,srcx,srcy,irec,iloc[irec][0],iloc[irec][1]))
+        #         gather0 = gather_rtm[irec,:]
+        #         return nt,[srcx, srcy, srcz],component,gather0
+        #         break
+
+def bin_gathers(locs,dats,weights=False,source_span=5):
+    assert len(locs)==len(dats), 'number of gathers(%d) and its locations(%d) not equal.'%(len(dats),len(locs))
+    ndat = len(locs)
+    logger.info('bin gathers into grids...')
+    locx_max,locy_max,locz = max(locs)
+    ilocx_max = int(np.ceil(locx_max/source_span)) + 1
+    ilocy_max = int(np.ceil(locy_max/source_span)) + 1
+    bin_ga = np.zeros([ilocx_max,ilocy_max,nt])
+    bin_ga_sum = np.zeros([ilocx_max,ilocy_max])
+    # put into bin
+    logger.debug('put into bin')
+    for ig in range(ndat):
+        loc = locs[ig]
+        ga = dats[ig]
+        if weights:
+            weight = weights[ig]
+        else:
+            weight = 1
+        ixbin = int(round(loc[0]/source_span))
+        iybin = int(round(loc[1]/source_span))
+        bin_ga[ixbin,iybin,:] += ga
+        bin_ga_sum[ixbin,iybin] += weight
+    # merge gather in the same location
+    logger.debug('merge gather in the same location')
+    for ix in range(ilocx_max):
+        for iy in range(ilocy_max):
+            if bin_ga_sum[ix,iy] == 0:
+                # logger.debug('no data at: (%d,%d)*%d'%(ix,iy,source_span))
+                pass
+            else:
+                yield (ix*source_span,iy*source_span,locz),bin_ga[ix][iy]/bin_ga_sum[ix][iy]
 
 
 def pre_RTM(list_src):
     if mode == 0:
-        # locs = ''
+        global dt,dx,dy,dz,v,z,max_offset,srclocs
         locs = []
         dats = []
+        weights = []
+        logger.info('loading para')
+        dic_model = sio.loadmat(os.path.join('model.mat'))
+        dict_sr = sio.loadmat(os.path.join('model_sr.mat'))
+        epr = np.array(dic_model['ep'])
+        dt = float(dic_model['dt'])
+        dx = float(dic_model['dx'])
+        dy = float(dic_model['dy'])
+        dz = float(dic_model['dz'])
+        nx = int(dic_model['nx'])
+        ny = int(dic_model['ny'])
+        nz_air = int(dic_model['nz_air'])
+        nz = int(dic_model['nz'])
+        v = 299792458/np.sqrt(epr)
+        z = (np.array(range(nz)) - nz_air) * dz
+        srcxs = [int(round(x/dx)) for x in dict_sr['srcx'][0].tolist()]
+        srcys = [int(round(y/dy)) for y in dict_sr['srcy'][0].tolist()]
+        srcz = int(round(float(dict_sr['srcz'])/dz + nz_air))
+        srclocs = [locxy+(srcz,) for locxy in zip(srcxs,srcys)]
+
+        dsrc_grid = np.linalg.norm(np.array(srclocs[1])-np.array(srclocs[0]))
+        max_offset = np.sqrt(2)*dsrc_grid
+        if no_nmo:
+            max_offset = 1
+        logger.debug('max_offset:%d'%max_offset)
 
     for i in list_src:#range(nsrc)
         isum,iloc = merge_gather(os.path.join(workdir,'Output'),i)
@@ -131,16 +192,22 @@ def pre_RTM(list_src):
         gather_rtm = remove_STD(isum,isum_std,i)
         
         if mode == 0:
-            nt,pos,component,gather0 = prepare_RTM(isum,iloc,isum_std,iloc_std,gather_rtm,i)
-            # locs += "%d %d %d %s\n"%(pos[0],pos[1],pos[2],component)
-            locs += [pos.append(component)]
-            dats.append(gather0)
+            nt,component,nmo_results = prepare_RTM(isum,iloc,isum_std,iloc_std,gather_rtm,i)
+            nmo_locs,nmo_gathers,offsets = zip(*nmo_results)
+            nmo_weights = 1-np.array(offsets)*0.9/max_offset # nmo weight: 1 for 0-offset, 0.1 for max_offset
+            locs += nmo_locs
+            dats += nmo_gathers
+            weights += nmo_weights.tolist()
+
             if i == list_src[-1]:
+                locs_binned,dats_binned = zip(*bin_gathers(locs,dats,weights))
+                locinfos = [(loc[0],loc[1],loc[2],component) for loc in locs_binned]
                 logger.info('Writing zero-offset source data...')
-                # with open(os.path.join(rtm0dir,'Input','src.in_0000'),'w') as fsrc:
+                fn = os.path.join(rtm0dir,'Input','src.in_0000')
+                extend_and_write_sources(fn, locinfos, dats_binned)
                 #     fsrc.write("%d %d\n" % (len(list_src), nt))
                 #     fsrc.write(locs)
-                #     savetxt(fsrc,dats)
+                #     np.savetxt(fsrc,dats)
                 logger.info('All Done.')
         else:
             prepare_RTM(isum,iloc,isum_std,iloc_std,gather_rtm,i)
@@ -150,7 +217,7 @@ def pre_RTM(list_src):
 
 if __name__ == "__main__":
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "m:o:d:", ["mode=","outdir=","workdir="])
+        opts, args = getopt.getopt(sys.argv[1:], "m:o:d:", ["mode=","outdir=","workdir=","no_nmo"])
     except getopt.GetoptError as err:
         # print help information and exit:
         logger.error(err)  # will print something like "option -a not recognized"
@@ -160,6 +227,7 @@ if __name__ == "__main__":
     mode = 1
     workdir = ''
     rtmdir_name = 'RTM'
+    no_nmo = False
     for o, a in opts:
         if o in ('-d','--workdir'):
             workdir = a
@@ -176,6 +244,8 @@ if __name__ == "__main__":
                 logger.info('normal mode. src%d'%isrc)
             else:
                 logger.error('mode parameter must be 0,1')
+        elif o in ("--no_nmo"):
+            no_nmo = True
         else:
             assert False, "unhandled option"
 
@@ -186,6 +256,7 @@ if __name__ == "__main__":
     read_par
     if mode == 0:
         pre_RTM(range(nsrc))
+        # pre_RTM([60])
     elif mode == 1:
         isrc = int(args[0])
         pre_RTM([isrc])

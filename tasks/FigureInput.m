@@ -1,10 +1,26 @@
 %%
-infn = fullfile('RTM/Input','src.in_0000');
+homedir = '3layers_with_0.2m_fault_300MHz_0.4m_0.2m';
+workdir = fullfile(homedir,'RTM0_nmo');
+indir = fullfile(workdir,'Input');
+infn = fullfile(indir,'src.in_0000');
+outdir = workdir;
+%%
+modelfiles = dir(fullfile(homedir,'model.mat'));
+modelfn = fullfile(modelfiles.folder,modelfiles.name);
+m = load(modelfn);
 
-dx=0.02;
-dy=0.02;
-dz=0.02;
-dt = 3e-11*1e9;%ns
+dx = m.dx;
+dy = m.dy;
+dz = m.dz;
+
+nx = m.nx;
+ny = m.ny;
+nz_air = m.nz_air;
+nz = m.nz;
+
+dt = m.dt;%ns
+
+%%
 
 fid = fopen(infn);
 info = str2num(fgetl(fid));
@@ -18,47 +34,19 @@ end
 fclose(fid);
 
 data = importdata(infn,' ',1+nsrc);
-gather = data.data;
+gather0 = data.data;
 %%
-for isrc = 1:nsrc
-    disp(isrc)
-    gather = importdata(['../Output/merge_gather_' num2str(isrc-1,'%04d') '.dat']);
-    imagesc(gather');colorbar;
-    pause(0.1)
+field = zeros(nx,ny,nt);
+for i=1:nsrc
+    field(srcloc(i,1),srcloc(i,2),:) = gather0(i,:);
+%     plot(gather0(i,:))
+%     title(num2str(i))
+%     pause(0.1)
 end
 %%
-x = (0:wstep:nx)*0.02;
-y=x;
-z = (0:wstep:nz)*0.02;
-for i = length(xslice)
-    figure(11)
-    imagesc(y,z,xslice{i});colorbar;
-    xlabel('y/m');ylabel('z/m');
-    title(['xslice t=' num2str(dt*(i-1)*tstep) 'ns'])
-    saveas(gca,'xslice.png')
-    figure(12)
-    imagesc(x,z,yslice{i});colorbar;
-    xlabel('x/m');ylabel('z/m');
-    title(['yslice t=' num2str(dt*(i-1)*tstep) 'ns'])
-    saveas(gca,'yslice.png')
-    figure(13)
-    zslices = zslice{i};
-    imagesc(x,y,zslices(:,:));colorbar;
-    xlabel('x/m');ylabel('y/m');
-    title(['zslice t=' num2str(dt*(i-1)*tstep) 'ns'])
-    saveas(gca,'zslice.png')
-end 
-%%
-% for i =1:10
-%     figure(15)
-%     linewf = squeeze(wavefield{end}(:,-2+5*i,:));
-%     x=1:size(wavefield{end},3)*0.1;
-%     z=1:size(wavefield{end},1)*0.1;
-%     imagesc(x,z,linewf);colorbar;
-%     xlabel('x(m)');ylabel('z(m)');
-%     caxis([-1e4,1e4])
-%     title(['linenum=' num2str(i)])
-%     saveas(gcf,['result/line' num2str(i,'%02d') '_3dmig.png']);
-%     save(['result/line' num2str(i,'%02d') '_3dmig.mat'],'linewf','x','z');
-% %     pause(0.1)
-% end 
+for i=ny/2
+    imagesc(flipud(squeeze(field(:,i,:))')),colorbar
+    title(['iy=' num2str(i)])
+%     pause(0.1)
+    saveas(gcf,fullfile(outdir,'input.png'));
+end

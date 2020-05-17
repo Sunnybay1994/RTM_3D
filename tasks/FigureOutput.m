@@ -1,13 +1,14 @@
 %% load files and parameters
-workdir = '.';
-result_dir = fullfile(workdir,'/RTM0/Output');
+homedir = '3layers_with_0.2m_fault_300MHz_0.4m_0.2m';
+workdir = fullfile(homedir,'RTM0_nmo');
+result_dir = fullfile(workdir,'Output');
 fxslice = dir(fullfile(result_dir,'xSlice*.dat*'));
 fyslice = dir(fullfile(result_dir,'ySlice*.dat*'));
 fzslice = dir(fullfile(result_dir,'zSlice*.dat*'));
 fwave = dir(fullfile(result_dir,'Wave*.dat*'));
-outdir = fullfile(workdir,'/RTM0');
+outdir = workdir;
 
-modelfiles = dir(fullfile(workdir,'model.mat'));
+modelfiles = dir(fullfile(homedir,'model.mat'));
 modelfn = fullfile(modelfiles.folder,modelfiles.name);
 m = load(modelfn);
 
@@ -37,7 +38,7 @@ dz = dz_ori * x_outstep;
 dt = dt_ori/t_outstep;
 
 %% behavier
-result_exist = true;
+result_exist = false;
 draw_slices = true;
 draw_wavefield_yslice = true;
 draw_3D_view = false;
@@ -93,43 +94,64 @@ if draw_slices
         hold on
         yi = 2.5;
         % draw layer
-        surf_pos = [0.8,1.3,2.3];
-        zm1 = ones(size(x))*0.8;
-        zm2 = ones(size(x))*1.3;
-        zm3 = ones(size(x))*2.3;
-        dh = 0.3; %m
-        for i = 1:length(x)
-            xi = x(i);
-            z1i = zm1(i);
-            z2i = zm2(i);
-            z3i = zm3(i);
+        surf_pos = [0.9,1.5,2.4];
+        zm1 = ones(size(x))*surf_pos(1);
+        zm2 = ones(size(x))*surf_pos(2);
+        zm3 = ones(size(x))*surf_pos(3);
+        dh = 0.2; %m
+        for ix = 1:length(x)
+            xi = x(ix);
+            z1i = zm1(ix);
+            z1hi = zm1(ix)+dh;
+            z2i = zm2(ix);
+            z2hi = zm2(ix)+dh;
+            z3i = zm3(ix);
+            z3hi = zm3(ix)+dh;
             dot1i = [xi,yi,z1i];
+            dot1hi = [xi,yi,z1hi];
             dot2i = [xi,yi,z2i];
+            dot2hi = [xi,yi,z2hi];
             dot3i = [xi,yi,z3i];
-            if dot([7.5,-0.75,-2.5],(dot1i-[2 0 0.8])) > 0
-                zm1(i) = zm1(i) + dh; 
+            dot3hi = [xi,yi,z3hi];
+            
+            temp1 = dot([7.5,-0.75,-2.5],(dot1i-[2 0 0.8]));
+            temp1h =  dot([7.5,-0.75,-2.5],(dot1hi-[2 0 0.8]));
+            if temp1 > 0 && temp1h < 0
+                zm1(ix) = (7.5*(xi-2)-0.75*yi)/2.5 + 0.8;
+            elseif temp1h > 0
+                zm1(ix) = z1hi;
             end
-            if dot([7.5,-0.75,-2.5],(dot2i-[2 0 0.8])) > 0
-                zm2(i) = zm2(i) + dh; 
+            
+            temp2 = dot([7.5,-0.75,-2.5],(dot2i-[2 0 0.8]));
+            temp2h =  dot([7.5,-0.75,-2.5],(dot2hi-[2 0 0.8]));
+            if temp2 > 0 && temp2h < 0
+                zm2(ix) = (7.5*(xi-2)-0.75*yi)/2.5 + 0.8;
+            elseif temp2h > 0
+                zm2(ix) = z2hi;
             end
-            if dot([7.5,-0.75,-2.5],(dot3i-[2 0 0.8])) > 0
-                zm3(i) = zm3(i) + dh; 
+            
+            temp3 = dot([7.5,-0.75,-2.5],(dot3i-[2 0 0.8]));
+            temp3h =  dot([7.5,-0.75,-2.5],(dot3hi-[2 0 0.8]));
+            if temp3 > 0 && temp3h < 0
+                zm3(ix) = (7.5*(xi-2)-0.75*yi)/2.5 + 0.8;
+            elseif temp3h > 0
+                zm3(ix) = z3hi;
             end
         end
         plot(x,zm1,'r--',x,zm2,'r--',x,zm3,'r--')
-        % draw fault: 7.5*(x-2)-0.75*y-2.5*(z-0.8)=0
-        zm = (7.5*(x-2)-0.75*yi)/2.5 + 0.8;
-        plot(x,zm,'r-.')
+%         % draw fault: 7.5*(x-2)-0.75*y-2.5*(z-0.8)=0
+%         zm = (7.5*(x-2)-0.75*yi)/2.5 + 0.8;
+%         plot(x,zm,'r-.')
         hold off
         saveas(gca,fullfile(outdir,'yslice.png'))
 
         figure(13)
         imagesc(x,y,agc(zslice{i}')');colorbar;
         xlabel('x/m');ylabel('y/m');
-        title(['zslice z=1.2m'])
+        title(['zslice z=1m'])
         % outline model, should add manully
         hold on
-        zi = 1.2;
+        zi = 1;
         % 7.5*(x-2)-0.75*y-2.5*(z-0.8)=0
         ym = (7.5*(x-2)-2.5*(zi-0.8))/0.75;
         plot(x,ym,'r--')
@@ -147,7 +169,7 @@ if draw_wavefield_yslice
     for i = 12:10:113
         yi = i*dy;
         wyslice = squeeze(wavefield{end}(:,i,:));
-        wyslice1 = agc(wyslice,1:size(wyslice,1),8);
+        wyslice1 = agc(wyslice);
         imagesc(x,z,wyslice1);colorbar
         xlabel('x/m');ylabel('z/m');
         title(['yslice at y=' num2str(yi) 'm'])
@@ -155,37 +177,54 @@ if draw_wavefield_yslice
         % outline model, should add manully
         hold on
         % draw layer
-        surf_pos = [0.8,1.3,2.3];
-        zm1 = ones(size(x))*0.8;
-        zm2 = ones(size(x))*1.3;
-        zm3 = ones(size(x))*2.3;
-        
-        % 7.5*(x-2)-0.75*y-2.5*(z-0.8)=0
-        dh = 0.3; %m
-        for i = 1:length(x)
-            xi = x(i);
-            z1i = zm1(i);
-            z2i = zm2(i);
-            z3i = zm3(i);
+        surf_pos = [0.9,1.5,2.4];
+        zm1 = ones(size(x))*surf_pos(1);
+        zm2 = ones(size(x))*surf_pos(2);
+        zm3 = ones(size(x))*surf_pos(3);
+        dh = 0.2; %m
+        for ix = 1:length(x)
+            xi = x(ix);
+            z1i = zm1(ix);
+            z1hi = zm1(ix)+dh;
+            z2i = zm2(ix);
+            z2hi = zm2(ix)+dh;
+            z3i = zm3(ix);
+            z3hi = zm3(ix)+dh;
             dot1i = [xi,yi,z1i];
+            dot1hi = [xi,yi,z1hi];
             dot2i = [xi,yi,z2i];
+            dot2hi = [xi,yi,z2hi];
             dot3i = [xi,yi,z3i];
-            if dot([7.5,-0.75,-2.5],(dot1i-[2 0 0.8])) > 0
-                zm1(i) = zm1(i) + dh; 
+            dot3hi = [xi,yi,z3hi];
+            
+            temp1 = dot([7.5,-0.75,-2.5],(dot1i-[2 0 0.8]));
+            temp1h =  dot([7.5,-0.75,-2.5],(dot1hi-[2 0 0.8]));
+            if temp1 > 0 && temp1h < 0
+                zm1(ix) = (7.5*(xi-2)-0.75*yi)/2.5 + 0.8;
+            elseif temp1h > 0
+                zm1(ix) = z1hi;
             end
-            if dot([7.5,-0.75,-2.5],(dot2i-[2 0 0.8])) > 0
-                zm2(i) = zm2(i) + dh; 
+            
+            temp2 = dot([7.5,-0.75,-2.5],(dot2i-[2 0 0.8]));
+            temp2h =  dot([7.5,-0.75,-2.5],(dot2hi-[2 0 0.8]));
+            if temp2 > 0 && temp2h < 0
+                zm2(ix) = (7.5*(xi-2)-0.75*yi)/2.5 + 0.8;
+            elseif temp2h > 0
+                zm2(ix) = z2hi;
             end
-            if dot([7.5,-0.75,-2.5],(dot3i-[2 0 0.8])) > 0
-                zm3(i) = zm3(i) + dh; 
+            
+            temp3 = dot([7.5,-0.75,-2.5],(dot3i-[2 0 0.8]));
+            temp3h =  dot([7.5,-0.75,-2.5],(dot3hi-[2 0 0.8]));
+            if temp3 > 0 && temp3h < 0
+                zm3(ix) = (7.5*(xi-2)-0.75*yi)/2.5 + 0.8;
+            elseif temp3h > 0
+                zm3(ix) = z3hi;
             end
         end
         plot(x,zm1,'r--',x,zm2,'r--',x,zm3,'r--')
-        
-        % draw fault
-        % 7.5*(x-2)-0.75*y-2.5*(z-0.8)=0
-        zm = (7.5*(x-2)-0.75*yi)/2.5 + 0.8;
-        plot(x,zm,'r-.')
+%         % draw fault: 7.5*(x-2)-0.75*y-2.5*(z-0.8)=0
+%         zm = (7.5*(x-2)-0.75*yi)/2.5 + 0.8;
+%         plot(x,zm,'r-.')
         hold off
         
         saveas(gcf,fullfile(outdir,['yslice at y=' num2str(yi) 'm.png']))

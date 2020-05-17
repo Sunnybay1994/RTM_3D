@@ -11,19 +11,25 @@ def trace_normal_moveout_layered(gather,tt,offset,v,z_v):
     # v: 1D velocity model at pos
     # z_v: z-coodrinate corresponding to v, should be above zero
     ###################################
+    if offset == 0:
+        print('zero offset, gather not change.')
+        return gather
 
+    print('Doing NMO, offset=%g'%offset)
     z_v = np.array(z_v)
     assert z_v.all()>0, 'z_v should be always > 0'
     v = np.array(v)
     # extend v and z_v if necessary
     v_max = np.max(v)
     z_max = tt[-1]*v_max
+    print('tt_max=%g,v_max=%g,z_max:%g, z_v_max:%g'%(tt[-1],v_max,z_max,z_v[-1]))
     if z_max > z_v[-1]:
         dz = z_v[-1] - z_v[-2]
         z_ext = np.arange(z_v[-1]+dz,z_max,dz)
         v_ext = v[-1]*np.ones(np.shape(z_ext))
         z_v = np.append(z_v,z_ext)
         v = np.append(v,v_ext)
+        print('z_v_extened_max:%g'%z_v[-1])
     # calculate v_rms
     z_vv = np.insert(z_v,0,0)
     dz_v = z_vv[1:] - z_vv[:-1] # space step
@@ -45,6 +51,26 @@ def trace_normal_moveout_layered(gather,tt,offset,v,z_v):
     # interpolate gather from tt0 to the ori time series tt
     gather0 = np.interp(tt,tt0,gather1,0,0)
     return gather0
+
+def gen_nmo_gathers(srcinfo,recinfos,max_offset,gathers,tt,v,z_v,dx,dy,dz):
+    # srcinfo,recinfos,max_offset are all in grids, not real value
+    # v is the velcity in the whole area and v_z are the z coordinates in real value
+    assert np.shape(recinfos)[0]==np.shape(gathers)[0], 'number of gathers(%d) and its locations(%d) not equal.'%(np.shape(gathers)[0],np.shape(recinfos)[0])
+    nrec = np.shape(recinfos)[0]
+    srcx = srcinfo[0]
+    srcy = srcinfo[1]
+    srcz = srcinfo[2]
+    for irec in range(nrec):
+        recx = recinfos[irec][0]
+        recy = recinfos[irec][1]
+        recz = recinfos[irec][2]
+        offset = np.linalg.norm([srcx-recx,srcy-recy])
+        if offset <= max_offset:
+            posx = int((srcx+recx)/2)
+            posy = int((srcy+recy)/2)
+            posz = int((srcz+recz)/2)
+            gather1 = trace_normal_moveout_layered(gathers[irec], tt[irec], np.linalg.norm([(srcx-recx)*dx,(srcy-recy)*dy]), v[posx][posy][:],z_v[:])
+            yield [posx,posy,posz],gather1,offset
 
 if __name__ == '__main__':
     ### load model ###

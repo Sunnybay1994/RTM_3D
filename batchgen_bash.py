@@ -36,6 +36,7 @@ echo
 #########  execute PROGRAM_NAME
 echo "Computing is started at $(date)."
 
+cd $WORKPATH
 python $PYPATH/pre_RTM_sub.py -m 0 
 echo "Current Directory = $WORKPATHRTM"
 mpiexec -np $NSLOTS -wdir $WORKPATHRTM $WORKPATHRTM/FDTD_MPI 0

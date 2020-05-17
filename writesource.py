@@ -20,7 +20,7 @@ def write_source(fn,srcinfos,srcpulses):
         fo.write("%d %d\n" % (nsrc,nt_src))
         list(map(lambda srcpos:fo.write("%d %d %d %s\n" %
                        (srcpos[0], srcpos[1], srcpos[2], srcpos[3])),srcinfos))
-        np.savetxt(fo,srcpulses)
+        np.savetxt(fo,srcpulses,'%g')
 
 def extend_and_write_one_source(fn,srcinfo,srcpulse,xhalfspan=3,yhalfspan=3):
     srcinfos,srcpulses = zip(*extend_source(srcinfo,srcpulse))
