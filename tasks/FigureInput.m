@@ -1,6 +1,6 @@
 %%
 homedir = '3layers_with_0.2m_fault_300MHz_0.4m_0.2m';
-workdir = fullfile(homedir,'RTM0_nmo');
+workdir = fullfile(homedir,'RTM0_nonmo');
 indir = fullfile(workdir,'Input');
 infn = fullfile(indir,'src.in_0000');
 outdir = workdir;

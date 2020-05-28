@@ -1,6 +1,6 @@
 %% load files and parameters
 homedir = '3layers_with_0.2m_fault_300MHz_0.4m_0.2m';
-workdir = fullfile(homedir,'RTM0_nmo');
+workdir = fullfile(homedir,'RTM0');
 result_dir = fullfile(workdir,'Output');
 fxslice = dir(fullfile(result_dir,'xSlice*.dat*'));
 fyslice = dir(fullfile(result_dir,'ySlice*.dat*'));
@@ -38,9 +38,10 @@ dz = dz_ori * x_outstep;
 dt = dt_ori/t_outstep;
 
 %% behavier
-result_exist = false;
+result_exist = true;
 draw_slices = true;
-draw_wavefield_yslice = true;
+draw_wyslice = false;
+draw_wzslice = true;
 draw_3D_view = false;
 
 %%
@@ -87,9 +88,9 @@ if draw_slices
         saveas(gca,fullfile(outdir,'xslice.png'))
 
         figure(12)
-        imagesc(x,z,agc(yslice{i}));colorbar;
+        imagesc(x,z(z>=0),amp_gain_distance(yslice{i}(z>=0,:),[2.5,2.5,0]));colorbar;
         xlabel('x/m');ylabel('z/m');
-        title(['yslice y=2.5m'])
+%         title(['yslice y=2.5m'])
         % outline model, should add manully
         hold on
         yi = 2.5;
@@ -138,15 +139,19 @@ if draw_slices
                 zm3(ix) = z3hi;
             end
         end
+        daspect([1,1,1])
         plot(x,zm1,'r--',x,zm2,'r--',x,zm3,'r--')
 %         % draw fault: 7.5*(x-2)-0.75*y-2.5*(z-0.8)=0
 %         zm = (7.5*(x-2)-0.75*yi)/2.5 + 0.8;
 %         plot(x,zm,'r-.')
+        plot(x,1*ones(size(x)),'k')% show where zslice locate.
         hold off
+        daspect([1,1,1])
+        xlabel('x(m)');ylabel('depth(m)')
         saveas(gca,fullfile(outdir,'yslice.png'))
 
         figure(13)
-        imagesc(x,y,agc(zslice{i}')');colorbar;
+        imagesc(x,y,zslice{i});colorbar;
         xlabel('x/m');ylabel('y/m');
         title(['zslice z=1m'])
         % outline model, should add manully
@@ -155,7 +160,10 @@ if draw_slices
         % 7.5*(x-2)-0.75*y-2.5*(z-0.8)=0
         ym = (7.5*(x-2)-2.5*(zi-0.8))/0.75;
         plot(x,ym,'r--')
+        plot(x,2.5*ones(size(x)),'k')% show where yslice locate.
         hold off
+        daspect([1,1,1])
+        xlabel('x(m)');ylabel('y(m)')
         saveas(gca,fullfile(outdir,'zslice.png'))
     end
 end
@@ -164,7 +172,8 @@ end
 x = (1:nx)*dx;
 y = (1:ny)*dy;
 z = ((1:nz)-nz_air)*dz;
-if draw_wavefield_yslice
+%%
+if draw_wyslice
     figure(15)
     for i = 12:10:113
         yi = i*dy;
@@ -230,25 +239,29 @@ if draw_wavefield_yslice
         saveas(gcf,fullfile(outdir,['yslice at y=' num2str(yi) 'm.png']))
         pause(0.1)
     end
-%     for i = -3:3
-%         figure(25+i)
-%         linewf = squeeze(wavefield{end}(:,round(ny/4+12.5*i),:));
-%     %     linewf = squeeze(wavefield{end}(:,:,i));
-%         imagesc(x,z,linewf);colorbar;
-%         xlabel('x(m)');ylabel('z(m)');
-%         ylim([0.1,2])
-%         caxis([-1e-6,1e-6])
-%     %     title(i)
-%         title(['y=' num2str(2.4+0.5*i) 'm'])
-%         xm = (0:nx/2-1)*0.04;
-%         ym = 2.4+0.5*i;
-%         zm = 2*(1-ym/6-xm/6);
-%         hold on
-%         plot(xm,zm,'r')
-%         hold off
-%         saveas(gcf,fullfile(outdir,['line' num2str(3+i,'%02d') '_3dmig.png']));
-%         pause(0.1)
-%     end
+end
+
+%% wv_zslice
+if draw_wzslice
+    for i = 28
+        zi = (i-nz_air)*dz;
+        wzslice = squeeze(wavefield{end}(i,:,:));
+        imagesc(x,y,wzslice);colorbar
+%         title(['zslice at z=' num2str(zi) 'm'])
+
+        % outline model, should add manully
+        hold on
+        % 7.5*(x-2)-0.75*y-2.5*(z-0.8)=0
+        ym = (7.5*(x-2)-2.5*(zi-0.8))/0.75;
+        plot(x,ym,'r--')
+        plot(x,2.52*ones(size(x)),'k')% show where yslice locate.
+        hold off
+        daspect([1,1,1])
+        xlabel('x(m)');ylabel('y(m)')
+        
+        saveas(gcf,fullfile(outdir,['zslice at z=' num2str(zi) 'm.png']))
+        pause(0.1)
+    end
 end
 
 %%
