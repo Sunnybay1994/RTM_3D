@@ -12,6 +12,7 @@ tasks/*/
 *.fig
 FDTD_MPI*
 src_rec/*.in_0000
+*NMO*.dat
 
 ## C++
 # Prerequisites
