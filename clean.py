@@ -154,7 +154,7 @@ if __name__ == "__main__":
         else:
             logger.warning("src%d: No wavefield deleted, as results are not complete!"%isrc)
     else:
-        clean_slice(isrc,workdir,dir3='.')
-        clean_wavefield(isrc,workdir,dir3='.')
+        clean_slice(isrc,workdir)
+        clean_wavefield(isrc,workdir)
 
     logger.info('src%d done.'%isrc)

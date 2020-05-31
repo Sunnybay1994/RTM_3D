@@ -55,16 +55,16 @@ def src_rec(dnx_src,dny_src=False,dnx_rec=False,dny_rec=False,nzp_src=False,nzp_
     global src, rec
     def ant_pos(dnx_ant,dny_ant,nz_pos,nx_ant,ny_ant,nshift,marginx,marginy):
         ant = []
-        dnx_ant = int(dnx_ant)
-        dny_ant = int(dny_ant)
-        nz_pos = int(nz_pos)
+        dnx_ant = dnx_ant
+        dny_ant = dny_ant
+        nz_pos = nz_pos
 
         if not nx_ant:
-            nx_ant = (nx - 2*marginx) // dnx_ant
+            nx_ant = int((nx - 2*marginx) // dnx_ant)
             if nx_ant % 2 == 0:
                 nx_ant += 1
         if not ny_ant:
-            ny_ant = (ny - 2*marginy) // dny_ant
+            ny_ant = int((ny - 2*marginy) // dny_ant)
             if ny_ant % 2 == 0:
                 ny_ant += 1
         
@@ -439,7 +439,7 @@ def cleanfiles(paths):
 ##############################################################################
 if __name__ == '__main__':
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "z:m:f:", ["zero-offset=","model=","freq=","dx_src=","dx_rec=","dy_rec=","no_gen_model"])
+        opts, args = getopt.getopt(sys.argv[1:], "z:m:f:", ["zero-offset=","model=","freq=","dx_src=","dy_src=","dx_rec=","no_gen_model"])
     except getopt.GetoptError as err:
         # print help information and exit:
         logger.error(err)  # will print something like "option -a not recognized"
@@ -596,11 +596,17 @@ if __name__ == '__main__':
     if is_zRTM == 1:
         dnx_src = round(dx_src/dx)
         dny_src = round(dy_src/dy)
-        [nsrc,nrec] = src_rec(dnx_src,dny_src, marginx=round(0.4/dx), marginy=round(0.4/dy))
+        mx = npmlx
+        my = npmly
+        logger.info('dnxs=%d,dnys=%d,mx=%d,my=%d'%(dnx_src,dny_src,mx,my))
+        [nsrc,nrec] = src_rec(dnx_src,dny_src, marginx=mx, marginy=my)
     else:
         dnx_src = round(dx_src/dx)
         dnx_rec = round(dx_rec/dx)
-        [nsrc,nrec] = src_rec(dnx_src,dnx_rec=dnx_rec, marginx=round(0.4/dx), marginx_rec=round(0.2/dy))
+        ms = npmlx
+        mr = npmlx
+        logger.info('dnxs=%d,dnxr=%d,ms=%d,mr=%d'%(dnx_src,dnx_rec,ms,mr))
+        [nsrc,nrec] = src_rec(dnx_src,dnx_rec=dnx_rec, marginx=ms, marginx_rec=mr)
     ### generate src & rec end ###
 
     ### generate model ###

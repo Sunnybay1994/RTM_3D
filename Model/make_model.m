@@ -1,5 +1,5 @@
 %% modelname
-modelname = '3layers_with_0.2m_fault';
+modelname = 'nmo_vs_full_2';
 fn = 'model';
 fn_save = [fn '.mat'];
 fig_save = [fn '.png'];
@@ -13,9 +13,9 @@ fmax = 300*1e6;
 dxmax = finddx(epr_max, miur_max, fmax);
 disp(['dxmax=' num2str(dxmax) 'm'])
 
-X = 5;
-Y = 5;
-Z = 3;
+X = 2;
+Y = 2;
+Z = 2;
 T = 60 * 1e-9;%s
 
 dx = 0.02; %m
@@ -57,8 +57,8 @@ slicez = [round(1/dz) + nz_air];
 x = (1:nx)*dx;
 y = (1:ny)*dy;
 z = ((1:nz)-nz_air)*dz;
-surf_ep = [6,9,12];
-surf_pos = [0.9,1.5,2.4]; %m
+surf_ep = [6,9];
+surf_pos = [0.8,1.4]; %m
 for i = 1:length(surf_pos)
     layer_z_begin = surf_pos(i);
     if i ~= length(surf_pos)
@@ -68,29 +68,19 @@ for i = 1:length(surf_pos)
     end
     ep(:,:,z >= layer_z_begin & z<=layer_z_end) = surf_ep(i);
 end
-%% faults model
-dot1 = [2 0 0.8];
-dot2 = [2.5 0 2.3];
-dot3 = [3 5 2.3];
-% 7.5*(x-2)-0.75*y-2.5*(z-0.8)=0
-
-dh = 0.2; %m
-idh = round(dh / dz);
-
-ep1 = ep;
-for iz = (1+nz_air):nz
-    ep1(:,:,iz) = ep(:,:,iz-idh);
-end
-
+%% dot
+r = 0.1;
+posx = X/2;
+posy = Y/2;
+posz = 1.1;
 for ix = 1:nx
-    xi = (ix-1)*dx;
+    xi = ix * dx;
     for iy = 1:ny
-        yi = (iy-1)*dy;
-        for iz = nz:-1:(nz_air+1+idh)
-            zi = (iz-nz_air)*dz;
-            doti = [xi,yi,zi];
-            if dot(cross((dot3-dot1),(dot2-dot1)),(doti-dot1)) > 0
-                ep(ix,iy,iz) = ep1(ix,iy,iz);
+        yi = iy * dy;
+        for iz = 1:nz
+            zi = (iz - nz_air) * dz;
+            if ((xi - posx)^2 + (yi - posy)^2 + (zi - posz)^2) < r^2
+                ep(ix,iy,iz) = 15;
             end
         end
     end
@@ -149,17 +139,19 @@ lighting gouraud
 
 % place src and rec
 hold on
-dx_src = 0.4;
-dx_rec = 0.2;
+dx_src = 0.1;
+dx_rec = 0.1;
 dnx_src = dx_src / dx;
 dnx_rec = dx_rec / dx;
-nx_src = round((nx-2*round(0.4/dx))/dnx_src);
+ms = npmlx;
+mr = npmlx;
+nx_src = round((nx-2*ms)/dnx_src);
 if iseven(nx_src)
-    nx_src = nx_src-1;
+    nx_src = nx_src+1;
 end
-nx_rec = round((nx-2*round(0.2/dx))/dnx_rec);
+nx_rec = round((nx-2*mr)/dnx_rec);
 if iseven(nx_rec)
-    nx_rec = nx_rec-1;
+    nx_rec = nx_rec+1;
 end
 srcx = ((-floor(nx_src/2):floor(nx_src/2)) * dx_src) + nx/2*dx;
 recx = ((-floor(nx_rec/2):floor(nx_rec/2)) * dx_rec) + nx/2*dx;

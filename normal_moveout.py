@@ -15,21 +15,21 @@ def trace_normal_moveout_layered(gather,tt,offset,v,z_v):
         print('zero offset, gather not change.')
         return gather
 
-    print('Doing NMO, offset=%g'%offset)
+    # print('Doing NMO, offset=%g'%offset)
     z_v = np.array(z_v)
     assert z_v.all()>0, 'z_v should be always > 0'
     v = np.array(v)
     # extend v and z_v if necessary
     v_max = np.max(v)
     z_max = tt[-1]*v_max
-    print('tt_max=%g,v_max=%g,z_max:%g, z_v_max:%g'%(tt[-1],v_max,z_max,z_v[-1]))
+    # print('tt_max=%g,v_max=%g,z_max:%g, z_v_max:%g'%(tt[-1],v_max,z_max,z_v[-1]))
     if z_max > z_v[-1]:
         dz = z_v[-1] - z_v[-2]
         z_ext = np.arange(z_v[-1]+dz,z_max,dz)
         v_ext = v[-1]*np.ones(np.shape(z_ext))
         z_v = np.append(z_v,z_ext)
         v = np.append(v,v_ext)
-        print('z_v_extened_max:%g'%z_v[-1])
+        # print('z_v_extened_max:%g'%z_v[-1])
     # calculate v_rms
     z_vv = np.insert(z_v,0,0)
     dz_v = z_vv[1:] - z_vv[:-1] # space step

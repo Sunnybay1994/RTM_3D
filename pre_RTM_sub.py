@@ -50,10 +50,10 @@ def merge_gather(idir, isrc):
                 for i in range(len(gather[:,0])):
                     iloc.append(gather[i,:3])
                     isum.append(gather[i,3:])
-        figure()
+        plt.figure()
         for i in range(len(isum)):
-            plot(isum[i]/max(abs(isum[i]))+i)
-        savefig(os.path.join(idir, 'merge_gather_'+str(isrc).zfill(4)+'.png'))
+            plt.plot(isum[i]/max(abs(isum[i]))+i)
+        plt.savefig(os.path.join(idir, 'merge_gather_'+str(isrc).zfill(4)+'.png'))
         with open(os.path.join(idir, 'merge_gather_'+str(isrc).zfill(4)+'.dat'),'w') as fp:
             np.savetxt(fp,isum)
         with open(os.path.join(idir, 'merge_gather_loc_'+str(isrc).zfill(4)+'.dat'),'w') as fp:
@@ -99,11 +99,6 @@ def prepare_RTM(isum,iloc,isum_std,iloc_std,gather_rtm,isrc):
         fn = os.path.join(rtmdir,'Input','src.in'+'_'+str(isrc).zfill(4))
         srcinfos = [item.tolist()+[component] for item in iloc]
         extend_and_write_sources(fn,srcinfos,gather_rtm)
-        # with open(os.path.join(rtmdir,'Input','src.in'+'_'+str(isrc).zfill(4)),'w') as fsrc:
-        #     fsrc.write("%d %d\n" % (nrec_std, nt_std))
-        #     for i in range(nrec_std):
-        #         fsrc.write("%d %d %d %s\n"%(iloc[i][0],iloc[i][1],iloc[i][2],component))
-        #     np.savetxt(fsrc,gather_rtm)
 
     if mode == 0:
         
@@ -114,15 +109,8 @@ def prepare_RTM(isum,iloc,isum_std,iloc_std,gather_rtm,isrc):
         logger.info('Doing NMO...')
         nmo_results = gen_nmo_gathers(srclocs[isrc], iloc, max_offset, gather_rtm, tt, v[:,:,z>0],z[z>0],dx,dy,dz)
         return nt,component,nmo_results
-        # for irec in range(nrec):
-        #     assert (iloc[irec] == iloc_std[irec]).all(), logger.warning("Position NOT correct for 'OUTPUT'(%s) and 'STD/OUTPUT'(%s)"%(iloc(irec),iloc_std(irec)))
-        #     if iloc[irec][0] == srcx and iloc[irec][1] == srcy:
-        #         logger.debug('src%d:(%d,%d); rec%d:(%d,%d)'%(isrc,srcx,srcy,irec,iloc[irec][0],iloc[irec][1]))
-        #         gather0 = gather_rtm[irec,:]
-        #         return nt,[srcx, srcy, srcz],component,gather0
-        #         break
 
-def bin_gathers(locs,dats,weights=False,source_span=5):
+def bin_gathers(locs,dats,offsets=False,decay_fac=0.5,source_span=5):
     assert len(locs)==len(dats), 'number of gathers(%d) and its locations(%d) not equal.'%(len(dats),len(locs))
     ndat = len(locs)
     logger.info('bin gathers into grids...')
@@ -136,13 +124,14 @@ def bin_gathers(locs,dats,weights=False,source_span=5):
     for ig in range(ndat):
         loc = locs[ig]
         ga = dats[ig]
-        if weights:
-            weight = weights[ig]
+        if offsets:
+            offset = offsets[ig]
+            weight = np.exp(-decay_fac * offset)
         else:
             weight = 1
         ixbin = int(round(loc[0]/source_span))
         iybin = int(round(loc[1]/source_span))
-        bin_ga[ixbin,iybin,:] += ga
+        bin_ga[ixbin,iybin,:] += ga * weight
         bin_ga_sum[ixbin,iybin] += weight
     # merge gather in the same location
     logger.debug('merge gather in the same location')
@@ -160,7 +149,7 @@ def pre_RTM(list_src):
         global dt,dx,dy,dz,v,z,max_offset,srclocs
         locs = []
         dats = []
-        weights = []
+        offsets = []
         logger.info('loading para')
         dic_model = sio.loadmat(os.path.join('model.mat'))
         dict_sr = sio.loadmat(os.path.join('model_sr.mat'))
@@ -193,17 +182,16 @@ def pre_RTM(list_src):
         
         if mode == 0:
             nt,component,nmo_results = prepare_RTM(isum,iloc,isum_std,iloc_std,gather_rtm,i)
-            nmo_locs,nmo_gathers,offsets = zip(*nmo_results)
-            nmo_weights = 1-np.array(offsets)*0.9/max_offset # nmo weight: 1 for 0-offset, 0.1 for max_offset
+            nmo_locs,nmo_gathers,nmo_offsets = zip(*nmo_results)
             locs += nmo_locs
             dats += nmo_gathers
-            weights += nmo_weights.tolist()
+            offsets += nmo_offsets
 
             if i == list_src[-1]:
-                locs_binned,dats_binned = zip(*bin_gathers(locs,dats,weights))
+                locs_binned,dats_binned = zip(*bin_gathers(locs,dats,offsets))
                 locinfos = [(loc[0],loc[1],loc[2],component) for loc in locs_binned]
                 logger.info('Writing zero-offset source data...')
-                fn = os.path.join(rtm0dir,'Input','src.in_0000')
+                fn = os.path.join(rtmdir,'Input','src.in_0000')
                 extend_and_write_sources(fn, locinfos, dats_binned)
                 #     fsrc.write("%d %d\n" % (len(list_src), nt))
                 #     fsrc.write(locs)
@@ -229,30 +217,29 @@ if __name__ == "__main__":
     rtmdir_name = 'RTM'
     no_nmo = False
     for o, a in opts:
-        if o in ('-d','--workdir'):
-            workdir = a
-        elif o in ('-o','--outdir'):
-            rtmdir_name = a
-            logger.info('Output dir = "%s"'%rtmdir_name)
-        elif o in ('-m','--mode'):
+        if o in ('-m','--mode'):
             if a == '0':
                 mode = 0
                 nsrc = len([f for f in os.listdir('Input') if os.path.isfile(os.path.join('Input',f)) and 'src.in_' in f])
+                rtmdir_name = 'RTM0'
                 logger.info('Zero-offset mode. We have %d sources to process.'%nsrc)
             elif a == '1':
                 mode = 1
                 logger.info('normal mode. src%d'%isrc)
             else:
                 logger.error('mode parameter must be 0,1')
+        elif o in ('-d','--workdir'):
+            workdir = a
+        elif o in ('-o','--outdir'):
+            rtmdir_name = a
+            logger.info('Output dir = "%s"'%rtmdir_name)
+        
         elif o in ("--no_nmo"):
             no_nmo = True
         else:
             assert False, "unhandled option"
 
-
-    rtm0dir_name = rtmdir_name+'0'
     rtmdir = os.path.join(workdir,rtmdir_name)
-    rtm0dir = os.path.join(workdir,rtm0dir_name)
     read_par
     if mode == 0:
         pre_RTM(range(nsrc))
