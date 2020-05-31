@@ -2,7 +2,7 @@
 import os,sys,getopt
 from model_em import cleanfiles
 
-def subg(dirname,nsrc,job_cap=8,proc_num=8):
+def subg(dirname,nsrc,job_cap=4,proc_num=8):
     list_src = range(0,nsrc)
     cwd = os.getcwd()
     pypath = cwd
