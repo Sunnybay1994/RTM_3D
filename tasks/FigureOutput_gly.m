@@ -18,7 +18,7 @@ dx=dx0*wstep;dy=dy0*wstep;dz=dz0*wstep;
 dt = dt0 * tstep;
 
 %% behavier
-result_exist = true;
+result_exist = false;
 draw_slices = true;
 draw_wavefield_yslice = true;
 draw_3D_view = false;

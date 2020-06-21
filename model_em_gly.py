@@ -382,10 +382,10 @@ if __name__ == '__main__':
     mu0 = 1.2566370614e-6
     ep0 = 8.8541878176e-12
 
-    epmin = 1.0 * 4
-    mumin = 1.0
-    epmax = 8.0 * 4
+    epmax = 5.0 * 4
     mumax = 1.0
+    epmin = epmax
+    mumin = 1.0
     fmax = 800e6  # Hz
 
     dx_max = finddx(epmax, mumax, fmax)
