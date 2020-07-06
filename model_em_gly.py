@@ -355,14 +355,87 @@ if __name__ == '__main__':
         sys.exit(2)
 
     gen_model = True
-    workdir = os.path.join('tasks','gly_400MHz')
+    workdir = os.path.join('tasks','gly_400MHz_linear_smooth')
+    fsrc = '2src0_400MHz.in_0000'
     for o, a in opts:
         if o in ('-d','--workdir'):
-            workdir = os.path.join('tasks',a)
+            if a.strip() == '1':
+                mode_hz = 1
+                workdirn = 'gly_100MHz'
+                fsrc = '100MHz_8_0.5_src.in_0000'
+            elif a.strip() == '1a':
+                mode_hz = 1
+                workdirn = 'gly_100MHz_agc'
+                fsrc = '100MHz_8_0.5_src_agc.in_0000'
+            elif a.strip() == '4':
+                mode_hz = 4
+                workdirn = 'gly_400MHz'
+                fsrc = '400MHz_8_0.5_src.in_0000'
+            elif a.strip() == '4a':
+                mode_hz = 4
+                workdirn = 'gly_400MHz_agc'
+                fsrc = '400MHz_8_0.5_src_agc.in_0000'
+            else:
+                workdirn = a
+            workdir = os.path.join('tasks',workdirn)
         elif o in ('--no_gen_model'):
             gen_model = False
         else:
             assert False, "unhandled option"
+    
+
+
+
+
+    #####################################################################
+    mu0 = 1.2566370614e-6
+    ep0 = 8.8541878176e-12
+
+    epmax = 3.0
+    mumax = 4.0
+    epmin = epmax
+    mumin = 1.0
+    fmax = 400e6  # Hz
+
+    dx_max = finddx(epmax, mumax, fmax)
+    dx = 0.05
+    dy = 0.1
+    dz = 0.02
+    logger.info("dx=%g, dy=%g, dz=%g"%(dx, dy, dz)) 
+    assert np.max([dx,dy,dz]) < dx_max, 'dx,dy,dz too big!!!'
+
+    nz_air = 10
+    nx = 1200+10
+    if mode_hz == 4:
+        ny = 125+10 # 400MHz
+        nz = round(6/dz)+ nz_air# 400MHz
+        dt = 0.0587e-9# 400MHz
+        nt = 952+1#400MHz
+    elif mode_hz == 1:
+        ny = 21+10 # 100MHz
+        nz = round(12/dz)+ nz_air# 100MHz
+        dt = 0.1466e-9# 100MHz
+        nt = 924+1#100MHz
+    logger.info('nx=%d, ny=%d, nz=%d'%(nx, ny, nz)) 
+
+    npmlx = 8
+    npmly = 8
+    npmlz = 8
+    nt_src = 50 # useless
+
+    outstep_t_wavefield = 4
+    outstep_x_wavefield = 2
+    outstep_slice = 4
+
+    dt_max = finddt(epmin, mumin, dx, dy, dz)
+    # nt better be k*outstep_t_wavefield+1(k is integer), so that forward wavefield and 
+    # backward wavefield will coincide perfectly when doing cross-correlation.
+    # nt += outstep_t_wavefield + 1 - nt%outstep_t_wavefield #useless
+    logger.info("dt=%g, nt=%d"%(dt, nt)) 
+    assert dt < dt_max, 'dt too big!!! (%g>%g)'%(dt,dt_max)
+
+    ###########################################################################
+    workdir = workdir + '_' + str(epmax) + '_' + str(dx) + '_' + str(dy) + '_' + str(dz)
     logger.info('workdir="%s"'%(workdir))
 
     indir = os.path.join(workdir,'Input')
@@ -377,52 +450,7 @@ if __name__ == '__main__':
 
     # added by mbw at 20190415
     shutil.copy("FDTD_MPI",workdir)
-
-    #####################################################################
-    mu0 = 1.2566370614e-6
-    ep0 = 8.8541878176e-12
-
-    epmax = 5.0 * 4
-    mumax = 1.0
-    epmin = epmax
-    mumin = 1.0
-    fmax = 800e6  # Hz
-
-    dx_max = finddx(epmax, mumax, fmax)
-    dx = 0.2
-    dy = 0.5
-    dz = 0.01
-    logger.info("dx=%f, dy=%f, dz=%f"%(dx, dy, dz)) 
-    # assert np.max([dx,dy,dz]) < dx_max, 'dx,dy,dz too big!!!'
-
-    # y = arange(yaxis2[0], yaxis1[1], dx)
-    # y_axis = y
-    # x_axis = arange(0, 5, dx)
-    # z_axis = arange(-1, 2.5, dx)
-
-    nx = 320
-    ny = 29
-    nz_air = 10
-    nz = round(3/dz)+ nz_air# 6m
-    logger.info('nx=%d, ny=%d, nz=%d'%(nx, ny, nz)) 
-
-    npmlx = 8
-    npmly = 4
-    npmlz = 8
-    nt_src = 50 # useless
-
-    outstep_t_wavefield = 4
-    outstep_x_wavefield = 1
-    outstep_slice = 4
-
-    dt_max = finddt(epmin, mumin, dx, dy, dz)
-    dt = 0.0587e-9
-    nt = 952
-    # nt better be k*outstep_t_wavefield+1(k is integer), so that forward wavefield and 
-    # backward wavefield will coincide perfectly when doing cross-correlation.
-    nt += outstep_t_wavefield + 1 - nt%outstep_t_wavefield #useless
-    logger.info("dt=%g, nt=%d"%(dt, nt)) 
-    assert dt < dt_max, 'dt too big!!! (%g>%g)'%(dt,dt_max)
+    ###########################################################################
 
     NUM_OF_PROCESS = 4
     order = 2 # num of interchange layers of each process
@@ -432,7 +460,7 @@ if __name__ == '__main__':
         eps_sig_mu(epmax)
 
     shutil.copy(os.path.join('src_rec','rec.in'), os.path.join(workdir,'Input'))
-    shutil.copy(os.path.join('src_rec','8src0_400MHz.in_0000'), os.path.join(workdir,'Input','src.in_0000'))
+    shutil.copy(os.path.join('src_rec',fsrc), os.path.join(workdir,'Input','src.in_0000'))
     par()
     islice(round(nx/2),round(ny/2),round(1/dz)+nz_air)
 
