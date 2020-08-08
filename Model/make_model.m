@@ -1,5 +1,5 @@
 %% modelname
-modelname = 'nmo_vs_full_2';
+modelname = 'pstdtest';
 fn = 'model';
 fn_save = [fn '.mat'];
 fig_save = [fn '.png'];
@@ -9,13 +9,13 @@ epr_max = 15;
 epr_min = 1;
 miur_max = 1;
 miur_min = 1;
-fmax = 300*1e6;
+fmax = 800*1e6;
 dxmax = finddx(epr_max, miur_max, fmax);
 disp(['dxmax=' num2str(dxmax) 'm'])
 
-X = 2;
-Y = 2;
-Z = 2;
+X = 0.02*128;
+Y = 0.02*128;
+Z = 0.02*64;
 T = 60 * 1e-9;%s
 
 dx = 0.02; %m
@@ -25,7 +25,7 @@ dz = dx;
 nx = round(X/dx);
 ny = round(Y/dy);
 nz_air = 10;
-nz = round(Z/dz) + nz_air;
+nz = round(Z/dz);% + nz_air;
 
 npmlx = 8;
 npmly = npmlx;
@@ -49,30 +49,30 @@ ep = ep_bg;
 %% slice
 slicex = [nx/2];
 slicey = [ny/2];
-slicez = [round(1/dz) + nz_air];
+slicez = [nz/2];
 
 %%% the parameter names above should be changed togather with those in 'model_em.py' %%%
 
-%% layers
-x = (1:nx)*dx;
-y = (1:ny)*dy;
-z = ((1:nz)-nz_air)*dz;
-surf_ep = [6,9];
-surf_pos = [0.8,1.4]; %m
-for i = 1:length(surf_pos)
-    layer_z_begin = surf_pos(i);
-    if i ~= length(surf_pos)
-        layer_z_end = surf_pos(i+1);
-    else
-        layer_z_end = z(end);
-    end
-    ep(:,:,z >= layer_z_begin & z<=layer_z_end) = surf_ep(i);
-end
+% %% layers
+% x = (1:nx)*dx;
+% y = (1:ny)*dy;
+% z = ((1:nz)-nz_air)*dz;
+% surf_ep = [6,9];
+% surf_pos = [0.8,1.4]; %m
+% for i = 1:length(surf_pos)
+%     layer_z_begin = surf_pos(i);
+%     if i ~= length(surf_pos)
+%         layer_z_end = surf_pos(i+1);
+%     else
+%         layer_z_end = z(end);
+%     end
+%     ep(:,:,z >= layer_z_begin & z<=layer_z_end) = surf_ep(i);
+% end
 %% dot
-r = 0.1;
+r = dx*10;
 posx = X/2;
 posy = Y/2;
-posz = 1.1;
+posz = Z/2;
 for ix = 1:nx
     xi = ix * dx;
     for iy = 1:ny
@@ -105,6 +105,7 @@ save(fn_save,'modelname','dx','dy','dz','nx','ny','nz','nz_air','T','dt',...
 % end
 
 %% 3D-view
+figure(1)
 x = (1:nx)*dx;
 y = (1:ny)*dy;
 z = ((1:nz)-nz_air)*dz;
@@ -139,8 +140,8 @@ lighting gouraud
 
 % place src and rec
 hold on
-dx_src = 0.1;
-dx_rec = 0.1;
+dx_src = 2;
+dx_rec = 0.5;
 dnx_src = dx_src / dx;
 dnx_rec = dx_rec / dx;
 ms = npmlx;

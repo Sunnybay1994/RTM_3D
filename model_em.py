@@ -85,12 +85,12 @@ def src_rec(dnx_src,dny_src=False,dnx_rec=False,dny_rec=False,nzp_src=False,nzp_
 
     for i in range(nsrc):
         fn_src = os.path.join(indir,'src.in_' + str(i).zfill(4))
-        extend_and_write_one_source(fn_src, src[i], srcpulse)
+        extend_and_write_one_source(fn_src, src[i], srcpulse,xhalfspan=half_span,yhalfspan=half_span)
 
     with open(os.path.join(indir,'rec.in'), 'w') as frec:
         frec.write("%d\n" % (nrec))
         for i in range(nrec):
-            frec.write("%d %d %d %s\n" %
+            frec.write("%d,%d,%d,%s\n" %
                        (rec[i][0], rec[i][1], rec[i][2], rec[i][3]))
 
     cp(os.path.join(indir,'src.in*'),std_indir)
@@ -98,11 +98,11 @@ def src_rec(dnx_src,dny_src=False,dnx_rec=False,dny_rec=False,nzp_src=False,nzp_
     if is_zRTM==1 or is_zRTM==2:
         with open(os.path.join(rtm0_indir,'rec.in'),'w+') as fo:
             fo.write('1\n')
-            fo.write('%d %d %d Ey\n'%(nx0,ny0,nz_air-2))
+            fo.write('%d,%d,%d,Ey\n'%(nx0,ny0,nz_air-2))
     if is_zRTM==0 or is_zRTM==2:
         with open(os.path.join(rtm_indir,'rec.in'),'w+') as fo:
             fo.write('1\n')
-            fo.write('%d %d %d Ey\n'%(nx0,ny0,nz_air-2))
+            fo.write('%d,%d,%d,Ey\n'%(nx0,ny0,nz_air-2))
             
     return nsrc,nrec
 
@@ -154,19 +154,19 @@ def eps_sig_mu(meps=1,meps_bg=False,msig=1e-5,msig_bg=False,mmiu=1,mmiu_bg=False
                 eps = meps[dumx,:,:]
             else:
                 eps[:,:] = meps
-            np.savetxt(feps, eps, fmt='%.3g')
+            np.savetxt(feps, eps, fmt='%.3g',delimiter=',')
 
             if not isinstance(msig,(int,float)):
                 sig = msig[dumx,:,:]
             else:
                 sig[:,:] = msig
-            np.savetxt(fsig, sig, fmt='%.3g')
+            np.savetxt(fsig, sig, fmt='%.3g',delimiter=',')
 
             if not isinstance(mmiu,(int,float)):
                 miu = mmiu[dumx,:,:]
             else:
                 miu[:,:] = mmiu
-            np.savetxt(fmiu, miu, fmt='%.3g')
+            np.savetxt(fmiu, miu, fmt='%.3g',delimiter=',')
 
             if not isinstance(meps_bg,bool):
                 eps_STD = np.ones((ny, nz))
@@ -174,7 +174,7 @@ def eps_sig_mu(meps=1,meps_bg=False,msig=1e-5,msig_bg=False,mmiu=1,mmiu_bg=False
                     eps_STD = meps_bg[dumx,:,:]
                 else:
                     eps_STD[:,:] = meps_bg
-                np.savetxt(feps_STD, eps_STD, fmt='%.3g')
+                np.savetxt(feps_STD, eps_STD, fmt='%.3g',delimiter=',')
 
             if not isinstance(msig_bg,bool):
                 sig_STD = np.ones((ny, nz))
@@ -182,7 +182,7 @@ def eps_sig_mu(meps=1,meps_bg=False,msig=1e-5,msig_bg=False,mmiu=1,mmiu_bg=False
                     sig_STD = msig_bg[dumx,:,:]
                 else:
                     sig_STD[:,:] = msig_bg
-                np.savetxt(fsig_STD, sig_STD, fmt='%.3g')
+                np.savetxt(fsig_STD, sig_STD, fmt='%.3g',delimiter=',')
 
             if not isinstance(mmiu_bg,bool):
                 miu_STD = np.ones((ny, nz))
@@ -190,7 +190,7 @@ def eps_sig_mu(meps=1,meps_bg=False,msig=1e-5,msig_bg=False,mmiu=1,mmiu_bg=False
                     miu_STD = mmiu_bg[dumx,:,:]
                 else:
                     miu_STD[:,:] = mmiu_bg
-                np.savetxt(fmiu_STD, miu_STD, fmt='%.3g')
+                np.savetxt(fmiu_STD, miu_STD, fmt='%.3g',delimiter=',')
             
 
         feps.close()
@@ -308,19 +308,19 @@ def distance(x, y, z, x0, y0, z0):
 def par():
     content = []
     content.append("#dx dy dz dt\n")
-    content.append("%e %e %e %e\n" % (dx, dy, dz, dt))
+    content.append("%e,%e,%e,%e\n" % (dx, dy, dz, dt))
     content.append("#nx ny nz nt\n")
-    content.append("%d %d %d %d\n" % (nx, ny, nz, nt))
+    content.append("%d,%d,%d,%d\n" % (nx, ny, nz, nt))
     content.append("#nt of src\n")
     content.append("%d\n" % (nt_src))
     content.append("#output time step and space step of wavefield\n")
-    content.append("%d %d\n" % (outstep_t_wavefield, outstep_x_wavefield))
+    content.append("%d,%d\n" % (outstep_t_wavefield, outstep_x_wavefield))
     content.append("#output step of slice\n")
     content.append("%d\n" % (outstep_slice))
     content.append("#npml x y z\n")
-    content.append("%d %d %d\n" % (npmlx, npmly, npmlz))
+    content.append("%d,%d,%d\n" % (npmlx, npmly, npmlz))
     content.append("#pml m kapxmax kapymax kapzmax alpha\n")
-    content.append("4 5 5 5 0.00\n")
+    content.append("4,5,5,5,0.00\n")
     content.append("#location of src\n")
     content.append("src.in\n")
     content.append("#location of rec\n")
@@ -333,12 +333,16 @@ def par():
     content.append("sig.in\n")
     content.append("#slices file\n")
     content.append("slice.in\n")
+    content.append("#slices(for pstd)\n")
+    content.append("%d,%d,%d\n"%(slx,sly,slz))
+    content.append("#nsthreads(for pstd)\n")
+    content.append("%d\n"%nthreads)
     with open(os.path.join(indir, 'par.in'), 'w') as fpar:
         fpar.write(''.join(content))
 
     cp(os.path.join(indir, 'par.in'), std_indir)
     if is_zRTM==1 or is_zRTM==2:
-        content[1] = "%e %e %e %e\n" % (dx, dy, dz, dt/2)
+        content[1] = "%e,%e,%e,%e\n" % (dx, dy, dz, dt/2)
         with open(os.path.join(rtm0_indir, 'par.in'), 'w') as fpar:
             fpar.write(''.join(content))
     if is_zRTM==0 or is_zRTM==2:
@@ -398,6 +402,8 @@ def islice(sxl,syl,szl):
     if is_zRTM==0 or is_zRTM==2:
         cp(fn_slice, rtm_indir)
 
+    return sxl[0],syl[0],szl[0]
+
 
 def cleanfiles(paths):
 
@@ -439,7 +445,7 @@ def cleanfiles(paths):
 ##############################################################################
 if __name__ == '__main__':
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "z:m:f:", ["zero-offset=","model=","freq=","dx_src=","dy_src=","dx_rec=","no_gen_model"])
+        opts, args = getopt.getopt(sys.argv[1:], "z:m:f:", ["zero-offset=","model=","freq=","dx_src=","dy_src=","dx_rec=","no_gen_model","np=","half_span="])
     except getopt.GetoptError as err:
         # print help information and exit:
         logger.error(err)  # will print something like "option -a not recognized"
@@ -453,6 +459,8 @@ if __name__ == '__main__':
     freq = 300  #MHz
     dx_src = 0.4
     dx_rec = 0.2
+    pnum = 8
+    half_span = 2
     for o, a in opts:
         if o in ('-z','--zero-offset'):
             is_zRTM = int(a)
@@ -463,7 +471,7 @@ if __name__ == '__main__':
         elif o in ('-m','--model'):
             model = a
         elif o in ('-f','--freq'):
-            freq = int(a)  #MHz
+            freq = float(a)  #MHz
         elif o in ('--dx_src'):
             dx_src = float(a)
         elif o in ('--dy_src'):
@@ -472,6 +480,10 @@ if __name__ == '__main__':
             dx_rec = float(a)
         elif o in ('--no_gen_model'):
             gen_model = False
+        elif o in ('--np'):
+            pnum = int(a)
+        elif o in ('--half_span'):
+            half_span = int(a)
         else:
             assert False, "unhandled option"
 
@@ -610,7 +622,7 @@ if __name__ == '__main__':
     ### generate src & rec end ###
 
     ### generate model ###
-    NUM_OF_PROCESS = 8
+    NUM_OF_PROCESS = pnum
     if gen_model:
         order = 2 # num of interchange layers of each process
         logger.info("NUM_OF_PROCESS: %d"%NUM_OF_PROCESS) 
@@ -618,8 +630,9 @@ if __name__ == '__main__':
         eps_sig_mu(dic_model['ep'],dic_model['ep_bg'])
     ### generate model end ###
 
+    nthreads = 12
+    slx,sly,slz = islice(dic_model['slicex'][0].tolist(),dic_model['slicey'][0].tolist(),dic_model['slicez'][0].tolist())
     par()
-    islice(dic_model['slicex'][0].tolist(),dic_model['slicey'][0].tolist(),dic_model['slicez'][0].tolist())
 
     # backup this file
     cp('model_em.py', workdir)
@@ -629,3 +642,5 @@ if __name__ == '__main__':
 
     subtxt = 'python batchgen_qsub.py -d %s -s %d -p %d -z %d'%(dirname,nsrc,NUM_OF_PROCESS,is_zRTM)
     os.system(subtxt)
+
+    # python model_em.py -f 800 --dx_src 2 --dx_rec 0.5 --np 1 --half_span 0
