@@ -1,6 +1,7 @@
 %% load files and parameters
-homedir = 'nmo_vs_full_300MHz_0.4m_0.2m';
-workdir = fullfile(homedir,'RTM0');
+homedir = 'pstdtest_800MHz_2.0m_0.5m';
+workdir = fullfile(homedir);
+% workdir = fullfile(homedir,'RTM0');
 inputdir = fullfile(workdir,'Input');
 result_dir = fullfile(workdir,'Output');
 fxslice = dir(fullfile(result_dir,'xSlice*.dat*'));
@@ -57,7 +58,7 @@ if ~input_exist
     ntr = temp(1);nt = temp(2);
     pre_rtm_gathers = zeros(nx_ori,ny_ori,nt);
     
-    gather_infos = textscan(fid,'%d %d %d %s\n',ntr);
+    gather_infos = textscan(fid,'%d,%d,%d,%s\n',ntr);
     srcx = gather_infos{1};
     srcy = gather_infos{2};
     
@@ -70,13 +71,13 @@ else
     load(fullfile(inputdir,'pre_rtm_gathers'))
 end
 %%
-for i = slicey
-    yi = i*dy_ori;
-    imagesc(flipud(squeeze(pre_rtm_gathers(:,i,:))'))
-    title(['y = ' num2str(yi) ' m']);colorbar
+% for i = slicey
+%     yi = i*dy_ori;
+%     imagesc(flipud(squeeze(pre_rtm_gathers(:,i,:))'))
+%     title(['y = ' num2str(yi) ' m']);colorbar
 %     saveas(gca,fullfile(outdir,['pre_yslice_at_y=' num2str(yi) 'm.png']))
-    pause(0.1)
-end
+% %     pause(0.1)
+% end
 
 
 %%
@@ -99,11 +100,11 @@ if ~result_exist
     %     zslice{i} = reshape(zslice0,[ny,nx,2]);
         zslice{i} = reshape(zslice0,[ny_ori,nx_ori]);
         fclose(zfid);
-        wfid = fopen(fullfile(result_dir,fwave(i).name));
-        wcell = textscan(wfid,'%f');
-        wavefield0 = wcell{1};
-        wavefield{i} = reshape(wavefield0,[nz,ny,nx]);
-        fclose(wfid);
+%         wfid = fopen(fullfile(result_dir,fwave(i).name));
+%         wcell = textscan(wfid,'%f');
+%         wavefield0 = wcell{1};
+%         wavefield{i} = reshape(wavefield0,[nz,ny,nx]);
+%         fclose(wfid);
     end
     save(fullfile(outdir,'result'),'xslice','yslice','zslice','wavefield','-v7.3')
 else
@@ -115,17 +116,20 @@ if draw_slices
     x = (1:nx_ori)*dx_ori;
     y = (1:ny_ori)*dy_ori;
     z = ((1:nz_ori)-nz_air_ori)*dz_ori;
-    for i = length(xslice)
+    for i = 1:length(xslice)
         figure(11)
         imagesc(y,z,xslice{i});colorbar;
         xlabel('y/m');ylabel('z/m');
         title(['xslice t=' num2str(dt*(i-1)) 'ns'])
-        saveas(gca,fullfile(outdir,['xslice(' num2str(slicex*dx_ori) 'm).png']))
+        daspect([1,1,1])
+        saveas(gca,fullfile(outdir,['slices/xslice(' num2str(slicex*dx_ori) 'm) at time_step=' num2str(i) '.png']))
+
 
         figure(12)
-        imagesc(x,z(z>=0),amp_gain_distance(yslice{i}(z>=0,:),[2.5,2.5,0]));colorbar;
+%         imagesc(x,z(z>=0),amp_gain_distance(yslice{i}(z>=0,:),[2.5,2.5,0]));colorbar;
+        imagesc(x,z,yslice{i});colorbar;
         xlabel('x/m');ylabel('z/m');
-%         title(['yslice y=2.5m'])
+        title(['yslice at y=' num2str(slicey*dy_ori) 'm'])
 
 %         % outline model, should add manully
 %         hold on
@@ -184,12 +188,12 @@ if draw_slices
         
         daspect([1,1,1])
         xlabel('x(m)');ylabel('depth(m)')
-        saveas(gca,fullfile(outdir,['yslice(' num2str(slicey*dy_ori) 'm).png']))
-
+        saveas(gca,fullfile(outdir,['yslice(' num2str(slicey*dy_ori) 'm) at time_step=' num2str(i) '.png']))
+% 
         figure(13)
         imagesc(x,y,zslice{i});colorbar;
         xlabel('x/m');ylabel('y/m');
-%         title(['zslice z=1m'])
+        title(['zslice at z=' num2str((slicez-nz_air_ori)*dz_ori) 'm'])
         
 %         % outline model, should add manully
 %         hold on
@@ -202,7 +206,8 @@ if draw_slices
 
         daspect([1,1,1])
         xlabel('x(m)');ylabel('y(m)')
-        saveas(gca,fullfile(outdir,['zslice(' num2str((slicez-nz_air_ori)*dz_ori) 'm).png']))
+        saveas(gca,fullfile(outdir,['zslice(' num2str((slicez-nz_air_ori)*dz_ori) 'm) at time_step=' num2str(i) '.png']))
+%         pause(0.1)
     end
 end
 

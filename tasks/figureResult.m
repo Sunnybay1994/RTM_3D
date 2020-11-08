@@ -1,7 +1,7 @@
 %% load files and parameters
-workdir = '3layers_with_0.2m_fault_300MHz_0.4m_0.2m';
+workdir = 'pstdtest_800MHz_2.0m_0.5m';
 resultdir = fullfile(workdir,'Result');
-outdir = fullfile(workdir,'RTM');
+outdir = fullfile(workdir,'Result');
 f_wavefield_corr = dir(fullfile(resultdir,'result_wavefield_corr.dat*'));
 
 modelfiles = dir(fullfile(workdir,'model.mat'));
@@ -34,9 +34,9 @@ y = (1:ny)*dy;
 z = ((1:nz)-nz_air)*dz;
 
 %% behavier
-result_exist = true;
-amp_exist = true;
-draw_xslice = false;
+result_exist = false;
+amp_exist = false;
+draw_xslice = true;
 draw_yslice = true;
 draw_zslice = true;
 
@@ -55,7 +55,7 @@ end
 if ~amp_exist
     for i = 1:length(f_wavefield_corr)
         wavefield_i = wavefield{i};
-        [wavefield_amp,factor1,factor2] = amp_gain_distance(wavefield_i,[srcx(i),srcy(i),srcz],x,y,z);% mul1&2 are 2 and 5
+        [wavefield_amp,factor1,factor2] = amp_gain_distance(wavefield_i,[srcx(i),srcy(i),srcz],x,y,z,0,pi,0);% mul1&2 are 2 and 5
         if i == 1
             wavefield_sum = wavefield_i;
             wavefield_amp_sum = wavefield_amp;
@@ -75,19 +75,20 @@ end
 wavefield_amp_sum1 = wavefield_amp_sum./factor2_sum;
 %%
 if draw_zslice
-    for i = 28
+    for i = round(nz/2);
         zi = (i-nz_air)*dz;
         zslice = squeeze(wavefield_amp_sum(i,:,:));
         imagesc(x,y,zslice);colorbar
-%         title(['zslice at z=' num2str(zi) 'm'])
+        title(['zslice at z=' num2str(zi) 'm'])
 
-        % outline model, should add manully
-        hold on
-        % 7.5*(x-2)-0.75*y-2.5*(z-0.8)=0
-        ym = (7.5*(x-2)-2.5*(zi-0.8))/0.75;
-        plot(x,ym,'r--')
-        plot(x,2.52*ones(size(x)),'k')% show where yslice locate.
-        hold off
+%         % outline model, should add manully
+%         hold on
+%         % 7.5*(x-2)-0.75*y-2.5*(z-0.8)=0
+%         ym = (7.5*(x-2)-2.5*(zi-0.8))/0.75;
+%         plot(x,ym,'r--')
+%         plot(x,2.52*ones(size(x)),'k')% show where yslice locate.
+%         hold off
+
         daspect([1,1,1])
         xlabel('x(m)');ylabel('y(m)')
         
@@ -97,21 +98,21 @@ if draw_zslice
 end
 %%
 if draw_xslice
-    for i = 1:nx
+    for i = round(nx/2)
         xi = i*dx;
         xslice = squeeze(wavefield_amp_sum(:,:,i));
         xslice1 = agc(xslice);
         imagesc(y,z,xslice);colorbar
         title(['xslice at x=' num2str(xi) 'm'])
 
-        % outline model, should add manully
-        hold on
-        % 7.5*(x-2)-0.75*y-2.5*(z-0.8)=0
-        zm = (7.5*(xi-2)-0.75*y)/2.5 + 0.8;
-        plot(y,zm,'r--')
-        hold off
+%         % outline model, should add manully
+%         hold on
+%         % 7.5*(x-2)-0.75*y-2.5*(z-0.8)=0
+%         zm = (7.5*(xi-2)-0.75*y)/2.5 + 0.8;
+%         plot(y,zm,'r--')
+%         hold off
         
-%         saveas(gcf,fullfile(outdir,['xslice at x=' num2str(xi) 'm.png']))
+        saveas(gcf,fullfile(outdir,['xslice at x=' num2str(xi) 'm.png']))
         pause(0.1)
     end
 end
@@ -126,61 +127,61 @@ if draw_yslice
         yslice1 = agc(yslice);%,1:size(yslice,1),8,op_length/10,1);
         imagesc(x(xind),z(zind),yslice);colorbar
 %         caxis([-1e-5,1e-5]);
-%         title(['yslice at y=' num2str(yi) 'm'])
+        title(['yslice at y=' num2str(yi) 'm'])
 
-% outline model, should add manully
-        hold on
-        % draw layer
-        surf_pos = [0.9,1.5,2.4];
-        zm1 = ones(size(x))*surf_pos(1);
-        zm2 = ones(size(x))*surf_pos(2);
-        zm3 = ones(size(x))*surf_pos(3);
-        dh = 0.2; %m
-        for ix = 1:length(x)
-            xi = x(ix);
-            z1i = zm1(ix);
-            z1hi = zm1(ix)+dh;
-            z2i = zm2(ix);
-            z2hi = zm2(ix)+dh;
-            z3i = zm3(ix);
-            z3hi = zm3(ix)+dh;
-            dot1i = [xi,yi,z1i];
-            dot1hi = [xi,yi,z1hi];
-            dot2i = [xi,yi,z2i];
-            dot2hi = [xi,yi,z2hi];
-            dot3i = [xi,yi,z3i];
-            dot3hi = [xi,yi,z3hi];
-            
-            temp1 = dot([7.5,-0.75,-2.5],(dot1i-[2 0 0.8]));
-            temp1h =  dot([7.5,-0.75,-2.5],(dot1hi-[2 0 0.8]));
-            if temp1 > 0 && temp1h < 0
-                zm1(ix) = (7.5*(xi-2)-0.75*yi)/2.5 + 0.8;
-            elseif temp1h > 0
-                zm1(ix) = z1hi;
-            end
-            
-            temp2 = dot([7.5,-0.75,-2.5],(dot2i-[2 0 0.8]));
-            temp2h =  dot([7.5,-0.75,-2.5],(dot2hi-[2 0 0.8]));
-            if temp2 > 0 && temp2h < 0
-                zm2(ix) = (7.5*(xi-2)-0.75*yi)/2.5 + 0.8;
-            elseif temp2h > 0
-                zm2(ix) = z2hi;
-            end
-            
-            temp3 = dot([7.5,-0.75,-2.5],(dot3i-[2 0 0.8]));
-            temp3h =  dot([7.5,-0.75,-2.5],(dot3hi-[2 0 0.8]));
-            if temp3 > 0 && temp3h < 0
-                zm3(ix) = (7.5*(xi-2)-0.75*yi)/2.5 + 0.8;
-            elseif temp3h > 0
-                zm3(ix) = z3hi;
-            end
-        end
-        plot(x,zm1,'r--',x,zm2,'r--',x,zm3,'r--')
-%         % draw fault: 7.5*(x-2)-0.75*y-2.5*(z-0.8)=0
-%         zm = (7.5*(x-2)-0.75*yi)/2.5 + 0.8;
-%         plot(x,zm,'r-.')
-        plot(x,0.92*ones(size(x)),'k')% show where zslice locate.
-        hold off
+% % outline model, should add manully
+%         hold on
+%         % draw layer
+%         surf_pos = [0.9,1.5,2.4];
+%         zm1 = ones(size(x))*surf_pos(1);
+%         zm2 = ones(size(x))*surf_pos(2);
+%         zm3 = ones(size(x))*surf_pos(3);
+%         dh = 0.2; %m
+%         for ix = 1:length(x)
+%             xi = x(ix);
+%             z1i = zm1(ix);
+%             z1hi = zm1(ix)+dh;
+%             z2i = zm2(ix);
+%             z2hi = zm2(ix)+dh;
+%             z3i = zm3(ix);
+%             z3hi = zm3(ix)+dh;
+%             dot1i = [xi,yi,z1i];
+%             dot1hi = [xi,yi,z1hi];
+%             dot2i = [xi,yi,z2i];
+%             dot2hi = [xi,yi,z2hi];
+%             dot3i = [xi,yi,z3i];
+%             dot3hi = [xi,yi,z3hi];
+%             
+%             temp1 = dot([7.5,-0.75,-2.5],(dot1i-[2 0 0.8]));
+%             temp1h =  dot([7.5,-0.75,-2.5],(dot1hi-[2 0 0.8]));
+%             if temp1 > 0 && temp1h < 0
+%                 zm1(ix) = (7.5*(xi-2)-0.75*yi)/2.5 + 0.8;
+%             elseif temp1h > 0
+%                 zm1(ix) = z1hi;
+%             end
+%             
+%             temp2 = dot([7.5,-0.75,-2.5],(dot2i-[2 0 0.8]));
+%             temp2h =  dot([7.5,-0.75,-2.5],(dot2hi-[2 0 0.8]));
+%             if temp2 > 0 && temp2h < 0
+%                 zm2(ix) = (7.5*(xi-2)-0.75*yi)/2.5 + 0.8;
+%             elseif temp2h > 0
+%                 zm2(ix) = z2hi;
+%             end
+%             
+%             temp3 = dot([7.5,-0.75,-2.5],(dot3i-[2 0 0.8]));
+%             temp3h =  dot([7.5,-0.75,-2.5],(dot3hi-[2 0 0.8]));
+%             if temp3 > 0 && temp3h < 0
+%                 zm3(ix) = (7.5*(xi-2)-0.75*yi)/2.5 + 0.8;
+%             elseif temp3h > 0
+%                 zm3(ix) = z3hi;
+%             end
+%         end
+%         plot(x,zm1,'r--',x,zm2,'r--',x,zm3,'r--')
+% %         % draw fault: 7.5*(x-2)-0.75*y-2.5*(z-0.8)=0
+% %         zm = (7.5*(x-2)-0.75*yi)/2.5 + 0.8;
+% %         plot(x,zm,'r-.')
+%         plot(x,0.92*ones(size(x)),'k')% show where zslice locate.
+%         hold off
         daspect([1,1,1])
         xlabel('x(m)');ylabel('depth(m)')
         
@@ -189,23 +190,23 @@ if draw_yslice
     end
 end
 
-%% show amp_gain_distance
-    iw=60;
-    wavefield_i = reshape(load(fullfile(resultdir,f_wavefield_corr(iw).name)),nz,ny,nx);
-    alpha = pi/6;
-    wavefield_amp = amp_gain_distance(wavefield_i,[srcx(iw),srcy(iw),srcz],x,y,z);%,2,alpha,5);
-    i = round(ny/2);
-    yi = i*dy;
-    zind = z>0;
-    xind = x>0.4&x<5-0.4;
-    yslice = squeeze(wavefield_amp(zind,i,xind));
-    op_length = 8;
-    yslice1 = agc(yslice,1:size(yslice,1),8,op_length/10,0);
-    imagesc(x(xind),z(zind),yslice);colorbar
-%         caxis([-1e-5,1e-5]);
-    title(['yslice at y=' num2str(yi) 'm'])
-    hold on
-    zz1 = (2.5-x)*cot(alpha);
-    zz2 = (x-2.5)*cot(alpha);
-    plot(x,zz1,'r--',x,zz2,'r--')
-    hold off
+% %% show amp_gain_distance
+%     iw=1;
+%     wavefield_i = reshape(load(fullfile(resultdir,f_wavefield_corr(iw).name)),nz,ny,nx);
+%     alpha = pi/6;
+%     wavefield_amp = amp_gain_distance(wavefield_i,[srcx(iw),srcy(iw),srcz],x,y,z);%,2,alpha,5);
+%     i = round(ny/2);
+%     yi = i*dy;
+%     zind = z>0;
+%     xind = x>0.4&x<5-0.4;
+%     yslice = squeeze(wavefield_amp(zind,i,xind));
+%     op_length = 8;
+%     yslice1 = agc(yslice,1:size(yslice,1),8,op_length/10,0);
+%     imagesc(x(xind),z(zind),yslice);colorbar
+% %         caxis([-1e-5,1e-5]);
+%     title(['yslice at y=' num2str(yi) 'm'])
+%     hold on
+%     zz1 = (2.5-x)*cot(alpha);
+%     zz2 = (x-2.5)*cot(alpha);
+%     plot(x,zz1,'r--',x,zz2,'r--')
+%     hold off

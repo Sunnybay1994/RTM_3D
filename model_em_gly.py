@@ -57,7 +57,7 @@ def cleanfiles(paths):
                 if os.path.isfile(fn):
                     os.remove(fn)
 
-def eps_sig_mu(meps=1,meps_bg=False,msig=1e-11,msig_bg=False,mmiu=1,mmiu_bg=False):
+def eps_sig_mu(meps=1,meps_bg=False,msig=1e-4,msig_bg=False,mmiu=1,mmiu_bg=False):
     logger.info('Generating model...')
 
     for ii in range(NUM_OF_PROCESS):
@@ -395,28 +395,38 @@ if __name__ == '__main__':
     mumax = 4.0
     epmin = epmax
     mumin = 1.0
-    fmax = 400e6  # Hz
+    fmax = mode_hz*2*100e6
+    logger.info("fmax=%gMHz"%(fmax/1e6)) 
 
-    dx_max = finddx(epmax, mumax, fmax)
     dx = 0.05
     dy = 0.1
-    dz = 0.02
-    logger.info("dx=%g, dy=%g, dz=%g"%(dx, dy, dz)) 
-    assert np.max([dx,dy,dz]) < dx_max, 'dx,dy,dz too big!!!'
 
     nz_air = 10
     nx = 1200+10
     if mode_hz == 4:
+        dz = 0.02
         ny = 125+10 # 400MHz
         nz = round(6/dz)+ nz_air# 400MHz
         dt = 0.0587e-9# 400MHz
         nt = 952+1#400MHz
     elif mode_hz == 1:
-        ny = 21+10 # 100MHz
+        dz = 0.04
+        ny = 105+10 # 100MHz
         nz = round(12/dz)+ nz_air# 100MHz
         dt = 0.1466e-9# 100MHz
         nt = 924+1#100MHz
     logger.info('nx=%d, ny=%d, nz=%d'%(nx, ny, nz)) 
+
+    dx_max = finddx(epmax, mumax, fmax)
+    logger.info("dx=%g, dy=%g, dz=%g"%(dx, dy, dz)) 
+    assert np.max([dx,dy,dz]) < dx_max, 'dx,dy,dz too big!!!'
+
+    dt_max = finddt(epmin, mumin, dx, dy, dz)
+    # nt better be k*outstep_t_wavefield+1(k is integer), so that forward wavefield and 
+    # backward wavefield will coincide perfectly when doing cross-correlation.
+    # nt += outstep_t_wavefield + 1 - nt%outstep_t_wavefield #useless
+    logger.info("dt=%g, nt=%d"%(dt, nt)) 
+    assert dt < dt_max, 'dt too big!!! (%g>%g)'%(dt,dt_max)
 
     npmlx = 8
     npmly = 8
@@ -427,12 +437,6 @@ if __name__ == '__main__':
     outstep_x_wavefield = 2
     outstep_slice = 4
 
-    dt_max = finddt(epmin, mumin, dx, dy, dz)
-    # nt better be k*outstep_t_wavefield+1(k is integer), so that forward wavefield and 
-    # backward wavefield will coincide perfectly when doing cross-correlation.
-    # nt += outstep_t_wavefield + 1 - nt%outstep_t_wavefield #useless
-    logger.info("dt=%g, nt=%d"%(dt, nt)) 
-    assert dt < dt_max, 'dt too big!!! (%g>%g)'%(dt,dt_max)
 
     ###########################################################################
     workdir = workdir + '_' + str(epmax) + '_' + str(dx) + '_' + str(dy) + '_' + str(dz)
@@ -452,12 +456,12 @@ if __name__ == '__main__':
     shutil.copy("FDTD_MPI",workdir)
     ###########################################################################
 
-    NUM_OF_PROCESS = 4
+    NUM_OF_PROCESS = 8
     order = 2 # num of interchange layers of each process
     logger.info("NUM_OF_PROCESS: %d"%(NUM_OF_PROCESS)) 
     if gen_model:
         rangex, nxSize = X_partition(nx, NUM_OF_PROCESS)
-        eps_sig_mu(epmax)
+        eps_sig_mu(meps=epmax,mmiu=mumax)
 
     shutil.copy(os.path.join('src_rec','rec.in'), os.path.join(workdir,'Input'))
     shutil.copy(os.path.join('src_rec',fsrc), os.path.join(workdir,'Input','src.in_0000'))

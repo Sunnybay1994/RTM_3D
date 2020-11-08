@@ -22,11 +22,11 @@ void getParameters()
     fgets(str,sizeof(str),fp);
 
     fgets(str,sizeof(str),fp);
-    sscanf(str, "%lf %lf %lf %lf", &dx, &dy, &dz, &dt);
+    sscanf(str, "%lf,%lf,%lf,%lf", &dx, &dy, &dz, &dt);
 
     fgets(str,sizeof(str),fp);
     fgets(str,sizeof(str),fp);
-    sscanf(str, "%d %d %d %d", &nx, &ny, &nz, &nt);
+    sscanf(str, "%d,%d,%d,%d", &nx, &ny, &nz, &nt);
 
     fgets(str,sizeof(str),fp);
     fgets(str,sizeof(str),fp);
@@ -34,7 +34,7 @@ void getParameters()
 
     fgets(str,sizeof(str),fp);
     fgets(str,sizeof(str),fp);
-    sscanf(str, "%d %d", &output_step_t_of_wavefield, &output_step_x_of_wavefield);
+    sscanf(str, "%d,%d", &output_step_t_of_wavefield, &output_step_x_of_wavefield);
 
     fgets(str,sizeof(str),fp);
     fgets(str,sizeof(str),fp);
@@ -42,11 +42,11 @@ void getParameters()
 
     fgets(str,sizeof(str),fp);
     fgets(str,sizeof(str),fp);
-    sscanf(str, "%d %d %d", &nxPML, &nyPML, &nzPML);
+    sscanf(str, "%d,%d,%d", &nxPML, &nyPML, &nzPML);
 
     fgets(str,sizeof(str),fp);
     fgets(str,sizeof(str),fp);
-    sscanf(str, "%d %d %d %d %lf", &m, &kapxmax, &kapymax, &kapzmax, &alpha);
+    sscanf(str, "%d,%d,%d,%d,%lf", &m, &kapxmax, &kapymax, &kapzmax, &alpha);
 
     fgets(str,sizeof(str),fp);
     fscanf(fp,"%s\n",src_file);
@@ -89,14 +89,13 @@ void readSource()
         exit(1);
     }
 
-    fscanf(fp,"%d",&nsrc);
+    fscanf(fp,"%d,%d",&nsrc,&nt_of_src);
+    printf("nsrc,nt_src: %d,%d\n",nsrc,nt_of_src);
     src = new Point[nsrc];
-
-    fscanf(fp,"%d",&nt_of_src);
     src_pulse = new double[nsrc*nt_of_src];
 
     for (i=0; i<nsrc; ++i){
-        fscanf(fp,"%d %d %d %s",&(src[i].x),&(src[i].y),&(src[i].z),dummy_str);
+        fscanf(fp,"%d,%d,%d,%s",&(src[i].x),&(src[i].y),&(src[i].z),dummy_str);
         if (strcmp(dummy_str,"Ex")==0) {
             if(src_type == 2) {src[i].component = Ex; src_type = 3;}
             else {src[i].component = Ex; src_type = 1;}
@@ -166,7 +165,7 @@ void readReceive()
     gather = new double[nrec*nt];
 
     for (i=0; i<nrec; ++i){
-        fscanf(fp,"%d %d %d %s",&(rec[i].x),&(rec[i].y),&(rec[i].z),dummy_str);
+        fscanf(fp,"%d,%d,%d,%s",&(rec[i].x),&(rec[i].y),&(rec[i].z),dummy_str);
         if (strcmp(dummy_str,"Ex")==0) rec[i].component = Ex;
         if (strcmp(dummy_str,"Ey")==0) rec[i].component = Ey;
         if (strcmp(dummy_str,"Ez")==0) rec[i].component = Ez;
@@ -274,18 +273,18 @@ void readSlice()
         exit(1);
     }
 
-    fscanf(fp,"%d %d %d",&nxslice,&nyslice,&nzslice);
+    fscanf(fp,"%d,%d,%d",&nxslice,&nyslice,&nzslice);
     slicex = new int[nxslice];
     slicey = new int[nyslice];
     slicez = new int[nzslice];
 
 
     for ( i=0; i<nxslice; ++i)
-	fscanf(fp,"%d %s\n",&(slicex[i]),dummy_str);
+	fscanf(fp,"%d,%s\n",&(slicex[i]),dummy_str);
     for ( i=0; i<nyslice; ++i)
-	fscanf(fp,"%d %s\n",&(slicey[i]),dummy_str);
+	fscanf(fp,"%d,%s\n",&(slicey[i]),dummy_str);
     for ( i=0; i<nzslice; ++i)
-	fscanf(fp,"%d %s\n",&(slicez[i]),dummy_str);
+	fscanf(fp,"%d,%s\n",&(slicez[i]),dummy_str);
 
     fclose(fp);
 }

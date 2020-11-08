@@ -107,37 +107,52 @@ def src_rec(dnx_src,dny_src=False,dnx_rec=False,dny_rec=False,nzp_src=False,nzp_
     return nsrc,nrec
 
 
-def eps_sig_mu(meps=1,meps_bg=False,msig=1e-5,msig_bg=False,mmiu=1,mmiu_bg=False):
+def eps_sig_mu(meps=1,meps_bg=False,msig=1e-5,msig_bg=False,mmiu=1,mmiu_bg=False,pstd=False):
     logger.info('Generating model...')
+    if pstd:
+        pnum = 1
+    else:
+        pnum = NUM_OF_PROCESS
 
-    for ii in range(NUM_OF_PROCESS):
+    for ii in range(pnum):
+
+        if pstd:
+            suffix = ''
+        else:
+            suffix = '_' + str(ii).zfill(3)
 
         if not isinstance(meps_bg,bool):
-            feps_STD = open(os.path.join(std_indir,'eps.in_' + str(ii).zfill(3)), 'w')
+            feps_STD = open(os.path.join(std_indir,'eps.in' + suffix), 'w')
         if not isinstance(msig_bg,bool):
-            fsig_STD = open(os.path.join(std_indir,'sig.in_' + str(ii).zfill(3)), 'w')
+            fsig_STD = open(os.path.join(std_indir,'sig.in' + suffix), 'w')
         if not isinstance(mmiu_bg,bool):
-            fmiu_STD = open(os.path.join(std_indir,'mu.in_' + str(ii).zfill(3)), 'w')
+            fmiu_STD = open(os.path.join(std_indir,'mu.in' + suffix), 'w')
 
 
-        feps = open(os.path.join(indir,'eps.in_' + str(ii).zfill(3)), 'w')
-        fsig = open(os.path.join(indir,'sig.in_' + str(ii).zfill(3)), 'w')
-        fmiu = open(os.path.join(indir,'mu.in_' + str(ii).zfill(3)), 'w')
+        feps = open(os.path.join(indir,'eps.in' + suffix), 'w')
+        fsig = open(os.path.join(indir,'sig.in' + suffix), 'w')
+        fmiu = open(os.path.join(indir,'mu.in' + suffix), 'w')
 
 
-        logger.info('file: %s'%(feps))
-        logger.info('rangex: %d~%d,%d'%(rangex[ii], rangex[ii + 1], rangex[ii + 1] - rangex[ii]))
-        for dumx in np.arange(rangex[ii] - order, rangex[ii + 1] + order):
+        if pstd:
+            dumx_range = range(nx)
+        else:
+            logger.info('file: %s'%(feps))
+            logger.info('rangex: %d~%d,%d'%(rangex[ii], rangex[ii + 1], rangex[ii + 1] - rangex[ii]))
+            dumx_range = np.arange(rangex[ii] - order, rangex[ii + 1] + order)
+
+        for dumx in dumx_range:
 
             # for dumx in x_axis:
 
             if dumx < 0:
-                logger.info('begin: %d'%dumx) 
-                dumx = 0
-
-            if dumx >= rangex[NUM_OF_PROCESS]:
-                logger.info('end: %d'%dumx) 
-                dumx = rangex[NUM_OF_PROCESS] - 1
+                continue
+                # logger.info('begin: %d'%dumx) 
+                # dumx = 0
+            elif dumx >= nx:
+                continue
+                # logger.info('end: %d'%dumx) 
+                # dumx = rangex[pnum] - 1
 
             # Modified by mbw at 20180607
             #print('dumx: ',dumx)
@@ -154,19 +169,19 @@ def eps_sig_mu(meps=1,meps_bg=False,msig=1e-5,msig_bg=False,mmiu=1,mmiu_bg=False
                 eps = meps[dumx,:,:]
             else:
                 eps[:,:] = meps
-            np.savetxt(feps, eps, fmt='%.3g',delimiter=',')
+            np.savetxt(feps, eps, fmt='%.3g')
 
             if not isinstance(msig,(int,float)):
                 sig = msig[dumx,:,:]
             else:
                 sig[:,:] = msig
-            np.savetxt(fsig, sig, fmt='%.3g',delimiter=',')
+            np.savetxt(fsig, sig, fmt='%.3g')
 
             if not isinstance(mmiu,(int,float)):
                 miu = mmiu[dumx,:,:]
             else:
                 miu[:,:] = mmiu
-            np.savetxt(fmiu, miu, fmt='%.3g',delimiter=',')
+            np.savetxt(fmiu, miu, fmt='%.3g')
 
             if not isinstance(meps_bg,bool):
                 eps_STD = np.ones((ny, nz))
@@ -174,7 +189,7 @@ def eps_sig_mu(meps=1,meps_bg=False,msig=1e-5,msig_bg=False,mmiu=1,mmiu_bg=False
                     eps_STD = meps_bg[dumx,:,:]
                 else:
                     eps_STD[:,:] = meps_bg
-                np.savetxt(feps_STD, eps_STD, fmt='%.3g',delimiter=',')
+                np.savetxt(feps_STD, eps_STD, fmt='%.3g')
 
             if not isinstance(msig_bg,bool):
                 sig_STD = np.ones((ny, nz))
@@ -182,7 +197,7 @@ def eps_sig_mu(meps=1,meps_bg=False,msig=1e-5,msig_bg=False,mmiu=1,mmiu_bg=False
                     sig_STD = msig_bg[dumx,:,:]
                 else:
                     sig_STD[:,:] = msig_bg
-                np.savetxt(fsig_STD, sig_STD, fmt='%.3g',delimiter=',')
+                np.savetxt(fsig_STD, sig_STD, fmt='%.3g')
 
             if not isinstance(mmiu_bg,bool):
                 miu_STD = np.ones((ny, nz))
@@ -190,7 +205,7 @@ def eps_sig_mu(meps=1,meps_bg=False,msig=1e-5,msig_bg=False,mmiu=1,mmiu_bg=False
                     miu_STD = mmiu_bg[dumx,:,:]
                 else:
                     miu_STD[:,:] = mmiu_bg
-                np.savetxt(fmiu_STD, miu_STD, fmt='%.3g',delimiter=',')
+                np.savetxt(fmiu_STD, miu_STD, fmt='%.3g')
             
 
         feps.close()
@@ -388,13 +403,13 @@ def islice(sxl,syl,szl):
 
     fn_slice = os.path.join(indir, 'slice.in')
     with open(fn_slice, 'w') as fslice:
-        fslice.write("%d %d %d\n" % (nslicex, nslicey, nslicez))
+        fslice.write("%d,%d,%d\n" % (nslicex, nslicey, nslicez))
         for i in range(len(slicex)):
-            fslice.write("%d %s\n" % (slicex[i][0], slicex[i][1]))
+            fslice.write("%d,%s\n" % (slicex[i][0], slicex[i][1]))
         for i in range(len(slicey)):
-            fslice.write("%d %s\n" % (slicey[i][0], slicey[i][1]))
+            fslice.write("%d,%s\n" % (slicey[i][0], slicey[i][1]))
         for i in range(len(slicez)):
-            fslice.write("%d %s\n" % (slicez[i][0], slicez[i][1]))
+            fslice.write("%d,%s\n" % (slicez[i][0], slicez[i][1]))
     
     cp(fn_slice, std_indir)
     if is_zRTM==1 or is_zRTM==2:
@@ -628,6 +643,7 @@ if __name__ == '__main__':
         logger.info("NUM_OF_PROCESS: %d"%NUM_OF_PROCESS) 
         rangex, nxSize = X_partition(nx, NUM_OF_PROCESS)
         eps_sig_mu(dic_model['ep'],dic_model['ep_bg'])
+        eps_sig_mu(dic_model['ep'],dic_model['ep_bg'],pstd=True)
     ### generate model end ###
 
     nthreads = 12

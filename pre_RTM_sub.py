@@ -75,6 +75,7 @@ def remove_STD(gather,gather_std,isrc):
     gather_RTM = np.fliplr(np.array(gather) - np.array(gather_std))
     # for i in range(len(gather_RTM[:,0])):
     #     gather_RTM[i,:] = gather_RTM[i,:]/max(abs(gather_RTM[i,:]))
+    nt = gather_RTM.shape[1]
     plt.figure()
     plt.imshow(gather_RTM,cmap='gray',origin='lower',extent=(0,nt,0,nt/2))
     plt.savefig(os.path.join(rtmdir,'Input','gather_without_src'+'_'+str(isrc).zfill(4)+'.png'))
@@ -84,8 +85,9 @@ def remove_STD(gather,gather_std,isrc):
 def prepare_RTM(isum,iloc,isum_std,iloc_std,gather_rtm,isrc):
     logger.info("preparing RTM: src%d"%isrc) 
     with open("./Input/rec.in","r") as fp:
-        nrec0 = int(fp.readline().split()[0])
-        component = fp.readline().split()[3]
+        nrec0 = int(fp.readline().split(',')[0])
+        component = fp.readline().split(',')[3]
+        # print(fp.readline().split())
     nrec = len(iloc)
     nrec_std = len(iloc_std)
     if nrec != nrec_std or nrec0!=nrec:

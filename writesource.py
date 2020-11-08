@@ -17,10 +17,10 @@ def write_source(fn,srcinfos,srcpulses):
     nt_src = len(srcpulses[0])
     assert (temp_bool and nt_src==len(srcpulse) for srcpulse in srcpulses), 'length of each srcpulses not equal.'
     with open(fn,'w') as fo:
-        fo.write("%d %d\n" % (nsrc,nt_src))
+        fo.write("%d,%d\n" % (nsrc,nt_src))
         list(map(lambda srcpos:fo.write("%d,%d,%d,%s\n" %
                        (srcpos[0], srcpos[1], srcpos[2], srcpos[3])),srcinfos))
-        np.savetxt(fo,srcpulses,'%g',delimiter=',')
+        np.savetxt(fo,srcpulses,'%g')
 
 def extend_and_write_one_source(fn,srcinfo,srcpulse,xhalfspan=2,yhalfspan=2):
     srcinfos,srcpulses = zip(*extend_source(srcinfo,srcpulse,xhalfspan,yhalfspan))
