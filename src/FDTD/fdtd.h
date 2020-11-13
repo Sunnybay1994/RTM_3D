@@ -106,6 +106,7 @@ extern double *src_pulse, *gather;
 extern double *Ex, *Ey, *Ez;
 extern double *Hx, *Hy, *Hz;
 extern double *E_total,*H_total;
+extern float *EH_slx, *EH_sly, *EH_slz, *EH_wvf;
 
 extern char rec_kind_name[10];
 extern char src_kind_name[10];

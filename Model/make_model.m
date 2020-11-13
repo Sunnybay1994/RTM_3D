@@ -13,19 +13,19 @@ fmax = 800*1e6;
 dxmax = finddx(epr_max, miur_max, fmax);
 disp(['dxmax=' num2str(dxmax) 'm'])
 
-X = 0.02*128;
-Y = 0.02*128;
-Z = 0.02*64;
-T = 60 * 1e-9;%s
+nx = 128;
+ny = 128;
+nz_air = 10;
+nz = 64;% + nz_air;
 
 dx = 0.02; %m
 dy = dx;
 dz = dx;
 
-nx = round(X/dx);
-ny = round(Y/dy);
-nz_air = 10;
-nz = round(Z/dz);% + nz_air;
+X = dx*nx;
+Y = dy*ny;
+Z = dz*nz;
+T = 60 * 1e-9;%s
 
 npmlx = 8;
 npmly = npmlx;

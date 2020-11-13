@@ -1,5 +1,4 @@
-<<<<<<< HEAD
-﻿## special
+## special
 sub_00*.sh
 test.py
 *.mat
@@ -14,6 +13,9 @@ FDTD_MPI*
 src_rec/*.in_0000
 *NMO*.dat
 *.out
+.vscode/
+PSTD
+*.txt
 
 ## C++
 # Prerequisites
@@ -175,8 +177,6 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-
-=======
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -306,4 +306,37 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
->>>>>>> 154a79003ef91776f3e075198b40868aea089347
+
+
+## Matlab
+# Windows default autosave extension
+*.asv
+
+# OSX / *nix default autosave extension
+*.m~
+
+# Compiled MEX binaries (all platforms)
+*.mex*
+
+# Packaged app and toolbox files
+*.mlappinstall
+*.mltbx
+
+# Generated helpsearch folders
+helpsearch*/
+
+# Simulink code generation folders
+slprj/
+sccprj/
+
+# Matlab code generation folders
+codegen/
+
+# Simulink autosave extension
+*.autosave
+
+# Simulink cache files
+*.slxc
+
+# Octave session info
+octave-workspace

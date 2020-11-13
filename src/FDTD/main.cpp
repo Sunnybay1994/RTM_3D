@@ -53,6 +53,8 @@ int *displs,*scounts;
 MPI_Status status;
 double *sig_total, *eps_total, *mu_total;
 double *E_total,*H_total;
+float *EH_slx, *EH_sly, *EH_slz, *EH_wvf;
+
 void add_source();
 void record_gather();
 int src_type;

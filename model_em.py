@@ -277,10 +277,10 @@ def blackharrispulse(fmax, dt):
 def gaussian(dt, t0, nt):
     global t
     T = 10 * t0
-    t = linspace(0, T, nt)
-    p = 10 ** 5 * exp(-((t - 3 * t0) / t0) ** 2)
-    plot(t, p)
-    savefig(os.path.join(workdir,'gaussian.png'))
+    t = np.linspace(0, T, nt)
+    p = 10 ** 5 * np.exp(-((t - 3 * t0) / t0) ** 2)
+    plt.plot(t, p)
+    plt.savefig(os.path.join(workdir,'gaussian.png'))
     return p
 
 
@@ -350,7 +350,7 @@ def par():
     content.append("slice.in\n")
     content.append("#slices(for pstd)\n")
     content.append("%d,%d,%d\n"%(slx,sly,slz))
-    content.append("#nsthreads(for pstd)\n")
+    content.append("#nthreads(for pstd)\n")
     content.append("%d\n"%nthreads)
     with open(os.path.join(indir, 'par.in'), 'w') as fpar:
         fpar.write(''.join(content))
@@ -460,7 +460,7 @@ def cleanfiles(paths):
 ##############################################################################
 if __name__ == '__main__':
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "z:m:f:", ["zero-offset=","model=","freq=","dx_src=","dy_src=","dx_rec=","no_gen_model","np=","half_span="])
+        opts, args = getopt.getopt(sys.argv[1:], "z:m:f:", ["zero-offset=","model=","freq=","dx_src=","dy_src=","dx_rec=","no_gen_model","np=","nthrd=","half_span=","pstd"])
     except getopt.GetoptError as err:
         # print help information and exit:
         logger.error(err)  # will print something like "option -a not recognized"
@@ -475,7 +475,9 @@ if __name__ == '__main__':
     dx_src = 0.4
     dx_rec = 0.2
     pnum = 8
+    nthreads = pnum*2
     half_span = 2
+    forward_method = 'fdtd'
     for o, a in opts:
         if o in ('-z','--zero-offset'):
             is_zRTM = int(a)
@@ -497,8 +499,13 @@ if __name__ == '__main__':
             gen_model = False
         elif o in ('--np'):
             pnum = int(a)
+            nthreads = 2*pnum
+        elif o in ('--nthrd'):
+            nthreads = int(a)
         elif o in ('--half_span'):
             half_span = int(a)
+        elif o in ('--pstd'):
+            forward_method = 'pstd'
         else:
             assert False, "unhandled option"
 
@@ -526,10 +533,15 @@ if __name__ == '__main__':
     ### parameter end ###
 
     ### init workdir ###
+    dir_suffix = ''
+    if forward_method == 'pstd':
+        dir_suffix += '_pstd_%d'%nthreads
+    elif forward_method == 'fdtd':
+        dir_suffix += '_fdtd_%d'%pnum
     if is_zRTM==1:
-        dirname = '%s_%dMHz_0o_%.1fm_%.1fm'%(modelname,freq,dx_src,dy_src)
-    else:
-        dirname = '%s_%dMHz_%.1fm_%.1fm'%(modelname,freq,dx_src,dx_rec)
+        dir_suffix += '_0o'
+
+    dirname = '%s_%dMHz_%.1fm_%.1fm%s'%(modelname,freq,dx_src,dx_rec,dir_suffix)
     workdir = os.path.join('tasks',dirname)
     logger.info('workdir="%s"'%(workdir))
     ### init workdir end ###
@@ -567,12 +579,16 @@ if __name__ == '__main__':
                 cleanlist += [idir]
     cleanfiles(cleanlist)
 
-    shutil.copy("FDTD_MPI",workdir)
-    shutil.copy("FDTD_MPI",std_dir)
+    if forward_method == 'fdtd':
+        forward_fn = "FDTD_MPI"
+    elif forward_method == 'pstd':
+        forward_fn = "PSTD"
+    shutil.copy(forward_fn,workdir)
+    shutil.copy(forward_fn,std_dir)
     if is_zRTM == 0 or is_zRTM == 2:
-        shutil.copy("FDTD_MPI",rtm_dir)
+        shutil.copy(forward_fn,rtm_dir)
     if is_zRTM == 1 or is_zRTM == 2:
-        shutil.copy("FDTD_MPI",rtm0_dir)
+        shutil.copy(forward_fn,rtm0_dir)
     ### directories end ###
 
 
@@ -637,7 +653,10 @@ if __name__ == '__main__':
     ### generate src & rec end ###
 
     ### generate model ###
-    NUM_OF_PROCESS = pnum
+    if forward_method == 'fdtd':
+        NUM_OF_PROCESS = pnum
+    elif forward_method == 'pstd':
+        NUM_OF_PROCESS = 1
     if gen_model:
         order = 2 # num of interchange layers of each process
         logger.info("NUM_OF_PROCESS: %d"%NUM_OF_PROCESS) 
@@ -646,7 +665,6 @@ if __name__ == '__main__':
         eps_sig_mu(dic_model['ep'],dic_model['ep_bg'],pstd=True)
     ### generate model end ###
 
-    nthreads = 12
     slx,sly,slz = islice(dic_model['slicex'][0].tolist(),dic_model['slicey'][0].tolist(),dic_model['slicez'][0].tolist())
     par()
 
@@ -656,7 +674,8 @@ if __name__ == '__main__':
     cp(os.path.join('Model',model), workdir) # backup model
     cp(os.path.join('Model','make_model.m'), workdir) # backup make_model
 
-    subtxt = 'python batchgen_qsub.py -d %s -s %d -p %d -z %d'%(dirname,nsrc,NUM_OF_PROCESS,is_zRTM)
+    subtxt = 'python batchgen_bash.py -d %s -s %d -p %d -z %d'%(dirname,nsrc,NUM_OF_PROCESS,is_zRTM)
     os.system(subtxt)
 
-    # python model_em.py -f 800 --dx_src 2 --dx_rec 0.5 --np 1 --half_span 0
+    # python model_em.py -f 800 --dx_src 2 --dx_rec 0.5 --np 6 --half_span 0
+    # python model_em.py -f 800 --dx_src 2 --dx_rec 0.5 --nthrd 12 --pstd --half_span 0

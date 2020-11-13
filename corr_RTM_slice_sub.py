@@ -19,28 +19,37 @@ ch.setFormatter(formatter)
 logger.addHandler(fh)
 logger.addHandler(ch)
 
-def corr_slice(isrc, workdir, dir1 = 'Output', dir2 = os.path.join('RTM','Output'), dir3 = 'Result'):
-    dir1 = os.path.join(workdir,dir1)
-    dir2 = os.path.join(workdir,dir2)
-    dir3 = os.path.join(workdir,dir3)
-    logger.info('corr_slice src%d'%isrc)
+def get_fn_from_dir(fn, order=1):
+    logger.info('loading files with name "' + fn + '" from "' + dir1 + '"')
     if 'win' in sys.platform:
-        xlist1 = os.popen('dir/b/on '+os.path.join(dir1, '*xSlice*dat'+'_'+str(isrc).zfill(4))).readlines()
-        ylist1 = os.popen('dir/b/on '+os.path.join(dir1, '*ySlice*dat'+'_'+str(isrc).zfill(4))).readlines()
-        zlist1 = os.popen('dir/b/on '+os.path.join(dir1, '*zSlice*dat'+'_'+str(isrc).zfill(4))).readlines()
-        xlist2 = os.popen('dir/b/on '+os.path.join(dir2, '*xSlice*dat'+'_'+str(isrc).zfill(4))).readlines()[::-1]
-        ylist2 = os.popen('dir/b/on '+os.path.join(dir2, '*ySlice*dat'+'_'+str(isrc).zfill(4))).readlines()[::-1]
-        zlist2 = os.popen('dir/b/on '+os.path.join(dir2, '*zSlice*dat'+'_'+str(isrc).zfill(4))).readlines()[::-1]
+        list1 = os.popen('dir/b/on ' + fn).readlines()
+        dirname = os.path.dirname(fn)
+        list1 = list(map(lambda x: os.path.join(dirname, x), list1))
     elif 'linux' in sys.platform:
-        xlist1 = os.popen('ls '+os.path.join(dir1,'*xSlice*dat'+'_'+str(isrc).zfill(4))).readlines()
-        ylist1 = os.popen('ls '+os.path.join(dir1,'*ySlice*dat'+'_'+str(isrc).zfill(4))).readlines()
-        zlist1 = os.popen('ls '+os.path.join(dir1,'*zSlice*dat'+'_'+str(isrc).zfill(4))).readlines()
-        xlist2 = os.popen('ls '+os.path.join(dir2,'*xSlice*dat'+'_'+str(isrc).zfill(4))).readlines()[::-1]
-        ylist2 = os.popen('ls '+os.path.join(dir2,'*ySlice*dat'+'_'+str(isrc).zfill(4))).readlines()[::-1]
-        zlist2 = os.popen('ls '+os.path.join(dir2,'*zSlice*dat'+'_'+str(isrc).zfill(4))).readlines()[::-1]
+        list1 = os.popen('ls ' + fn).readlines()
     else:
         logger.error('unknown platform: %s'%sys.platform)
         return 0
+    if order == -1:
+        list1.reverse()
+
+    return list(map(lambda x: x.strip('\n'), list1))
+
+def corr_slice(isrc, workdir, dir1 = 'Output', dir2 = os.path.join('RTM','Output'), dir3 = 'Result'):
+    logger.info('corr_slice src%d'%isrc)
+
+    dir1 = os.path.join(workdir,dir1)
+    dir2 = os.path.join(workdir,dir2)
+    dir3 = os.path.join(workdir,dir3)
+    
+    xlist1 = get_fn_from_dir(os.path.join(dir1, '*xSlice*dat'+'_'+str(isrc).zfill(4)))
+    ylist1 = get_fn_from_dir(os.path.join(dir1, '*ySlice*dat'+'_'+str(isrc).zfill(4)))
+    zlist1 = get_fn_from_dir(os.path.join(dir1, '*zSlice*dat'+'_'+str(isrc).zfill(4)))
+
+    xlist2 = get_fn_from_dir(os.path.join(dir2, '*xSlice*dat'+'_'+str(isrc).zfill(4)), -1)
+    ylist2 = get_fn_from_dir(os.path.join(dir2, '*ySlice*dat'+'_'+str(isrc).zfill(4)), -1)
+    zlist2 = get_fn_from_dir(os.path.join(dir2, '*zSlice*dat'+'_'+str(isrc).zfill(4)), -1)
+
     if len(xlist1) != len(xlist2) or len(ylist1) != len(ylist2) or len(zlist1) != len(zlist2):
         logger.error("src%d: The number of slice are different!(std:%d %d %d, rtm:%d %d %d)"%(isrc,len(xlist1),len(ylist1),len(zlist1),len(xlist2),len(ylist2),len(zlist2))) 
         return 0
@@ -53,19 +62,12 @@ def corr_slice(isrc, workdir, dir1 = 'Output', dir2 = os.path.join('RTM','Output
     zdata2 = []
     dum = 0
     for i in range(len(xlist1)):
-        xname1 = xlist1[i].strip('\n')
-        yname1 = ylist1[i].strip('\n')
-        zname1 = zlist1[i].strip('\n')
-        xname2 = xlist2[i].strip('\n')
-        yname2 = ylist2[i].strip('\n')
-        zname2 = zlist2[i].strip('\n')
-        if 'win' in sys.platform:
-            xname1 = os.path.join(dir1,xname1)
-            yname1 = os.path.join(dir1,yname1)
-            zname1 = os.path.join(dir1,zname1)
-            xname2 = os.path.join(dir2,xname2)
-            yname2 = os.path.join(dir2,yname2)
-            zname2 = os.path.join(dir2,zname2)
+        xname1 = xlist1[i]
+        yname1 = ylist1[i]
+        zname1 = zlist1[i]
+        xname2 = xlist2[i]
+        yname2 = ylist2[i]
+        zname2 = zlist2[i]
         logger.debug('corr_slice:%s,%s'%(os.path.basename(xname1),os.path.basename(xname2)))
         xdata1 = loadtxt(xname1)
         ydata1 = loadtxt(yname1)

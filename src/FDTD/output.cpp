@@ -1,5 +1,6 @@
 #include "fdtd.h"
 using namespace std;
+
 void output_gather()
 {
     int it;
@@ -30,17 +31,20 @@ void output_gather()
 }
 void output_slice(int it,double *EH_total)
 {
+    int data_size = sizeof(EH_slx[0]);
+    
 
     char xfilename[30],yfilename[30],zfilename[30];
     char xdir[MAX_NAME_LEN] = "./Output/";
     char ydir[MAX_NAME_LEN] = "./Output/";
     char zdir[MAX_NAME_LEN] = "./Output/";
     
-    sprintf(xfilename, "xSlice%05d_%d.dat", it,NUM_OF_PROCESS);
-    sprintf(yfilename, "ySlice%05d_%d.dat", it,NUM_OF_PROCESS);
-    sprintf(zfilename, "zSlice%05d_%d.dat", it,NUM_OF_PROCESS);
+    sprintf(xfilename, "slx_Ey%s_%05d.bin", tag,it);
+    sprintf(yfilename, "sly_Ey%s_%05d.bin", tag,it);
+    sprintf(zfilename, "slz_Ey%s_%05d.bin", tag,it);
     FILE *fp;
-    fp=fopen(strcat(strcat(xdir, xfilename),tag), "w+");
+    
+    fp=fopen(strcat(xdir, xfilename), "wb+");
     if(fp==NULL)
     {
         printf("File open error in output_slice!");
@@ -48,62 +52,80 @@ void output_slice(int it,double *EH_total)
     }
     if(nxslice != 0){
     for(i=0;i<nxslice;++i){
-        for(j=0;j<ny;++j){
-            for(k=0;k<nz;++k){
-                fprintf(fp, "%e ", EH_total(slicex[i]+order,j,k));
-            }}}}
+        for(k=0;k<nz;++k){
+            for(j=0;j<ny;++j){
+                EH_slx[(i*nz+k)*ny+j] = EH_total(slicex[i]+order,j,k);
+            //     fprintf(fp, "%e ", EH_total(slicex[i]+order,j,k));
+            }
+            }}}
+    fwrite(EH_slx,data_size,ny*nz,fp);
     fclose(fp);
-
-    fp=fopen(strcat(strcat(ydir, yfilename),tag), "w+");
+    fp=fopen(strcat(ydir, yfilename), "wb+");
     if(fp==NULL)
     {
         printf("File open error");
     }
     if(nyslice !=0){
     for(j=0;j<nyslice;++j){
-       for(i=0;i<nx;++i){
-            for(k=0;k<nz;++k){
-                fprintf(fp, "%e ", EH_total(i+order,slicey[j],k));
-            }}}}
+       for(k=0;k<nz;++k){
+            for(i=0;i<nx;++i){
+                EH_sly[(j*nz+k)*nx+i] = EH_total(i+order,slicey[j],k);
+                // fprintf(fp, "%e ", EH_total(i+order,slicey[j],k));
+            }
+            }}}
+    fwrite(EH_sly,data_size,nx*nz,fp);
     fclose(fp);
 
-    fp=fopen(strcat(strcat(zdir, zfilename),tag), "w+");
+    fp=fopen(strcat(zdir, zfilename), "wb+");
     if(fp==NULL)
     {
         printf("File open error");
     }
     if(nzslice != 0){
     for(k=0;k<nzslice;++k){
-        for(i=0;i<nx;++i){
-            for(j=0;j<ny;++j){
-                fprintf(fp, "%e ", EH_total(i+order,j,slicez[k]));
+        for(j=0;j<ny;++j){
+            for(i=0;i<nx;++i){
+                EH_slz[(k*ny+j)*nx+i] = EH_total(i+order,j,slicez[k]);
+                // fprintf(fp, "%e ", EH_total(i+order,j,slicez[k]));
             }}}}
+    fwrite(EH_slz,data_size,nx*ny,fp);
     fclose(fp);
 
 }
 void output_wavefield(int it,double *EH_total)
 {
+    int data_size = sizeof(EH_wvf[0]);
+
     char filename[30];
     char dir[MAX_NAME_LEN] = "./Output/";
-    sprintf(filename, "Wavefield%05d.dat", it);
+    sprintf(filename, "wvf_Ey%s_%05d.bin", tag, it);
     FILE *fp;
-    fp=fopen(strcat(strcat(dir,filename),tag), "w+");
+    fp=fopen(strcat(dir,filename), "wb+");
 
     if(fp==NULL)
     {
         printf("File open error in output_wavefield!");
 	    exit(1);
     }
-    for(i=0;i<nx;i+=output_step_x_of_wavefield)
+    // store element in the first dimention first, to coincide with fortran
+    int inz = int(nz/output_step_x_of_wavefield);
+    int iny = int(ny/output_step_x_of_wavefield);
+    int inx = int(nx/output_step_x_of_wavefield);
+    for(k=0;k<nz;k+=output_step_x_of_wavefield)
     {
+        int ik = int(k/output_step_x_of_wavefield);
         for(j=0;j<ny;j+=output_step_x_of_wavefield)
         {
-            for(k=0;k<nz;k+=output_step_x_of_wavefield)
+            int ij = int(j/output_step_x_of_wavefield);
+            for(i=0;i<nx;i+=output_step_x_of_wavefield)
             {
-                fprintf(fp, "%e ", EH_total(i,j,k));
+                int ii = int(i/output_step_x_of_wavefield);
+                EH_wvf[((ik*inz+ij)*iny+ii)] = EH_total(i+order,j,k);
+                // fprintf(fp, "%e ", EH_total(i+order,j,k));
             }
         }
     }
+    fwrite(EH_wvf,data_size,inx*iny*inz,fp);
     fclose(fp);
 }
 

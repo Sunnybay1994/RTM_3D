@@ -278,6 +278,14 @@ void readSlice()
     slicey = new int[nyslice];
     slicez = new int[nzslice];
 
+    EH_slx = new float[nxslice*ny*nz];
+    memset(EH_slx, 0, nxslice*ny*nz*sizeof(float));
+    EH_sly = new float[nyslice*nx*nz];
+    memset(EH_sly, 0, nyslice*nx*nz*sizeof(float));
+    EH_slz = new float[nzslice*ny*nx];
+    memset(EH_slz, 0, nzslice*nx*ny*sizeof(float));
+    EH_wvf = new float[int(nx/output_step_x_of_wavefield)*int(ny/output_step_x_of_wavefield)*int(nz/output_step_x_of_wavefield)];
+    memset(EH_wvf, 0, int(nx/output_step_x_of_wavefield)*int(ny/output_step_x_of_wavefield)*int(nz/output_step_x_of_wavefield)*sizeof(float));
 
     for ( i=0; i<nxslice; ++i)
 	fscanf(fp,"%d,%s\n",&(slicex[i]),dummy_str);
@@ -430,6 +438,7 @@ void init()
     Ay = 0.0;
     Az = 0.0;
     init_psi();
+
     if(myRank == 0) cout << "call init end" << endl;
 }
 
