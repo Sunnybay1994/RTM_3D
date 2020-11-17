@@ -4,7 +4,7 @@ import matplotlib
 import scipy.io as sio
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-import os,sys,logging,getopt
+import os,sys,logging,getopt,struct
 from par_RTM import *
 from writesource import *
 from normal_moveout import *
@@ -22,34 +22,46 @@ ch.setFormatter(formatter)
 logger.addHandler(fh)
 logger.addHandler(ch)
 
-def merge_gather(idir, isrc):
+def merge_gather(wdir, isrc):
     # global isum
     # global iloc
+    idir = os.path.join(wdir,'Output')
     if 'win' in sys.platform:
-        ilist = os.popen('dir/b/on '+ os.path.join(idir,'gather*dat'+'_'+str(isrc).zfill(4))).readlines()
+        ilist = os.popen('dir/b/on '+ os.path.join(idir,'gather'+'_'+str(isrc).zfill(4)+'*')).readlines()
         logger.debug(ilist)
         ilist = [os.path.join(idir,f) for f in ilist]
         logger.debug(ilist)
     elif 'linux' in sys.platform:
-        ilist = os.popen('ls '+ os.path.join(idir,'gather*dat'+'_'+str(isrc).zfill(4))).readlines()
+        ilist = os.popen('ls '+ os.path.join(idir,'gather'+'_'+str(isrc).zfill(4)+'*')).readlines()
     else:
         logger.error('unknown platform: %s'%sys.platform)
         return 0
     isum = []
     iloc = []
     if ilist:
-        logger.info("merging gather for %d files: %s-src%d"%(len(ilist),idir,isrc)) 
-        for name in ilist:
-            gather = np.loadtxt(name.strip('\n'))
-            if np.shape(gather)[0] == 0:
-                continue
-            if np.shape(np.shape(gather))[0] == 1:
-                iloc.append((int(x) for x in gather[:3]))
-                isum.append(gather[3:])
-            else:
-                for i in range(len(gather[:,0])):
-                    iloc.append(gather[i,:3])
-                    isum.append(gather[i,3:])
+        if forward_method == 'fdtd':
+            logger.info("merging gather for %d files: %s-src%d"%(len(ilist),idir,isrc))
+            for name in ilist:
+                gather = np.loadtxt(name.strip('\n'))
+                if np.shape(gather)[0] == 0:
+                    continue
+                if np.shape(np.shape(gather))[0] == 1:
+                    iloc.append((int(x) for x in gather[:3]))
+                    isum.append(gather[3:])
+                else:
+                    for i in range(len(gather[:,0])):
+                        iloc.append(gather[i,:3])
+                        isum.append(gather[i,3:])
+        elif forward_method == 'pstd':
+            logger.info("Reading gather from bin (%d files): %s-src%d"%(len(ilist),idir,isrc))
+            with open(os.path.join(wdir,'Input','rec.in'),'r') as fo:
+                nrec = int(fo.readline())
+                for line in fo.readlines():
+                    iloc.append([int(x) for x in line.split(',')[:3]])
+                iloc = np.array(iloc)
+            with open(ilist[0].strip('\n'),'rb') as fo:
+                data_raw = struct.unpack('f'*nt*nrec,fo.read())
+                isum = np.reshape(data_raw,(nrec,nt))
         plt.figure()
         for i in range(len(isum)):
             plt.plot(isum[i]/max(abs(isum[i]))+i)
@@ -86,7 +98,7 @@ def prepare_RTM(isum,iloc,isum_std,iloc_std,gather_rtm,isrc):
     logger.info("preparing RTM: src%d"%isrc) 
     with open("./Input/rec.in","r") as fp:
         nrec0 = int(fp.readline().split(',')[0])
-        component = fp.readline().split(',')[3]
+        component = fp.readline().strip().split(',')[3]
         # print(fp.readline().split())
     nrec = len(iloc)
     nrec_std = len(iloc_std)
@@ -178,8 +190,8 @@ def pre_RTM(list_src):
         logger.debug('max_offset:%d'%max_offset)
 
     for i in list_src:#range(nsrc)
-        isum,iloc = merge_gather(os.path.join(workdir,'Output'),i)
-        isum_std,iloc_std = merge_gather(os.path.join(workdir,'STD','Output'),i)
+        isum,iloc = merge_gather(workdir,i)
+        isum_std,iloc_std = merge_gather(os.path.join(workdir,'STD'),i)
         gather_rtm = remove_STD(isum,isum_std,i)
         
         if mode == 0:
@@ -207,7 +219,7 @@ def pre_RTM(list_src):
 
 if __name__ == "__main__":
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "m:o:d:", ["mode=","outdir=","workdir=","no_nmo"])
+        opts, args = getopt.getopt(sys.argv[1:], "m:o:d:", ["mode=","outdir=","workdir=","no_nmo","pstd"])
     except getopt.GetoptError as err:
         # print help information and exit:
         logger.error(err)  # will print something like "option -a not recognized"
@@ -218,6 +230,7 @@ if __name__ == "__main__":
     workdir = ''
     rtmdir_name = 'RTM'
     no_nmo = False
+    forward_method = 'fdtd'
     for o, a in opts:
         if o in ('-m','--mode'):
             if a == '0':
@@ -235,9 +248,11 @@ if __name__ == "__main__":
         elif o in ('-o','--outdir'):
             rtmdir_name = a
             logger.info('Output dir = "%s"'%rtmdir_name)
-        
-        elif o in ("--no_nmo"):
+        elif o in ("--no_nmo",):
             no_nmo = True
+        elif o in ("--pstd",):
+            forward_method = 'pstd'
+            print('pstd')
         else:
             assert False, "unhandled option"
 

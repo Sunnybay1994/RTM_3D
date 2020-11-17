@@ -1,9 +1,9 @@
 #!/usr/bin/env python
-from numpy import *
+import numpy as np
 import matplotlib
 matplotlib.use('Agg')
-from matplotlib.pyplot import *
-import sys,os,re,logging,getopt
+import matplotlib.pyplot as plt
+import sys,os,re,logging,getopt,struct
 from par_RTM import *
 
 #logger
@@ -20,7 +20,7 @@ logger.addHandler(fh)
 logger.addHandler(ch)
 
 def get_fn_from_dir(fn, order=1):
-    logger.info('loading files with name "' + fn + '" from "' + dir1 + '"')
+    logger.info('loading files with name "' + os.path.basename(fn) + '" from "' + os.path.dirname(fn) + '"')
     if 'win' in sys.platform:
         list1 = os.popen('dir/b/on ' + fn).readlines()
         dirname = os.path.dirname(fn)
@@ -35,6 +35,15 @@ def get_fn_from_dir(fn, order=1):
 
     return list(map(lambda x: x.strip('\n'), list1))
 
+def read_bin_data(fn, dims):
+    with open(fn,'rb') as fo:
+        data_raw = struct.unpack('f'*dims[0]*dims[1]*dims[2],fo.read())
+    dims.reverse()
+    dims = np.array(dims)
+    data = np.reshape(data_raw,dims[dims!=1])
+    return data
+
+
 def corr_slice(isrc, workdir, dir1 = 'Output', dir2 = os.path.join('RTM','Output'), dir3 = 'Result'):
     logger.info('corr_slice src%d'%isrc)
 
@@ -42,13 +51,13 @@ def corr_slice(isrc, workdir, dir1 = 'Output', dir2 = os.path.join('RTM','Output
     dir2 = os.path.join(workdir,dir2)
     dir3 = os.path.join(workdir,dir3)
     
-    xlist1 = get_fn_from_dir(os.path.join(dir1, '*xSlice*dat'+'_'+str(isrc).zfill(4)))
-    ylist1 = get_fn_from_dir(os.path.join(dir1, '*ySlice*dat'+'_'+str(isrc).zfill(4)))
-    zlist1 = get_fn_from_dir(os.path.join(dir1, '*zSlice*dat'+'_'+str(isrc).zfill(4)))
+    xlist1 = get_fn_from_dir(os.path.join(dir1, 'slx_Ey_'+str(0).zfill(4)+'*.bin'))
+    ylist1 = get_fn_from_dir(os.path.join(dir1, 'sly_Ey_'+str(0).zfill(4)+'*.bin'))
+    zlist1 = get_fn_from_dir(os.path.join(dir1, 'slz_Ey_'+str(0).zfill(4)+'*.bin'))
 
-    xlist2 = get_fn_from_dir(os.path.join(dir2, '*xSlice*dat'+'_'+str(isrc).zfill(4)), -1)
-    ylist2 = get_fn_from_dir(os.path.join(dir2, '*ySlice*dat'+'_'+str(isrc).zfill(4)), -1)
-    zlist2 = get_fn_from_dir(os.path.join(dir2, '*zSlice*dat'+'_'+str(isrc).zfill(4)), -1)
+    xlist2 = get_fn_from_dir(os.path.join(dir2, 'slx_Ey_'+str(0).zfill(4)+'*.bin'), -1)
+    ylist2 = get_fn_from_dir(os.path.join(dir2, 'sly_Ey_'+str(0).zfill(4)+'*.bin'), -1)
+    zlist2 = get_fn_from_dir(os.path.join(dir2, 'slz_Ey_'+str(0).zfill(4)+'*.bin'), -1)
 
     if len(xlist1) != len(xlist2) or len(ylist1) != len(ylist2) or len(zlist1) != len(zlist2):
         logger.error("src%d: The number of slice are different!(std:%d %d %d, rtm:%d %d %d)"%(isrc,len(xlist1),len(ylist1),len(zlist1),len(xlist2),len(ylist2),len(zlist2))) 
@@ -69,12 +78,12 @@ def corr_slice(isrc, workdir, dir1 = 'Output', dir2 = os.path.join('RTM','Output
         yname2 = ylist2[i]
         zname2 = zlist2[i]
         logger.debug('corr_slice:%s,%s'%(os.path.basename(xname1),os.path.basename(xname2)))
-        xdata1 = loadtxt(xname1)
-        ydata1 = loadtxt(yname1)
-        zdata1 = loadtxt(zname1)
-        xdata2 = loadtxt(xname2)
-        ydata2 = loadtxt(yname2)
-        zdata2 = loadtxt(zname2)
+        xdata1 = read_bin_data(xname1,[slice_nx,ny,nz])
+        ydata1 = read_bin_data(yname1,[nx,slice_ny,nz])
+        zdata1 = read_bin_data(zname1,[nx,ny,slice_nz])
+        xdata2 = read_bin_data(xname2,[slice_nx,ny,nz])
+        ydata2 = read_bin_data(yname2,[nx,slice_ny,nz])
+        zdata2 = read_bin_data(zname2,[nx,ny,slice_nz])
         if i == 0:
             xcorr_data = xdata1 * xdata2
             ycorr_data = ydata1 * ydata2
@@ -125,65 +134,74 @@ def corr_slice(isrc, workdir, dir1 = 'Output', dir2 = os.path.join('RTM','Output
         logger.warning(wa+'(zb:%d/%d)'%(zcorr_data,znormal_backward))
 
 
-    savetxt(os.path.join(dir3, 'result_xcorr.dat'+'_'+str(isrc).zfill(4)),xcorr_data)
-    savetxt(os.path.join(dir3, 'result_ycorr.dat'+'_'+str(isrc).zfill(4)),ycorr_data)
-    savetxt(os.path.join(dir3, 'result_zcorr.dat'+'_'+str(isrc).zfill(4)),zcorr_data)
-    xslice = reshape(xcorr_data,(slice_nx,ny,nz))
-    yslice = reshape(ycorr_data,(slice_ny,nx,nz))
-    zslice = reshape(zcorr_data,(slice_nz,nx,ny))
+    np.savetxt(os.path.join(dir3, 'result_xcorr.dat'+'_'+str(isrc).zfill(4)),np.reshape(xcorr_data,[slice_nx*ny,nz]))
+    np.savetxt(os.path.join(dir3, 'result_ycorr.dat'+'_'+str(isrc).zfill(4)),np.reshape(ycorr_data,[nx*slice_ny,nz]))
+    np.savetxt(os.path.join(dir3, 'result_zcorr.dat'+'_'+str(isrc).zfill(4)),np.reshape(zcorr_data,[nx*ny,slice_nz]))
+    # xslice = np.reshape(xcorr_data,(slice_nx,ny,nz))
+    # yslice = np.reshape(ycorr_data,(slice_ny,nx,nz))
+    # zslice = np.reshape(zcorr_data,(slice_nz,nx,ny))
+    xslice = xcorr_data
+    yslice = ycorr_data
+    zslice = zcorr_data
 
-    savetxt(os.path.join(dir3, 'result_xcorr_normal_forward.dat'+'_'+str(isrc).zfill(4)),xcorr_normal_forward)
-    savetxt(os.path.join(dir3, 'result_ycorr_normal_forward.dat'+'_'+str(isrc).zfill(4)),ycorr_normal_forward)
-    savetxt(os.path.join(dir3, 'result_zcorr_normal_forward.dat'+'_'+str(isrc).zfill(4)),zcorr_normal_forward)
-    xslice_normal_forward = reshape(xcorr_normal_forward,(slice_nx,ny,nz))
-    yslice_normal_forward = reshape(ycorr_normal_forward,(slice_ny,nx,nz))
-    zslice_normal_forward = reshape(zcorr_normal_forward,(slice_nz,nx,ny))
+    np.savetxt(os.path.join(dir3, 'result_xcorr_normal_forward.dat'+'_'+str(isrc).zfill(4)),np.reshape(xcorr_normal_forward,[slice_nx*ny,nz]))
+    np.savetxt(os.path.join(dir3, 'result_ycorr_normal_forward.dat'+'_'+str(isrc).zfill(4)),np.reshape(ycorr_normal_forward,[nx*slice_ny,nz]))
+    np.savetxt(os.path.join(dir3, 'result_zcorr_normal_forward.dat'+'_'+str(isrc).zfill(4)),np.reshape(zcorr_normal_forward,[nx*ny,slice_nz]))
+    # xslice_normal_forward = np.reshape(xcorr_normal_forward,(slice_nx,ny,nz))
+    # yslice_normal_forward = np.reshape(ycorr_normal_forward,(slice_ny,nx,nz))
+    # zslice_normal_forward = np.reshape(zcorr_normal_forward,(slice_nz,nx,ny))
+    xslice_normal_forward = xcorr_normal_forward
+    yslice_normal_forward = ycorr_normal_forward
+    zslice_normal_forward = zcorr_normal_forward
 
-    savetxt(os.path.join(dir3, 'result_xcorr_normal_backward.dat'+'_'+str(isrc).zfill(4)),xcorr_normal_backward)
-    savetxt(os.path.join(dir3, 'result_ycorr_normal_backward.dat'+'_'+str(isrc).zfill(4)),ycorr_normal_backward)
-    savetxt(os.path.join(dir3, 'result_zcorr_normal_backward.dat'+'_'+str(isrc).zfill(4)),zcorr_normal_backward)
-    xslice_normal_backward = reshape(xcorr_normal_backward,(slice_nx,ny,nz))
-    yslice_normal_backward = reshape(ycorr_normal_backward,(slice_ny,nx,nz))
-    zslice_normal_backward = reshape(zcorr_normal_backward,(slice_nz,nx,ny))
+    np.savetxt(os.path.join(dir3, 'result_xcorr_normal_backward.dat'+'_'+str(isrc).zfill(4)),np.reshape(xcorr_normal_backward,[slice_nx*ny,nz]))
+    np.savetxt(os.path.join(dir3, 'result_ycorr_normal_backward.dat'+'_'+str(isrc).zfill(4)),np.reshape(ycorr_normal_backward,[nx*slice_ny,nz]))
+    np.savetxt(os.path.join(dir3, 'result_zcorr_normal_backward.dat'+'_'+str(isrc).zfill(4)),np.reshape(zcorr_normal_backward,[nx*ny,slice_nz]))
+    # xslice_normal_backward = np.reshape(xcorr_normal_backward,(slice_nx,ny,nz))
+    # yslice_normal_backward = np.reshape(ycorr_normal_backward,(slice_ny,nx,nz))
+    # zslice_normal_backward = np.reshape(zcorr_normal_backward,(slice_nz,nx,ny))
+    xslice_normal_backward = xcorr_normal_backward
+    yslice_normal_backward = ycorr_normal_backward
+    zslice_normal_backward = zcorr_normal_backward
 
-    clf()
-    imshow(xslice[0].T, interpolation='none')
-    colorbar()
-    savefig(os.path.join(dir3, 'xResult_RTM'+'_'+str(isrc).zfill(4)+'.png'))
-    clf()
-    imshow(yslice[0].T, interpolation='none')
-    colorbar()
-    savefig(os.path.join(dir3, 'yResult_RTM'+'_'+str(isrc).zfill(4)+'.png'))
-    clf()
-    imshow(zslice[0].T, interpolation='none')
-    colorbar()
-    savefig(os.path.join(dir3, 'zResult_RTM'+'_'+str(isrc).zfill(4)+'.png'))
+    plt.clf()
+    plt.imshow(xslice[0].T, interpolation='none')
+    plt.colorbar()
+    plt.savefig(os.path.join(dir3, 'xResult_RTM'+'_'+str(isrc).zfill(4)+'.png'))
+    plt.clf()
+    plt.imshow(yslice[0].T, interpolation='none')
+    plt.colorbar()
+    plt.savefig(os.path.join(dir3, 'yResult_RTM'+'_'+str(isrc).zfill(4)+'.png'))
+    plt.clf()
+    plt.imshow(zslice[0].T, interpolation='none')
+    plt.colorbar()
+    plt.savefig(os.path.join(dir3, 'zResult_RTM'+'_'+str(isrc).zfill(4)+'.png'))
 
-    clf()
-    imshow(xslice_normal_forward[0].T, interpolation='none')
-    colorbar()
-    savefig(os.path.join(dir3, 'xResult_RTM_normal_forward'+'_'+str(isrc).zfill(4)+'.png'))
-    clf()
-    imshow(yslice_normal_forward[0].T, interpolation='none')
-    colorbar()
-    savefig(os.path.join(dir3, 'yResult_RTM_normal_forward'+'_'+str(isrc).zfill(4)+'.png'))
-    clf()
-    imshow(zslice_normal_forward[0].T, interpolation='none')
-    colorbar()
-    savefig(os.path.join(dir3, 'zResult_RTM_normal_forward'+'_'+str(isrc).zfill(4)+'.png'))
+    plt.clf()
+    plt.imshow(xslice_normal_forward[0].T, interpolation='none')
+    plt.colorbar()
+    plt.savefig(os.path.join(dir3, 'xResult_RTM_normal_forward'+'_'+str(isrc).zfill(4)+'.png'))
+    plt.clf()
+    plt.imshow(yslice_normal_forward[0].T, interpolation='none')
+    plt.colorbar()
+    plt.savefig(os.path.join(dir3, 'yResult_RTM_normal_forward'+'_'+str(isrc).zfill(4)+'.png'))
+    plt.clf()
+    plt.imshow(zslice_normal_forward[0].T, interpolation='none')
+    plt.colorbar()
+    plt.savefig(os.path.join(dir3, 'zResult_RTM_normal_forward'+'_'+str(isrc).zfill(4)+'.png'))
 
-    clf()
-    imshow(xslice_normal_backward[0].T, interpolation='none')
-    colorbar()
-    savefig(os.path.join(dir3, 'xResult_RTM_normal_backward'+'_'+str(isrc).zfill(4)+'.png'))
-    clf()
-    imshow(yslice_normal_backward[0].T, interpolation='none')
-    colorbar()
-    savefig(os.path.join(dir3, 'yResult_RTM_normal_backward'+'_'+str(isrc).zfill(4)+'.png'))
-    clf()
-    imshow(zslice_normal_backward[0].T, interpolation='none')
-    colorbar()
-    savefig(os.path.join(dir3, 'zResult_RTM_normal_backward'+'_'+str(isrc).zfill(4)+'.png'))
+    plt.clf()
+    plt.imshow(xslice_normal_backward[0].T, interpolation='none')
+    plt.colorbar()
+    plt.savefig(os.path.join(dir3, 'xResult_RTM_normal_backward'+'_'+str(isrc).zfill(4)+'.png'))
+    plt.clf()
+    plt.imshow(yslice_normal_backward[0].T, interpolation='none')
+    plt.colorbar()
+    plt.savefig(os.path.join(dir3, 'yResult_RTM_normal_backward'+'_'+str(isrc).zfill(4)+'.png'))
+    plt.clf()
+    plt.imshow(zslice_normal_backward[0].T, interpolation='none')
+    plt.colorbar()
+    plt.savefig(os.path.join(dir3, 'zResult_RTM_normal_backward'+'_'+str(isrc).zfill(4)+'.png'))
     return 1
 
 

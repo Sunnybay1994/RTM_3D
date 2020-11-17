@@ -68,13 +68,14 @@ program SGPSTD3D
     !real(4),allocatable,dimension(:)   :: z
     !!=================
     
-    real(4)        :: dt
+    real(4)     :: dt
     integer     :: Nt
-    real(4)        :: travelTime
+    real(4)     :: travelTime
     
-    real(4)        :: fm, pulseWidth
+    real(4) :: fm, pulseWidth
 	integer ::  nt_src, nsrc, nrec
-	integer ::  islicex, islicey, islicez
+	integer ::  nslicex, nslicey, nslicez
+    integer,allocatable,dimension(:)      :: islicex, islicey, islicez
 	integer ::  xstep, tstep
     integer, allocatable, dimension(:)	::  sourcex_idx, sourcey_idx, sourcez_idx, compnt
 	integer, allocatable, dimension(:)  ::  recx,recy,recz,compnt_rec
@@ -82,20 +83,20 @@ program SGPSTD3D
 	real(4), allocatable, dimension(:,:)   :: srcpulse
 	real(4), allocatable, dimension(:,:)   :: gather
     
-    real(4), allocatable, dimension(:,:,:) :: Ex, Ey, Ez
-    real(4), allocatable, dimension(:,:,:) :: Hx, Hy, Hz
-    real(4), allocatable, dimension(:,:,:) :: epsl, sigma
-    real(4), allocatable, dimension(:,:,:) :: Dxy, Dxz, Dyx, Dyz, Dzx, Dzy
-    real(4)    :: epslx, epsly, epslz
-    real(4)    :: sigmax, sigmay, sigmaz
+    real(4), allocatable, dimension(:,:,:)  :: Ex, Ey, Ez
+    real(4), allocatable, dimension(:,:,:)  :: Hx, Hy, Hz
+    real(4), allocatable, dimension(:,:,:)  :: epsl, sigma
+    real(4), allocatable, dimension(:,:,:)  :: Dxy, Dxz, Dyx, Dyz, Dzx, Dzy
+    real(4) :: epslx, epsly, epslz
+    real(4) :: sigmax, sigmay, sigmaz
     
-    real(4), allocatable, dimension(:)     :: coefx, coefy, coefz
+    real(4), allocatable, dimension(:)      :: coefx, coefy, coefz
     
-    real(4), allocatable, dimension(:,:)   :: tranx, trany, tranz
-    real(4), allocatable, dimension(:,:)   :: dtranx, dtrany, dtranz
-    real(4), allocatable, dimension(:,:,:) :: field1, field2, field3, field4
+    real(4), allocatable, dimension(:,:)    :: tranx, trany, tranz
+    real(4), allocatable, dimension(:,:)    :: dtranx, dtrany, dtranz
+    real(4), allocatable, dimension(:,:,:)  :: field1, field2, field3, field4
     type df_pointer
-        type(dfti_descriptor),pointer   :: desc_handle
+        type(dfti_descriptor),pointer       :: desc_handle
     end type
     
     type(df_pointer), allocatable, dimension(:) :: df_pointer_x, df_pointer_y, df_pointer_z
@@ -105,100 +106,129 @@ program SGPSTD3D
     
     
     !The PML boundary
-    real(4),allocatable::Feyx(:,:,:)
-    real(4),allocatable::Feyz(:,:,:)
-    real(4),allocatable::Fezx(:,:,:)
-    real(4),allocatable::Fezy(:,:,:)
-    real(4),allocatable::Fexy(:,:,:)
-    real(4),allocatable::Fexz(:,:,:)
+    real(4),allocatable ::Feyx(:,:,:)
+    real(4),allocatable ::Feyz(:,:,:)
+    real(4),allocatable ::Fezx(:,:,:)
+    real(4),allocatable ::Fezy(:,:,:)
+    real(4),allocatable ::Fexy(:,:,:)
+    real(4),allocatable ::Fexz(:,:,:)
 
-    real(4),allocatable::Fhyx(:,:,:)
-    real(4),allocatable::Fhyz(:,:,:)
-    real(4),allocatable::Fhzx(:,:,:)
-    real(4),allocatable::Fhzy(:,:,:)
-    real(4),allocatable::Fhxy(:,:,:)
-    real(4),allocatable::Fhxz(:,:,:)
+    real(4),allocatable ::Fhyx(:,:,:)
+    real(4),allocatable ::Fhyz(:,:,:)
+    real(4),allocatable ::Fhzx(:,:,:)
+    real(4),allocatable ::Fhzy(:,:,:)
+    real(4),allocatable ::Fhxy(:,:,:)
+    real(4),allocatable ::Fhxz(:,:,:)
 
-    real(4),allocatable::iv(:)
-    real(4),allocatable::jv(:)
-    real(4),allocatable::kv(:)
+    real(4),allocatable ::iv(:)
+    real(4),allocatable ::jv(:)
+    real(4),allocatable ::kv(:)
 
-    real(4),allocatable::wx(:)
-    real(4),allocatable::wy(:)
-    real(4),allocatable::wz(:)
-    real(4),allocatable::wx2(:)
-    real(4),allocatable::wy2(:)
-    real(4),allocatable::wz2(:)
+    real(4),allocatable ::wx(:)
+    real(4),allocatable ::wy(:)
+    real(4),allocatable ::wz(:)
+    real(4),allocatable ::wx2(:)
+    real(4),allocatable ::wy2(:)
+    real(4),allocatable ::wz2(:)
     
-    real(4),allocatable::ewx(:)
-    real(4),allocatable::ewy(:)
-    real(4),allocatable::ewz(:)
-    real(4),allocatable::ewx2(:)
-    real(4),allocatable::ewy2(:)
-    real(4),allocatable::ewz2(:)
+    real(4),allocatable ::ewx(:)
+    real(4),allocatable ::ewy(:)
+    real(4),allocatable ::ewz(:)
+    real(4),allocatable ::ewx2(:)
+    real(4),allocatable ::ewy2(:)
+    real(4),allocatable ::ewz2(:)
     
     integer     :: i,j,k,m,n
     integer     :: status
     
     character(len=10)   :: field_name
-    integer,allocatable,dimension(:,:)  :: RecordSurfaceEz, RecordSurfaceHx, RecordSurfaceHy
-    real(4),allocatable,dimension(:,:)     :: EzSurface, HxSurface, HySurface
-    real(4),allocatable,dimension(:,:)     :: slicex, slicey, slicez
+    integer,allocatable,dimension(:,:,:)      :: RecordSurfaceEz, RecordSurfaceHx, RecordSurfaceHy
+    real(4),allocatable,dimension(:,:,:)      :: EzSurface, HxSurface, HySurface
+    real(4),allocatable,dimension(:,:,:)      :: slicex, slicey, slicez
     
-    integer         :: time1, time2, time3, time4
-	real(4)            :: cal_time, io_time
+    integer         :: time1, time2, time3, time0, time4
+	real(4)         :: cal_time, io_time
 	character(100)  :: string100
-	character(15)   :: s1,s2,s3,s4
-	
-	CHARACTER(4) :: isrc_s
-	CHARACTER(6) :: it_s
-	
-	if (command_argument_count() > 0) then
-	    CALL GET_COMMAND_ARGUMENT(1,isrc_s)
-		print *, 'src:'//isrc_s
+	character(15)   :: s1,s2,s3,s4,s5
+    
+    integer         :: isrc
+	CHARACTER(4)    :: isrc_s
+    CHARACTER(6)    :: it_s
+    
+	CHARACTER(9)    :: cmd_arg
+    
+    
+    call system_clock(time0)
+
+    
+    if (command_argument_count() > 0) then
+        CALL GET_COMMAND_ARGUMENT(1,cmd_arg)
+        read(cmd_arg,*) nthreads
+	else
+		nthreads = 8
+	endif
+    print *, "nthreads:",nthreads
+
+	if (command_argument_count() > 1) then
+        CALL GET_COMMAND_ARGUMENT(2,cmd_arg)
+        read(cmd_arg,*) isrc
+        write(isrc_s,'(i4.4)') isrc
 	else
 		isrc_s = "0000"
-	endif
+    endif
+    print *, "isrc:",isrc
+    
     
     open(1,file = 'input/par.in',status = 'old',action = 'read')   
     read(1,*)
     read(1,*) dx,dy,dz,dt
-    print *, "dx=",dx,", dy=",dy,", dz=",dz,", dt=",dt
+    print *, "dx=",dx,", dy=",dy,", dz=",dz,", dt=",dt,'\n'
     read(1,*)
     read(1,*) nx, ny, nz, nt
-    print *, "nx=",nx,", ny=",ny,", nz=",nz,", nt=",nt
+    print *, "nx=",nx,", ny=",ny,", nz=",nz,", nt=",nt,'\n'
     read(1,*)
     read(1,*)
     read(1,*)
     read(1,*) tstep, xstep
-    print *, "tstep=",tstep,", xstep=",xstep
+    print *, "tstep=",tstep,", xstep=",xstep,'\n'
     read(1,*)
     read(1,*)
     read(1,*)
     read(1,*) PMLx, PMLy, PMLz
-    print *, "PMLx=",PMLx,", PMLy=",PMLy,", PMLz=",PMLz
-    read(1,*)
-    read(1,*)
-    read(1,*)
-    read(1,*)
-    read(1,*)
-    read(1,*)
-    read(1,*)
-    read(1,*)
-    read(1,*)
-    read(1,*)
-    read(1,*)
-    read(1,*)
-    read(1,*)
-    read(1,*)
-    read(1,*)
-    read(1,*) islicex,islicey,islicez
-    print *, "islicex=",islicex,", islicey=",islicey,", islicez=",islicez
-    read(1,*)
-    read(1,*) nthreads
-    print *, "nthreads=",nthreads
+    print *, "PMLx=",PMLx,", PMLy=",PMLy,", PMLz=",PMLz,'\n'
+    ! read(1,*)
+    ! read(1,*)
+    ! read(1,*)
+    ! read(1,*)
+    ! read(1,*)
+    ! read(1,*)
+    ! read(1,*)
+    ! read(1,*)
+    ! read(1,*)
+    ! read(1,*)
+    ! read(1,*)
+    ! read(1,*)
+    ! read(1,*)
+    ! read(1,*)
     close(1)
 	
+    open(6,file = 'input/slice.in',status = 'old',action = 'read')
+    read(6,*) nslicex,nslicey,nslicez
+    print *, "nslicex=",nslicex,", nslicey=",nslicey,", nslicez=",nslicez,'\n'
+    allocate(islicex(nslicex),islicey(nslicey),islicez(nslicez))
+    do i = 1,nslicex
+        read(6,*) islicex(i),cmd_arg
+    enddo
+    do i = 1,nslicey
+        read(6,*) islicey(i),cmd_arg
+    enddo
+    do i = 1,nslicez
+        read(6,*) islicez(i),cmd_arg
+    enddo
+    print *, "islicex=",islicex
+    print *, "islicey=",islicey
+    print *, "islicez=",islicez
+    close(6)
     
 	
     !! for mt_wash model
@@ -918,16 +948,11 @@ program SGPSTD3D
         !endif
 		
         
-	end do
-	
-	write(s3,'(f15.3)') cal_time
-	write(s4,'(f15.3)') io_time
-	write (string100,*) 'Total calculate time: '//trim(adjustl(s3))//'s, Total I/O time: '//trim(adjustl(s4))//'s'
-	print *,trim(adjustl(string100))
-	write(11,*) trim(adjustl(string100))
-	close(11)
+    end do
+    
 	
 	! output gather
+    call system_clock(time3)
 	call data_output_vector(gather,'gather_'//isrc_s, nt, nrec, 1, 0)
     
     do i = 1,nthreads
@@ -935,6 +960,16 @@ program SGPSTD3D
         status = DftiFreeDescriptor(df_pointer_y(i)%desc_handle)
         status = DftiFreeDescriptor(df_pointer_z(i)%desc_handle)
     enddo
+
+    call system_clock(time4)
+	write(s5,'(f15.3)') (time4-time0)/10000.
+	
+	write(s3,'(f15.3)') cal_time
+	write(s4,'(f15.3)') io_time + (time4-time3)/10000.
+	write (string100,*) 'Total time: '//trim(adjustl(s5))//'s, Total calculate time: '//trim(adjustl(s3))//'s, Total I/O time: '//trim(adjustl(s4))//'s'
+	print *,trim(adjustl(string100))
+	write(11,*) trim(adjustl(string100))
+	close(11)
     
     
 end program SGPSTD3D

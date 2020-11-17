@@ -5,7 +5,7 @@ from model_em import cleanfiles
 def subg(dirname,nsrc,job_cap=2,proc_num=4):
     list_src = range(0,nsrc)
     cwd = os.getcwd()
-    pypath = cwd
+    exepath = cwd
     workdir = os.path.join('tasks',dirname)
     workpath = os.path.join(cwd,workdir)
     stdpath = os.path.join(workpath,'STD')
@@ -16,14 +16,24 @@ def subg(dirname,nsrc,job_cap=2,proc_num=4):
     fname_rtm0 = os.path.join(workpath,'sub_0offset.sh')
 
     if is_zRTM:
-        with open(fname_rtm0, 'w') as fp:
-            fp.write('''#!/bin/sh
+        isrc = 0
+        if forward_method == 'fdtd':
+            pstd_tag = ''
+            execmd_rtm = 'mpiexec -np $NSLOTS -wdir $WORKPATHRTM $EXEPATH/FDTD_MPI '+ str(isrc) +' > $WORKPATHRTM/Output/' + str(isrc) + '.out'
+        elif forward_method == 'pstd':
+            pstd_tag = ' --pstd'
+            execmd_rtm ='''cd $WORKPATHRTM
+./PSTD $NSLOTS '''+ str(isrc) +'''
+cd $WORKPATH'''
 
-NSLOTS=4
+        with open(fname_rtm0, 'w') as fp:
+            fp.write('''#!/bin/bash
+
+NSLOTS=''' + str(proc_num) + '''
 echo "Got $NSLOTS slots."
 echo "PATH = $PATH"
 echo "LD_LIBRARY_PATH = $LD_LIBRARY_PATH"
-PYPATH="''' + pypath + '''"
+EXEPATH="''' + exepath + '''"
 DIRNAME="''' + dirname + '''"
 WORKPATH="''' + workpath + '''"
 WORKPATHSTD="''' + stdpath + '''"
@@ -37,9 +47,9 @@ echo
 echo "Computing is started at $(date)."
 
 cd $WORKPATH
-python $PYPATH/pre_RTM_sub.py -m 0 
+python $EXEPATH/pre_RTM_sub.py -m ''' + pstd_tag + ''' 0
 echo "Current Directory = $WORKPATHRTM"
-mpiexec -np $NSLOTS -wdir $WORKPATHRTM $WORKPATHRTM/FDTD_MPI 0
+''' + execmd_rtm +'''
 
 echo "Computing is stopped at $(date)."
 
@@ -48,17 +58,33 @@ exit 0
 
 
     for isrc in list_src:
+        if forward_method == 'fdtd':
+            pstd_tag = ''
+            execmd = 'mpiexec -np $NSLOTS -wdir $WORKPATH $EXEPATH/FDTD_MPI '+ str(isrc) +' > $WORKPATH/Output/' + str(isrc) + '.out'
+            execmd_std = 'mpiexec -np $NSLOTS -wdir $WORKPATHSTD $EXEPATH/FDTD_MPI '+ str(isrc) +' > $WORKPATHSTD/Output/' + str(isrc) + '.out'
+            execmd_rtm = 'mpiexec -np $NSLOTS -wdir $WORKPATHRTM $EXEPATH/FDTD_MPI '+ str(isrc) +' > $WORKPATHRTM/Output/' + str(isrc) + '.out'
+        elif forward_method == 'pstd':
+            pstd_tag = ' --pstd'
+            execmd = '''cd $WORKPATH
+./PSTD $NSLOTS '''+ str(isrc)# +' > '+ str(proc_num) +'_threads.out'
+            execmd_std = '''cd $WORKPATHSTD
+./PSTD $NSLOTS '''+ str(isrc) +'''
+cd $WORKPATH'''
+            execmd_rtm ='''cd $WORKPATHRTM
+./PSTD $NSLOTS '''+ str(isrc) +'''
+cd $WORKPATH'''
+
         fname = os.path.join(workpath,'log','sub_' + str(isrc).zfill(4) + '.sh')
         fname_next = 'sub_' + str(isrc + job_cap).zfill(4) + '.sh'
         fname_post = 'sub_' + str(isrc).zfill(4) + '_post.sh'
 
-        text_head = '''#!/bin/sh
+        text_head = '''#!/bin/bash
 
-NSLOTS=4
+NSLOTS=''' + str(proc_num) + '''
 echo "Got $NSLOTS slots."
 echo "PATH = $PATH"
 echo "LD_LIBRARY_PATH = $LD_LIBRARY_PATH"
-PYPATH="''' + pypath + '''"
+EXEPATH="''' + exepath + '''"
 DIRNAME="''' + dirname + '''"
 WORKPATH="''' + workpath + '''"
 WORKPATHSTD="''' + stdpath + '''"
@@ -74,25 +100,25 @@ echo "Computing is started at $(date)."
 '''
         if is_zRTM==1:
             text = '''
-mpiexec -np $NSLOTS -wdir $WORKPATH $WORKPATH/FDTD_MPI '''+ str(isrc) +'''
-mpiexec -np $NSLOTS -wdir $WORKPATHSTD $WORKPATHSTD/FDTD_MPI '''+ str(isrc) +'''
+''' + execmd +'''
+''' + execmd_cmd + '''
 
 nohup sh "log/''' + fname_next + '''" > "log/''' + str(isrc + job_cap) + '''.out" 2>&1 &
 
-python $PYPATH/clean.py -f '''+ str(isrc) +'''
+python $EXEPATH/clean.py -f '''+ str(isrc) +'''
 '''
         else:
             text = '''
-mpiexec -np $NSLOTS -wdir $WORKPATH $WORKPATH/FDTD_MPI '''+ str(isrc) +'''
-mpiexec -np $NSLOTS -wdir $WORKPATHSTD $WORKPATHSTD/FDTD_MPI '''+ str(isrc) +'''
-python $PYPATH/pre_RTM_sub.py '''+ str(isrc) +'''
-mpiexec -np $NSLOTS -wdir $WORKPATHRTM $WORKPATHRTM/FDTD_MPI '''+ str(isrc) +'''
+''' + execmd +'''
+''' + execmd_std + '''
+python $EXEPATH/pre_RTM_sub.py ''' + pstd_tag + ' ' + str(isrc) + '''
+''' + execmd_rtm +'''
 
 nohup sh "log/''' + fname_next + '''" > "log/''' + str(isrc + job_cap) + '''.out" 2>&1 &
 
-python $PYPATH/corr_RTM_wavefield_sub.py '''+ str(isrc) +'''
-python $PYPATH/corr_RTM_slice_sub.py '''+ str(isrc) +'''
-python $PYPATH/clean.py '''+ str(isrc) +'''
+python $EXEPATH/corr_RTM_wavefield_sub.py '''+ str(isrc) +'''
+python $EXEPATH/corr_RTM_slice_sub.py '''+ str(isrc) +'''
+python $EXEPATH/clean.py '''+ str(isrc) +'''
 '''
 
         text_tail = '''
@@ -138,7 +164,7 @@ echo "Computing is stopped at $(date)."
 
 # echo "PATH = $PATH"
 # echo "LD_LIBRARY_PATH = $LD_LIBRARY_PATH"
-# PYPATH="''' + pypath + '''"
+# EXEPATH="''' + exepath + '''"
 # DIRNAME="''' + dirname + '''"
 # WORKPATH="''' + workpath + '''"
 # echo "Current Directory = $WORKPATH"
@@ -148,9 +174,9 @@ echo "Computing is stopped at $(date)."
 # echo "Computing is started at $(date)."
 
 # cd $WORKPATH
-# python $PYPATH/corr_RTM_wavefield_sub.py '''+ str(isrc) +'''
-# python $PYPATH/corr_RTM_slice_sub.py '''+ str(isrc) +'''
-# python $PYPATH/clean.py '''+ str(isrc) +'''
+# python $EXEPATH/corr_RTM_wavefield_sub.py '''+ str(isrc) +'''
+# python $EXEPATH/corr_RTM_slice_sub.py '''+ str(isrc) +'''
+# python $EXEPATH/clean.py '''+ str(isrc) +'''
 
 # echo "Computing is stopped at $(date)."
 
@@ -162,7 +188,7 @@ echo "Computing is stopped at $(date)."
 
 if __name__ == '__main__':
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "z:s:d:c:p:", ["zero-offset=","src_num=","workdir=","job_capacity=","proc_num="])
+        opts, args = getopt.getopt(sys.argv[1:], "z:s:d:c:p:", ["zero-offset=","src_num=","workdir=","job_capacity=","proc_num=","pstd"])
     except getopt.GetoptError as err:
         # print help information and exit:
         print(err)  # will print something like "option -a not recognized"
@@ -173,6 +199,7 @@ if __name__ == '__main__':
     dirname = 'default'
     job_capacity = 8
     proc_num = 8
+    forward_method = 'fdtd'
     for o, a in opts:
         if o in ('-z','--zero-offset'):
             is_zRTM = int(a)
@@ -185,6 +212,8 @@ if __name__ == '__main__':
             job_capacity = int(a)
         elif o in ('-p','--proc_num'):
             proc_num = int(a)
+        elif o in ('--pstd',):
+            forward_method = 'pstd'
         else:
             assert False, "unhandled option"
 
@@ -193,5 +222,5 @@ if __name__ == '__main__':
         os.mkdir(logdir)
     else:
         cleanfiles(logdir)
-
+    print(forward_method)
     subg(dirname,src_num,job_capacity,proc_num)

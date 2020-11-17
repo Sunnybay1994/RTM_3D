@@ -7,8 +7,8 @@ void output_gather()
     FILE *fp;
     char filename[30];
     char dir[MAX_NAME_LEN] = "./Output/";
-    sprintf(filename, "gather_%02d.dat", myRank);
-    fp=fopen(strcat(strcat(dir, filename),tag), "w+");
+    sprintf(filename, "gather%s_%02d.dat", tag, myRank);
+    fp=fopen(strcat(dir, filename), "w+");
     if(fp==NULL)
     {
         printf("File open error in output_gather!");
@@ -44,51 +44,48 @@ void output_slice(int it,double *EH_total)
     sprintf(zfilename, "slz_Ey%s_%05d.bin", tag,it);
     FILE *fp;
     
+    if(nxslice != 0){
+        for(k=0;k<nz;++k){
+            for(j=0;j<ny;++j){
+                for(i=0;i<nxslice;++i){
+                    // printf("%d,%d,%d(%d):%f\n",i,j,k,(k*ny+j)*nx+i,EH_total(slicex[i]+order,j,k));
+                    EH_slx[(k*ny+j)*nxslice+i] = EH_total(slicex[i]+order,j,k);
+    }}}}
     fp=fopen(strcat(xdir, xfilename), "wb+");
     if(fp==NULL)
     {
         printf("File open error in output_slice!");
 	exit(1);
     }
-    if(nxslice != 0){
-    for(i=0;i<nxslice;++i){
-        for(k=0;k<nz;++k){
-            for(j=0;j<ny;++j){
-                EH_slx[(i*nz+k)*ny+j] = EH_total(slicex[i]+order,j,k);
-            //     fprintf(fp, "%e ", EH_total(slicex[i]+order,j,k));
-            }
-            }}}
-    fwrite(EH_slx,data_size,ny*nz,fp);
+    fwrite(EH_slx,data_size,nxslice*ny*nz,fp);
     fclose(fp);
+
+    if(nyslice !=0){
+       for(k=0;k<nz;++k){
+            for(j=0;j<nyslice;++j){
+                for(i=0;i<nx;++i){
+                    EH_sly[(k*nyslice+j)*nx+i] = EH_total(i+order,slicey[j],k);
+    }}}}
     fp=fopen(strcat(ydir, yfilename), "wb+");
     if(fp==NULL)
     {
         printf("File open error");
     }
-    if(nyslice !=0){
-    for(j=0;j<nyslice;++j){
-       for(k=0;k<nz;++k){
-            for(i=0;i<nx;++i){
-                EH_sly[(j*nz+k)*nx+i] = EH_total(i+order,slicey[j],k);
-                // fprintf(fp, "%e ", EH_total(i+order,slicey[j],k));
-            }
-            }}}
-    fwrite(EH_sly,data_size,nx*nz,fp);
+    fwrite(EH_sly,data_size,nyslice*nx*nz,fp);
     fclose(fp);
 
+    if(nzslice != 0){
+        for(k=0;k<nzslice;++k){
+            for(j=0;j<ny;++j){
+                for(i=0;i<nx;++i){
+                    EH_slz[(k*ny+j)*nx+i] = EH_total(i+order,j,slicez[k]);
+    }}}}
     fp=fopen(strcat(zdir, zfilename), "wb+");
     if(fp==NULL)
     {
         printf("File open error");
     }
-    if(nzslice != 0){
-    for(k=0;k<nzslice;++k){
-        for(j=0;j<ny;++j){
-            for(i=0;i<nx;++i){
-                EH_slz[(k*ny+j)*nx+i] = EH_total(i+order,j,slicez[k]);
-                // fprintf(fp, "%e ", EH_total(i+order,j,slicez[k]));
-            }}}}
-    fwrite(EH_slz,data_size,nx*ny,fp);
+    fwrite(EH_slz,data_size,nzslice*nx*ny,fp);
     fclose(fp);
 
 }

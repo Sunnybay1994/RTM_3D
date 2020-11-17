@@ -207,7 +207,6 @@ def eps_sig_mu(meps=1,meps_bg=False,msig=1e-5,msig_bg=False,mmiu=1,mmiu_bg=False
                     miu_STD[:,:] = mmiu_bg
                 np.savetxt(fmiu_STD, miu_STD, fmt='%.3g')
             
-
         feps.close()
         fsig.close()
         fmiu.close()
@@ -348,10 +347,10 @@ def par():
     content.append("sig.in\n")
     content.append("#slices file\n")
     content.append("slice.in\n")
-    content.append("#slices(for pstd)\n")
-    content.append("%d,%d,%d\n"%(slx,sly,slz))
-    content.append("#nthreads(for pstd)\n")
-    content.append("%d\n"%nthreads)
+    # content.append("#slices(for pstd)\n")
+    # content.append("%d,%d,%d\n"%(slx,sly,slz))
+    # content.append("#nthreads(for pstd)\n")
+    # content.append("%d\n"%nthreads)
     with open(os.path.join(indir, 'par.in'), 'w') as fpar:
         fpar.write(''.join(content))
 
@@ -489,22 +488,22 @@ if __name__ == '__main__':
             model = a
         elif o in ('-f','--freq'):
             freq = float(a)  #MHz
-        elif o in ('--dx_src'):
+        elif o in ('--dx_src',):
             dx_src = float(a)
-        elif o in ('--dy_src'):
+        elif o in ('--dy_src',):
             dy_src = float(a)
-        elif o in ('--dx_rec'):
+        elif o in ('--dx_rec',):
             dx_rec = float(a)
-        elif o in ('--no_gen_model'):
+        elif o in ('--no_gen_model',):
             gen_model = False
-        elif o in ('--np'):
+        elif o in ('--np',):
             pnum = int(a)
             nthreads = 2*pnum
-        elif o in ('--nthrd'):
+        elif o in ('--nthrd',):
             nthreads = int(a)
-        elif o in ('--half_span'):
+        elif o in ('--half_span',):
             half_span = int(a)
-        elif o in ('--pstd'):
+        elif o in ('--pstd',):
             forward_method = 'pstd'
         else:
             assert False, "unhandled option"
@@ -535,7 +534,7 @@ if __name__ == '__main__':
     ### init workdir ###
     dir_suffix = ''
     if forward_method == 'pstd':
-        dir_suffix += '_pstd_%d'%nthreads
+        dir_suffix += '_pstd'
     elif forward_method == 'fdtd':
         dir_suffix += '_fdtd_%d'%pnum
     if is_zRTM==1:
@@ -583,12 +582,12 @@ if __name__ == '__main__':
         forward_fn = "FDTD_MPI"
     elif forward_method == 'pstd':
         forward_fn = "PSTD"
-    shutil.copy(forward_fn,workdir)
-    shutil.copy(forward_fn,std_dir)
-    if is_zRTM == 0 or is_zRTM == 2:
-        shutil.copy(forward_fn,rtm_dir)
-    if is_zRTM == 1 or is_zRTM == 2:
-        shutil.copy(forward_fn,rtm0_dir)
+        shutil.copy(forward_fn,workdir)
+        shutil.copy(forward_fn,std_dir)
+        if is_zRTM == 0 or is_zRTM == 2:
+            shutil.copy(forward_fn,rtm_dir)
+        if is_zRTM == 1 or is_zRTM == 2:
+            shutil.copy(forward_fn,rtm0_dir)
     ### directories end ###
 
 
@@ -674,8 +673,15 @@ if __name__ == '__main__':
     cp(os.path.join('Model',model), workdir) # backup model
     cp(os.path.join('Model','make_model.m'), workdir) # backup make_model
 
-    subtxt = 'python batchgen_bash.py -d %s -s %d -p %d -z %d'%(dirname,nsrc,NUM_OF_PROCESS,is_zRTM)
+    
+    if forward_method == 'pstd':
+        pnum = nthreads
+        forward_method = '--pstd'
+    elif forward_method == 'fdtd':
+        forward_method = ''
+    subtxt = 'python batchgen_bash.py -d %s -s %d -p %d -z %d -c %d %s'%(dirname,nsrc,pnum,is_zRTM,1,forward_method)
+    logger.info(subtxt)
     os.system(subtxt)
 
-    # python model_em.py -f 800 --dx_src 2 --dx_rec 0.5 --np 6 --half_span 0
+    # python model_em.py -f 800 --dx_src 2 --dx_rec 0.5 --np 12 --half_span 0
     # python model_em.py -f 800 --dx_src 2 --dx_rec 0.5 --nthrd 12 --pstd --half_span 0

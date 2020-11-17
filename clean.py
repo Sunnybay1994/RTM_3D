@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import sys,os,logging,getopt
+from corr_RTM_slice_sub import get_fn_from_dir
 
 #logger
 logger = logging.getLogger('clean')
@@ -19,39 +20,10 @@ def clean_slice(isrc, workdir, dir1 = os.path.join('STD','Output'), dir2 = os.pa
     dir2 = os.path.join(workdir,dir2)
     dir3 = os.path.join(workdir,dir3)
     logger.info("Begin cleaning slice of src%d"%isrc) 
-    if 'win' in sys.platform:
-        xlist1 = os.popen('dir/b/on '+os.path.join(dir1,'*xSlice*dat'+'_'+str(isrc).zfill(4))).readlines()
-        ylist1 = os.popen('dir/b/on '+os.path.join(dir1,'*ySlice*dat'+'_'+str(isrc).zfill(4))).readlines()
-        zlist1 = os.popen('dir/b/on '+os.path.join(dir1,'*zSlice*dat'+'_'+str(isrc).zfill(4))).readlines()
-        xlist2 = os.popen('dir/b/on '+os.path.join(dir2,'*xSlice*dat'+'_'+str(isrc).zfill(4))).readlines()[::-1]
-        ylist2 = os.popen('dir/b/on '+os.path.join(dir2,'*ySlice*dat'+'_'+str(isrc).zfill(4))).readlines()[::-1]
-        zlist2 = os.popen('dir/b/on '+os.path.join(dir2,'*zSlice*dat'+'_'+str(isrc).zfill(4))).readlines()[::-1]
-        xlist3 = os.popen('dir/b/on '+os.path.join(dir3,'*xSlice*dat'+'_'+str(isrc).zfill(4))).readlines()
-        ylist3 = os.popen('dir/b/on '+os.path.join(dir3,'*ySlice*dat'+'_'+str(isrc).zfill(4))).readlines()
-        zlist3 = os.popen('dir/b/on '+os.path.join(dir3,'*zSlice*dat'+'_'+str(isrc).zfill(4))).readlines()
-    elif 'linux' in sys.platform:
-        xlist1 = os.popen('ls '+os.path.join(dir1,'*xSlice*dat'+'_'+str(isrc).zfill(4))).readlines()
-        ylist1 = os.popen('ls '+os.path.join(dir1,'*ySlice*dat'+'_'+str(isrc).zfill(4))).readlines()
-        zlist1 = os.popen('ls '+os.path.join(dir1,'*zSlice*dat'+'_'+str(isrc).zfill(4))).readlines()
-        xlist2 = os.popen('ls '+os.path.join(dir2,'*xSlice*dat'+'_'+str(isrc).zfill(4))).readlines()[::-1]
-        ylist2 = os.popen('ls '+os.path.join(dir2,'*ySlice*dat'+'_'+str(isrc).zfill(4))).readlines()[::-1]
-        zlist2 = os.popen('ls '+os.path.join(dir2,'*zSlice*dat'+'_'+str(isrc).zfill(4))).readlines()[::-1]
-        xlist3 = os.popen('ls '+os.path.join(dir3,'*xSlice*dat'+'_'+str(isrc).zfill(4))).readlines()
-        ylist3 = os.popen('ls '+os.path.join(dir3,'*ySlice*dat'+'_'+str(isrc).zfill(4))).readlines()
-        zlist3 = os.popen('ls '+os.path.join(dir3,'*zSlice*dat'+'_'+str(isrc).zfill(4))).readlines()
-    else:
-        logger.error('unknown platform: %s'%sys.platform)
-        return 0
-
-
-    if 'win' in sys.platform:
-        list1 = map(lambda x: os.path.join(dir1,x), (xlist1+ylist1+zlist1))
-        list2 = map(lambda x: os.path.join(dir2,x), (xlist2+ylist2+zlist2))
-        list3 = map(lambda x: os.path.join(dir3,x), (xlist3+ylist3+zlist3))
-    else:
-        list1 = xlist1+ylist1+zlist1
-        list2 = xlist2+ylist2+zlist2
-        list3 = xlist3+ylist3+zlist3
+    
+    list1 = get_fn_from_dir(os.path.join(dir1, 'sl*_Ey_'+str(0).zfill(4)+'*.bin'))
+    list2 = get_fn_from_dir(os.path.join(dir2, 'sl*_Ey_'+str(0).zfill(4)+'*.bin'))
+    list3 = get_fn_from_dir(os.path.join(dir3, 'sl*_Ey_'+str(0).zfill(4)+'*.bin'))
 
     for flist in [list1,list2,list3]:
         for fname in flist:
@@ -67,26 +39,10 @@ def clean_wavefield(isrc, workdir, dir1 = os.path.join('STD','Output'), dir2 = o
     dir2 = os.path.join(workdir,dir2)
     dir3 = os.path.join(workdir,dir3)
     logger.info("Begin cleaning wavefield of src%d"%isrc) 
-    if 'linux' in sys.platform:
-        wavefield1 = os.popen('ls '+os.path.join(dir1,'Wavefield*dat'+'_'+str(isrc).zfill(4))).readlines()
-        wavefield2 = os.popen('ls '+os.path.join(dir2,'Wavefield*dat'+'_'+str(isrc).zfill(4))).readlines()[::-1]
-        wavefield3 = os.popen('ls '+os.path.join(dir3,'Wavefield*dat'+'_'+str(isrc).zfill(4))).readlines()
-    elif 'win' in sys.platform:
-        wavefield1 = os.popen('dir/b/on '+os.path.join(dir1,'Wavefield*dat'+'_'+str(isrc).zfill(4))).readlines()
-        wavefield2 = os.popen('dir/b/on '+os.path.join(dir2,'Wavefield*dat'+'_'+str(isrc).zfill(4))).readlines()[::-1]
-        wavefield3 = os.popen('dir/b/on '+os.path.join(dir3,'Wavefield*dat'+'_'+str(isrc).zfill(4))).readlines()
-    else:
-        logger.error('unknown platform: %s'%sys.platform)
-        return 0
-
-    if 'win' in sys.platform:
-        list1 = map(lambda x: os.path.join(dir1,x),wavefield1)
-        list2 = map(lambda x: os.path.join(dir2,x),wavefield2)
-        list3 = map(lambda x: os.path.join(dir3,x),wavefield3)
-    else:
-        list1 = wavefield1
-        list2 = wavefield2
-        list3 = wavefield3
+    
+    list1 = get_fn_from_dir(os.path.join(dir1, 'wvf_Ey_'+str(0).zfill(4)+'*.bin'))
+    list2 = get_fn_from_dir(os.path.join(dir2, 'wvf_Ey_'+str(0).zfill(4)+'*.bin'))
+    list3 = get_fn_from_dir(os.path.join(dir3, 'wvf_Ey_'+str(0).zfill(4)+'*.bin'))
 
     for flist in [list1,list2,list3]:
         for fname in flist:

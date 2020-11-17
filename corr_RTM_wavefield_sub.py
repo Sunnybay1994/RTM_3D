@@ -1,10 +1,11 @@
 #!/usr/bin/env python
-from numpy import *
+import numpy as np
 import matplotlib
 matplotlib.use('Agg')
-from matplotlib.pyplot import *
+import matplotlib.pyplot as plt
 import sys,os,re,logging,getopt
 from par_RTM import *
+from corr_RTM_slice_sub import get_fn_from_dir,read_bin_data
 
 #logger
 logger = logging.getLogger('corr_wavefield')
@@ -24,37 +25,23 @@ def corr_wavefield(isrc, workdir, dir1 = os.path.join('STD','Output'), dir2 = os
     dir2 = os.path.join(workdir,dir2)
     dir3 = os.path.join(workdir,dir3)
     logger.info('corr_wavefield src%d'%isrc)
-    if 'win' in sys.platform:
-        wavefield1 = os.popen('dir/b/on '+os.path.join(dir1,'Wavefield*dat'+'_'+str(isrc).zfill(4))).readlines()
-        wavefield2 = os.popen('dir/b/on '+os.path.join(dir2,'Wavefield*dat'+'_'+str(isrc).zfill(4))).readlines()[::-1]
-    elif 'linux' in sys.platform:
-        wavefield1 = os.popen('ls ' + os.path.join(dir1,'Wavefield*dat'+'_'+str(isrc).zfill(4))).readlines()
-        wavefield2 = os.popen('ls ' + os.path.join(dir2,'Wavefield*dat'+'_'+str(isrc).zfill(4))).readlines()[::-1]
-    else:
-        logger.error('unknown platform: %s'%sys.platform)
+    
+    list1 = get_fn_from_dir(os.path.join(dir1, 'wvf_Ey_'+str(0).zfill(4)+'*.bin'))
+    list2 = get_fn_from_dir(os.path.join(dir2, 'wvf_Ey_'+str(0).zfill(4)+'*.bin'))
+    
+    if len(list1) != len(list2):
+        logger.error("src%d: The number of wavefiled are different!(std:%d,rtm:%d)"%(isrc,len(list1),len(list2))) 
         return 0
-    # xlist1 = os.popen('ls '+dir1+'/*xSlice*dat').readlines()
-    # ylist1 = os.popen('ls '+dir1+'/*ySlice*dat').readlines()
-    # zlist1 = os.popen('ls '+dir1+'/*zSlice*dat').readlines()
-    # xlist2 = os.popen('ls '+dir2+'/*xSlice*dat').readlines()[::-1]
-    # ylist2 = os.popen('ls '+dir2+'/*ySlice*dat').readlines()[::-1]
-    # zlist2 = os.popen('ls '+dir2+'/*zSlice*dat').readlines()[::-1]
-    # if len(xlist1) != len(xlist2) or len(ylist1) != len(ylist2) or len(zlist1) != len(zlist2):
-    #     print "The number of slices are different!"
-    #     return 0
-    if len(wavefield1) != len(wavefield2):
-        logger.error("src%d: The number of wavefiled are different!(std:%d,rtm:%d)"%(isrc,len(wavefield1),len(wavefield2))) 
-        return 0
-
-    for i in range(len(wavefield1)):
-        name1 = wavefield1[i].strip('\n')
-        name2 = wavefield2[i].strip('\n')
-        if 'win' in sys.platform:
-            name1 = os.path.join(dir1,name1)
-            name2 = os.path.join(dir2,name2)
+    
+    wvf_nx = nx//step_x_wavefield
+    wvf_ny = ny//step_x_wavefield
+    wvf_nz = nz//step_x_wavefield
+    for i in range(len(list1)):
+        name1 = list1[i]
+        name2 = list2[i]
         logger.debug('corr_wavefield:%s,%s'%(os.path.basename(name1),os.path.basename(name2)))
-        data1 = loadtxt(name1)
-        data2 = loadtxt(name2)
+        data1 = read_bin_data(name1,[wvf_nx,wvf_ny,wvf_nz])
+        data2 = read_bin_data(name2,[wvf_nx,wvf_ny,wvf_nz])
         if i == 0:
             corr_data = data1 * data2
             data_forward = data1 * data1
@@ -65,9 +52,9 @@ def corr_wavefield(isrc, workdir, dir1 = os.path.join('STD','Output'), dir2 = os
             data_backward += data2 * data2
 
 
-    savetxt(os.path.join(dir3,'result_wavefield_corr.dat'+'_'+str(isrc).zfill(4)),corr_data)
-    savetxt(os.path.join(dir3,'result_wavefield_forward.dat'+'_'+str(isrc).zfill(4)),data_forward)
-    savetxt(os.path.join(dir3,'result_wavefield_backward.dat'+'_'+str(isrc).zfill(4)),data_backward)
+    np.savetxt(os.path.join(dir3,'result_wavefield_corr.dat'+'_'+str(isrc).zfill(4)),np.reshape(corr_data,[wvf_nx*wvf_ny,wvf_nz]))
+    np.savetxt(os.path.join(dir3,'result_wavefield_forward.dat'+'_'+str(isrc).zfill(4)),np.reshape(data_forward,[wvf_nx*wvf_ny,wvf_nz]))
+    np.savetxt(os.path.join(dir3,'result_wavefield_backward.dat'+'_'+str(isrc).zfill(4)),np.reshape(data_backward,[wvf_nx*wvf_ny,wvf_nz]))
     return 1
 
 

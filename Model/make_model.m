@@ -1,5 +1,5 @@
 %% modelname
-modelname = 'pstdtest';
+modelname = 'pstdtestbig';
 fn = 'model';
 fn_save = [fn '.mat'];
 fig_save = [fn '.png'];
@@ -9,14 +9,14 @@ epr_max = 15;
 epr_min = 1;
 miur_max = 1;
 miur_min = 1;
-fmax = 800*1e6;
+fmax = 300*1e6;
 dxmax = finddx(epr_max, miur_max, fmax);
 disp(['dxmax=' num2str(dxmax) 'm'])
 
-nx = 128;
-ny = 128;
+nx = 256;
+ny = 256;
 nz_air = 10;
-nz = 64;% + nz_air;
+nz = 128;% + nz_air;
 
 dx = 0.02; %m
 dy = dx;
@@ -37,7 +37,7 @@ outstep_slice = 5;
 
 dtmax = finddt(epr_min, miur_min, dx, dy, dz);
 disp(['dt_max=' num2str(dtmax/1e-9) 'ns']);
-dt = 0.03 *1e-9;
+dt = 0.01 *1e-9;
 nt = T/dt;
 
 %% background model
@@ -49,7 +49,7 @@ ep = ep_bg;
 %% slice
 slicex = [nx/2];
 slicey = [ny/2];
-slicez = [nz/2];
+slicez = [nz/3,nz/2];
 
 %%% the parameter names above should be changed togather with those in 'model_em.py' %%%
 
@@ -69,7 +69,7 @@ slicez = [nz/2];
 %     ep(:,:,z >= layer_z_begin & z<=layer_z_end) = surf_ep(i);
 % end
 %% dot
-r = dx*10;
+r = dx*30;
 posx = X/2;
 posy = Y/2;
 posz = Z/2;
@@ -138,10 +138,10 @@ lighting gouraud
 camlight('right')
 lighting gouraud
 
-% place src and rec
+%% place src and rec
 hold on
-dx_src = 2;
-dx_rec = 0.5;
+dx_src = 1;
+dx_rec = 0.2;
 dnx_src = dx_src / dx;
 dnx_rec = dx_rec / dx;
 ms = npmlx;
@@ -164,10 +164,11 @@ srcy = reshape(Ys,1,[]);
 recx = reshape(Xr,1,[]);
 recy = reshape(Yr,1,[]);
 recz = srcz;
+disp("nsrc:"+num2str(length(srcx)+", nrec:"+num2str(length(recx))))
 save([fn,'_sr.mat'],'srcx','srcy','srcz','recx','recy','recz')
 plot3(Xs,Ys,Zs,'r^')
 plot3(Xr,Yr,Zr,'b.')
 % xlim([0 10]);ylim([0 10]);zlim([-0.5 5])
 hold off
 
-% saveas(gcf,fig_save)
+saveas(gcf,fig_save)

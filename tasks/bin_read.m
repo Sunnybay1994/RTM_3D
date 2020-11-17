@@ -112,12 +112,16 @@ t_cal_fdtd = A{2};
 t_io_fdtd = A{1};
 
 fid = fopen('time_pstd.txt');
-c1 = ' Total calculate time: %fs, Total I/O time: %fs\n';
+c1 = 'Total time: %fs, Total calculate time: %fs, Total I/O time: %fs\n';
 formatSpec = [c1]; 
 B = textscan(fid, formatSpec);
 fclose(fid);
-t_cal_pstd = B{1};
-t_io_pstd = B{2};
+t_pstd = B{1};
+t_cal_pstd = B{2};
+t_io_pstd = B{3};
+%%
+figure(21)
+semilogy(np,t_fdtd,'r',np,t_cal_fdtd,'r--',np,t_io_fdtd,'r-.',np,t_pstd,'b-',np,t_cal_pstd,'b--',np,t_io_pstd,'b-.')
 %%
 figure(20)
 subplot(2,2,1)
@@ -125,10 +129,10 @@ plot(np,t_cal_fdtd)
 title('Total calculate time of FDTD');xlabel('num of cores');ylabel('time(s)')
 subplot(2,2,2)
 plot(np,t_cal_pstd)
-title('Total I/O time of FDTD');xlabel('num of cores');ylabel('time(s)')
+title('Total calculate time of PSTD');xlabel('num of threads');ylabel('time(s)')
 subplot(2,2,3)
 plot(np,t_io_fdtd)
-title('Total calculate time of PSTD');xlabel('num of threads');ylabel('time(s)')
+title('Total I/O time of FDTD');xlabel('num of cores');ylabel('time(s)')
 subplot(2,2,4)
 plot(np,t_io_pstd)
 title('Total I/O time of PSTD');xlabel('num of threads');ylabel('time(s)')
