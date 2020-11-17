@@ -907,9 +907,9 @@ program SGPSTD3D
 		! output wavefield and slice 
         if(mod(n,tstep) == 1) then
             call data_output_vector(Ey(1:nx:xstep,1:ny:xstep,1:nz:xstep),'wvf_Ey_'//isrc_s, Nx/xstep,Ny/xstep,Nz/xstep, n)
-			call data_output_vector(Ey(islicex,:,:),'slx_Ey_'//isrc_s, 1,Ny,Nz, n)
-			call data_output_vector(Ey(:,islicey,:),'sly_Ey_'//isrc_s, nx,1,Nz, n)
-			call data_output_vector(Ey(:,:,islicez),'slz_Ey_'//isrc_s, nx,Ny,1, n)
+			call data_output_vector(Ey(islicex,:,:),'slx_Ey_'//isrc_s, nslicex,Ny,Nz, n)
+			call data_output_vector(Ey(:,islicey,:),'sly_Ey_'//isrc_s, nx,nslicey,Nz, n)
+			call data_output_vector(Ey(:,:,islicez),'slz_Ey_'//isrc_s, nx,Ny,nslicez, n)
             !field_name = 'travelTime'
             !call data_output_scalar(travelTime-dt/2., field_name, n)
 			
