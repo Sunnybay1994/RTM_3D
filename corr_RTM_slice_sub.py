@@ -39,8 +39,9 @@ def read_bin_data(fn, dims):
     with open(fn,'rb') as fo:
         data_raw = struct.unpack('f'*dims[0]*dims[1]*dims[2],fo.read())
     dims.reverse()
-    dims = np.array(dims)
-    data = np.reshape(data_raw,dims[dims!=1])
+    data = np.reshape(data_raw,dims)
+    data = data.transpose(2,1,0)
+    print(np.shape(data))
     return data
 
 
@@ -51,13 +52,13 @@ def corr_slice(isrc, workdir, dir1 = 'Output', dir2 = os.path.join('RTM','Output
     dir2 = os.path.join(workdir,dir2)
     dir3 = os.path.join(workdir,dir3)
     
-    xlist1 = get_fn_from_dir(os.path.join(dir1, 'slx_Ey_'+str(0).zfill(4)+'*.bin'))
-    ylist1 = get_fn_from_dir(os.path.join(dir1, 'sly_Ey_'+str(0).zfill(4)+'*.bin'))
-    zlist1 = get_fn_from_dir(os.path.join(dir1, 'slz_Ey_'+str(0).zfill(4)+'*.bin'))
+    xlist1 = get_fn_from_dir(os.path.join(dir1, 'slx_Ey_'+str(isrc).zfill(4)+'*.bin'))
+    ylist1 = get_fn_from_dir(os.path.join(dir1, 'sly_Ey_'+str(isrc).zfill(4)+'*.bin'))
+    zlist1 = get_fn_from_dir(os.path.join(dir1, 'slz_Ey_'+str(isrc).zfill(4)+'*.bin'))
 
-    xlist2 = get_fn_from_dir(os.path.join(dir2, 'slx_Ey_'+str(0).zfill(4)+'*.bin'), -1)
-    ylist2 = get_fn_from_dir(os.path.join(dir2, 'sly_Ey_'+str(0).zfill(4)+'*.bin'), -1)
-    zlist2 = get_fn_from_dir(os.path.join(dir2, 'slz_Ey_'+str(0).zfill(4)+'*.bin'), -1)
+    xlist2 = get_fn_from_dir(os.path.join(dir2, 'slx_Ey_'+str(isrc).zfill(4)+'*.bin'), -1)
+    ylist2 = get_fn_from_dir(os.path.join(dir2, 'sly_Ey_'+str(isrc).zfill(4)+'*.bin'), -1)
+    zlist2 = get_fn_from_dir(os.path.join(dir2, 'slz_Ey_'+str(isrc).zfill(4)+'*.bin'), -1)
 
     if len(xlist1) != len(xlist2) or len(ylist1) != len(ylist2) or len(zlist1) != len(zlist2):
         logger.error("src%d: The number of slice are different!(std:%d %d %d, rtm:%d %d %d)"%(isrc,len(xlist1),len(ylist1),len(zlist1),len(xlist2),len(ylist2),len(zlist2))) 
@@ -133,75 +134,69 @@ def corr_slice(isrc, workdir, dir1 = 'Output', dir2 = os.path.join('RTM','Output
     except Warning as wa:
         logger.warning(wa+'(zb:%d/%d)'%(zcorr_data,znormal_backward))
 
+    for i in range(slice_nx):
+        xslice = xcorr_data[i,:,:]
+        xslice_normal_forward = xcorr_normal_forward[i,:,:]
+        xslice_normal_backward = xcorr_normal_backward[i,:,:]
+        np.savetxt(os.path.join(dir3, 'result_xcorr_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.dat'), xslice)
+        np.savetxt(os.path.join(dir3, 'result_xcorr_normal_forward_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.dat'), xslice_normal_forward)
+        np.savetxt(os.path.join(dir3, 'result_xcorr_normal_backward_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.dat'), xslice_normal_backward)
+        
+        plt.clf()
+        plt.imshow(xslice.T, interpolation='none')
+        plt.colorbar()
+        plt.savefig(os.path.join(dir3, 'xResult_RTM_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.png'))
+        plt.clf()
+        plt.imshow(xslice_normal_forward.T, interpolation='none')
+        plt.colorbar()
+        plt.savefig(os.path.join(dir3, 'xResult_RTM_normal_forward_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.png'))
+        plt.clf()
+        plt.imshow(xslice_normal_backward.T, interpolation='none')
+        plt.colorbar()
+        plt.savefig(os.path.join(dir3, 'xResult_RTM_normal_backward_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.png'))
 
-    np.savetxt(os.path.join(dir3, 'result_xcorr.dat'+'_'+str(isrc).zfill(4)),np.reshape(xcorr_data,[slice_nx*ny,nz]))
-    np.savetxt(os.path.join(dir3, 'result_ycorr.dat'+'_'+str(isrc).zfill(4)),np.reshape(ycorr_data,[nx*slice_ny,nz]))
-    np.savetxt(os.path.join(dir3, 'result_zcorr.dat'+'_'+str(isrc).zfill(4)),np.reshape(zcorr_data,[nx*ny,slice_nz]))
-    # xslice = np.reshape(xcorr_data,(slice_nx,ny,nz))
-    # yslice = np.reshape(ycorr_data,(slice_ny,nx,nz))
-    # zslice = np.reshape(zcorr_data,(slice_nz,nx,ny))
-    xslice = xcorr_data
-    yslice = ycorr_data
-    zslice = zcorr_data
+    for i in range(slice_ny):
+        yslice = ycorr_data[:,i,:]
+        yslice_normal_forward = ycorr_normal_forward[:,i,:]
+        yslice_normal_backward = ycorr_normal_backward[:,i,:]
+        np.savetxt(os.path.join(dir3, 'result_ycorr_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.dat'), yslice)
+        np.savetxt(os.path.join(dir3, 'result_ycorr_normal_forward_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.dat'), yslice_normal_forward)
+        np.savetxt(os.path.join(dir3, 'result_ycorr_normal_backward_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.dat'), yslice_normal_backward)
+        
+        plt.clf()
+        plt.imshow(yslice.T, interpolation='none')
+        plt.colorbar()
+        plt.savefig(os.path.join(dir3, 'yResult_RTM_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.png'))
+        plt.clf()
+        plt.imshow(yslice_normal_forward.T, interpolation='none')
+        plt.colorbar()
+        plt.savefig(os.path.join(dir3, 'yResult_RTM_normal_forward_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.png'))
+        plt.clf()
+        plt.imshow(yslice_normal_backward.T, interpolation='none')
+        plt.colorbar()
+        plt.savefig(os.path.join(dir3, 'yResult_RTM_normal_backward_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.png'))        
 
-    np.savetxt(os.path.join(dir3, 'result_xcorr_normal_forward.dat'+'_'+str(isrc).zfill(4)),np.reshape(xcorr_normal_forward,[slice_nx*ny,nz]))
-    np.savetxt(os.path.join(dir3, 'result_ycorr_normal_forward.dat'+'_'+str(isrc).zfill(4)),np.reshape(ycorr_normal_forward,[nx*slice_ny,nz]))
-    np.savetxt(os.path.join(dir3, 'result_zcorr_normal_forward.dat'+'_'+str(isrc).zfill(4)),np.reshape(zcorr_normal_forward,[nx*ny,slice_nz]))
-    # xslice_normal_forward = np.reshape(xcorr_normal_forward,(slice_nx,ny,nz))
-    # yslice_normal_forward = np.reshape(ycorr_normal_forward,(slice_ny,nx,nz))
-    # zslice_normal_forward = np.reshape(zcorr_normal_forward,(slice_nz,nx,ny))
-    xslice_normal_forward = xcorr_normal_forward
-    yslice_normal_forward = ycorr_normal_forward
-    zslice_normal_forward = zcorr_normal_forward
+    for i in range(slice_nz):
+        zslice = zcorr_data[:,:,i]
+        zslice_normal_forward = zcorr_normal_forward[:,:,i]
+        zslice_normal_backward = zcorr_normal_backward[:,:,i]
+        np.savetxt(os.path.join(dir3, 'result_zcorr_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.dat'), zslice)
+        np.savetxt(os.path.join(dir3, 'result_zcorr_normal_forward_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.dat'), zslice_normal_forward)
+        np.savetxt(os.path.join(dir3, 'result_zcorr_normal_backward_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.dat'), zslice_normal_backward)
+        
+        plt.clf()
+        plt.imshow(zslice.T, interpolation='none')
+        plt.colorbar()
+        plt.savefig(os.path.join(dir3, 'zResult_RTM_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.png'))
+        plt.clf()
+        plt.imshow(zslice_normal_forward.T, interpolation='none')
+        plt.colorbar()
+        plt.savefig(os.path.join(dir3, 'zResult_RTM_normal_forward_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.png'))
+        plt.clf()
+        plt.imshow(zslice_normal_backward.T, interpolation='none')
+        plt.colorbar()
+        plt.savefig(os.path.join(dir3, 'zResult_RTM_normal_backward_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.png'))
 
-    np.savetxt(os.path.join(dir3, 'result_xcorr_normal_backward.dat'+'_'+str(isrc).zfill(4)),np.reshape(xcorr_normal_backward,[slice_nx*ny,nz]))
-    np.savetxt(os.path.join(dir3, 'result_ycorr_normal_backward.dat'+'_'+str(isrc).zfill(4)),np.reshape(ycorr_normal_backward,[nx*slice_ny,nz]))
-    np.savetxt(os.path.join(dir3, 'result_zcorr_normal_backward.dat'+'_'+str(isrc).zfill(4)),np.reshape(zcorr_normal_backward,[nx*ny,slice_nz]))
-    # xslice_normal_backward = np.reshape(xcorr_normal_backward,(slice_nx,ny,nz))
-    # yslice_normal_backward = np.reshape(ycorr_normal_backward,(slice_ny,nx,nz))
-    # zslice_normal_backward = np.reshape(zcorr_normal_backward,(slice_nz,nx,ny))
-    xslice_normal_backward = xcorr_normal_backward
-    yslice_normal_backward = ycorr_normal_backward
-    zslice_normal_backward = zcorr_normal_backward
-
-    plt.clf()
-    plt.imshow(xslice[0].T, interpolation='none')
-    plt.colorbar()
-    plt.savefig(os.path.join(dir3, 'xResult_RTM'+'_'+str(isrc).zfill(4)+'.png'))
-    plt.clf()
-    plt.imshow(yslice[0].T, interpolation='none')
-    plt.colorbar()
-    plt.savefig(os.path.join(dir3, 'yResult_RTM'+'_'+str(isrc).zfill(4)+'.png'))
-    plt.clf()
-    plt.imshow(zslice[0].T, interpolation='none')
-    plt.colorbar()
-    plt.savefig(os.path.join(dir3, 'zResult_RTM'+'_'+str(isrc).zfill(4)+'.png'))
-
-    plt.clf()
-    plt.imshow(xslice_normal_forward[0].T, interpolation='none')
-    plt.colorbar()
-    plt.savefig(os.path.join(dir3, 'xResult_RTM_normal_forward'+'_'+str(isrc).zfill(4)+'.png'))
-    plt.clf()
-    plt.imshow(yslice_normal_forward[0].T, interpolation='none')
-    plt.colorbar()
-    plt.savefig(os.path.join(dir3, 'yResult_RTM_normal_forward'+'_'+str(isrc).zfill(4)+'.png'))
-    plt.clf()
-    plt.imshow(zslice_normal_forward[0].T, interpolation='none')
-    plt.colorbar()
-    plt.savefig(os.path.join(dir3, 'zResult_RTM_normal_forward'+'_'+str(isrc).zfill(4)+'.png'))
-
-    plt.clf()
-    plt.imshow(xslice_normal_backward[0].T, interpolation='none')
-    plt.colorbar()
-    plt.savefig(os.path.join(dir3, 'xResult_RTM_normal_backward'+'_'+str(isrc).zfill(4)+'.png'))
-    plt.clf()
-    plt.imshow(yslice_normal_backward[0].T, interpolation='none')
-    plt.colorbar()
-    plt.savefig(os.path.join(dir3, 'yResult_RTM_normal_backward'+'_'+str(isrc).zfill(4)+'.png'))
-    plt.clf()
-    plt.imshow(zslice_normal_backward[0].T, interpolation='none')
-    plt.colorbar()
-    plt.savefig(os.path.join(dir3, 'zResult_RTM_normal_backward'+'_'+str(isrc).zfill(4)+'.png'))
     return 1
 
 

@@ -26,8 +26,8 @@ def corr_wavefield(isrc, workdir, dir1 = os.path.join('STD','Output'), dir2 = os
     dir3 = os.path.join(workdir,dir3)
     logger.info('corr_wavefield src%d'%isrc)
     
-    list1 = get_fn_from_dir(os.path.join(dir1, 'wvf_Ey_'+str(0).zfill(4)+'*.bin'))
-    list2 = get_fn_from_dir(os.path.join(dir2, 'wvf_Ey_'+str(0).zfill(4)+'*.bin'))
+    list1 = get_fn_from_dir(os.path.join(dir1, 'wvf_Ey_'+str(isrc).zfill(4)+'*.bin'))
+    list2 = get_fn_from_dir(os.path.join(dir2, 'wvf_Ey_'+str(isrc).zfill(4)+'*.bin'))
     
     if len(list1) != len(list2):
         logger.error("src%d: The number of wavefiled are different!(std:%d,rtm:%d)"%(isrc,len(list1),len(list2))) 

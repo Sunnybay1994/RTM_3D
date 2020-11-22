@@ -37,7 +37,7 @@ outstep_slice = 5;
 
 dtmax = finddt(epr_min, miur_min, dx, dy, dz);
 disp(['dt_max=' num2str(dtmax/1e-9) 'ns']);
-dt = 0.01 *1e-9;
+dt = 0.02 *1e-9;
 nt = T/dt;
 
 %% background model

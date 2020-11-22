@@ -684,4 +684,4 @@ if __name__ == '__main__':
     os.system(subtxt)
 
     # python model_em.py -f 800 --dx_src 2 --dx_rec 0.5 --np 12 --half_span 0
-    # python model_em.py -f 800 --dx_src 2 --dx_rec 0.5 --nthrd 12 --pstd --half_span 0
+    # python model_em.py -f 300 --dx_src 1 --dx_rec 0.2 --nthrd 12 --pstd --half_span 0

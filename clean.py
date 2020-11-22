@@ -21,9 +21,9 @@ def clean_slice(isrc, workdir, dir1 = os.path.join('STD','Output'), dir2 = os.pa
     dir3 = os.path.join(workdir,dir3)
     logger.info("Begin cleaning slice of src%d"%isrc) 
     
-    list1 = get_fn_from_dir(os.path.join(dir1, 'sl*_Ey_'+str(0).zfill(4)+'*.bin'))
-    list2 = get_fn_from_dir(os.path.join(dir2, 'sl*_Ey_'+str(0).zfill(4)+'*.bin'))
-    list3 = get_fn_from_dir(os.path.join(dir3, 'sl*_Ey_'+str(0).zfill(4)+'*.bin'))
+    list1 = get_fn_from_dir(os.path.join(dir1, 'sl*_Ey_'+str(isrc).zfill(4)+'*.bin'))
+    list2 = get_fn_from_dir(os.path.join(dir2, 'sl*_Ey_'+str(isrc).zfill(4)+'*.bin'))
+    list3 = get_fn_from_dir(os.path.join(dir3, 'sl*_Ey_'+str(isrc).zfill(4)+'*.bin'))
 
     for flist in [list1,list2,list3]:
         for fname in flist:
@@ -40,9 +40,9 @@ def clean_wavefield(isrc, workdir, dir1 = os.path.join('STD','Output'), dir2 = o
     dir3 = os.path.join(workdir,dir3)
     logger.info("Begin cleaning wavefield of src%d"%isrc) 
     
-    list1 = get_fn_from_dir(os.path.join(dir1, 'wvf_Ey_'+str(0).zfill(4)+'*.bin'))
-    list2 = get_fn_from_dir(os.path.join(dir2, 'wvf_Ey_'+str(0).zfill(4)+'*.bin'))
-    list3 = get_fn_from_dir(os.path.join(dir3, 'wvf_Ey_'+str(0).zfill(4)+'*.bin'))
+    list1 = get_fn_from_dir(os.path.join(dir1, 'wvf_Ey_'+str(isrc).zfill(4)+'*.bin'))
+    list2 = get_fn_from_dir(os.path.join(dir2, 'wvf_Ey_'+str(isrc).zfill(4)+'*.bin'))
+    list3 = get_fn_from_dir(os.path.join(dir3, 'wvf_Ey_'+str(isrc).zfill(4)+'*.bin'))
 
     for flist in [list1,list2,list3]:
         for fname in flist:
