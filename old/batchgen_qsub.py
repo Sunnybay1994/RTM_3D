@@ -2,7 +2,7 @@
 import os,sys,getopt
 from model_em import cleanfiles
 
-def subg(dirname,nsrc,job_cap=4,proc_num=8):
+def subg(dirname,nsrc,job_cap=8,proc_num=8):
     list_src = range(0,nsrc)
     cwd = os.getcwd()
     pypath = cwd
@@ -69,6 +69,22 @@ exit 0
 
 
     for isrc in list_src:
+        if forward_method == 'fdtd':
+            pstd_tag = ''
+            execmd = '''~/software/openmpi-4.0.3/bin/mpiexec -np $NSLOTS -wdir $WORKPATH $WORKPATH/FDTD_MPI '''+ str(isrc)
+            execmd_std = '''~/software/openmpi-4.0.3/bin/mpiexec -np $NSLOTS -wdir $WORKPATHSTD $WORKPATHSTD/FDTD_MPI '''+ str(isrc)
+            execmd_rtm = '''~/software/openmpi-4.0.3/bin/mpiexec -np $NSLOTS -wdir $WORKPATHRTM $WORKPATHRTM/FDTD_MPI '''+ str(isrc)
+        elif forward_method == 'pstd':
+            pstd_tag = ' --pstd'
+            execmd = '''cd $WORKPATH
+./PSTD.exe $NSLOTS '''+ str(isrc) +' > '+ str(proc_num) +'_threads.out'
+            execmd_std = '''cd $WORKPATHSTD
+./PSTD.exe $NSLOTS '''+ str(isrc) +'''
+cd $WORKPATH'''
+            execmd_rtm ='''cd $WORKPATHRTM
+./PSTD.exe $NSLOTS '''+ str(isrc) +'''
+cd $WORKPATH'''
+
         fname = os.path.join(workpath,'log','sub_' + str(isrc).zfill(4) + '.sh')
         fname_next = 'sub_' + str(isrc + job_cap).zfill(4) + '.sh'
         fname_post = 'sub_' + str(isrc).zfill(4) + '_post.sh'
@@ -120,14 +136,14 @@ echo "Current Directory = $WORKPATH"
 '''
         else:
             text = '''
-~/software/openmpi-4.0.3/bin/mpiexec -np $NSLOTS -wdir $WORKPATH $WORKPATH/FDTD_MPI '''+ str(isrc) +'''
+''' + execmd + '''
 echo "Current Directory = $WORKPATHSTD"
-~/software/openmpi-4.0.3/bin/mpiexec -np $NSLOTS -wdir $WORKPATHSTD $WORKPATHSTD/FDTD_MPI '''+ str(isrc) +'''
+''' + execmd_std + '''
 echo "Current Directory = $WORKPATH"
 ~/software/openmpi-4.0.3/bin/mpiexec -np 1 -wdir $WORKPATH $PYPATH/pre_RTM_sub.py '''+ str(isrc) +'''
 echo "Current Directory = $WORKPATHRTM"
-~/software/openmpi-4.0.3/bin/mpiexec -np $NSLOTS -wdir $WORKPATHRTM $WORKPATHRTM/FDTD_MPI '''+ str(isrc) +'''
-#echo "Current Directory = $WORKPATH"
+''' + execmd_rtm + '''
+echo "Current Directory = $WORKPATH"
 #~/software/openmpi-4.0.3/bin/mpiexec -np 1 -wdir $WORKPATH $PYPATH/corr_RTM_wavefield_sub.py '''+ str(isrc) +'''
 #~/software/openmpi-4.0.3/bin/mpiexec -np 1 -wdir $WORKPATH $PYPATH/corr_RTM_slice_sub.py '''+ str(isrc) +'''
 #~/software/openmpi-4.0.3/bin/mpiexec -np 1 -wdir $WORKPATH $PYPATH/clean.py '''+ str(isrc) +'''
@@ -211,7 +227,7 @@ python post_put.py -t ''' + dirname + ' ' + str(isrc) +'''
 
 if __name__ == '__main__':
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "z:s:d:c:p:", ["zero-offset=","src_num=","workdir=","job_capacity=","proc_num="])
+        opts, args = getopt.getopt(sys.argv[1:], "z:s:d:c:p:", ["zero-offset=","src_num=","workdir=","job_capacity=","proc_num=","pstd","server="])
     except getopt.GetoptError as err:
         # print help information and exit:
         print(err)  # will print something like "option -a not recognized"
@@ -222,6 +238,8 @@ if __name__ == '__main__':
     dirname = 'default'
     job_capacity = 8
     proc_num = 8
+    forward_method = 'fdtd'
+    server_name = 'local'
     for o, a in opts:
         if o in ('-z','--zero-offset'):
             is_zRTM = int(a)
@@ -234,6 +252,11 @@ if __name__ == '__main__':
             job_capacity = int(a)
         elif o in ('-p','--proc_num'):
             proc_num = int(a)
+        elif o in ('--pstd',):
+            forward_method = 'pstd'
+        elif o in ('--server',):
+            server_name = a
+            print('servername:"' + server_name + '"')
         else:
             assert False, "unhandled option"
 
@@ -242,5 +265,5 @@ if __name__ == '__main__':
         os.mkdir(logdir)
     else:
         cleanfiles(logdir)
-
+    print(forward_method)
     subg(dirname,src_num,job_capacity,proc_num)

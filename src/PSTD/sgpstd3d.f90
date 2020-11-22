@@ -546,7 +546,7 @@ program SGPSTD3D
     !open(996,file = 'travelTimeE.txt',status = 'replace')
     !!open(995,file = 'travelTimeH.txt',status = 'replace')
 	
-    open(11,file = 'Output/time_usage.txt',status = 'replace')
+    open(11,file = 'Output/time_usage_'//isrc_s//'.txt',status = 'replace')
 
     print*, 'nthreads = ',nthreads
 	

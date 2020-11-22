@@ -682,7 +682,7 @@ if __name__ == '__main__':
         forward_method = '--pstd'
     elif forward_method == 'fdtd':
         forward_method = ''
-    subtxt = 'python batchgen.py -d %s -s %d -p %d -z %d -c %d --server %s %s '%(dirname,nsrc,pnum,is_zRTM,5,server_name,forward_method)
+    subtxt = 'python batchgen.py -d %s -s %d -p %d -z %d -c %d --server %s %s '%(dirname,nsrc,pnum,is_zRTM,1,server_name,forward_method)
     logger.info(subtxt)
     os.system(subtxt)
 

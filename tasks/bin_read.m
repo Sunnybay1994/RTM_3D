@@ -122,18 +122,26 @@ t_io_pstd = B{3};
 %%
 figure(21)
 semilogy(np,t_fdtd,'r',np,t_cal_fdtd,'r--',np,t_io_fdtd,'r-.',np,t_pstd,'b-',np,t_cal_pstd,'b--',np,t_io_pstd,'b-.')
+set(gca,'fontsize',24);
+title('Time usage VS cores/threads','Fontsize',36);xlabel('num of cores/threads','Fontsize',32);ylabel('time(s)','Fontsize',32)
+legend('Total time(FDTD)','Calculation time(FDTD)','I/O time(FDTD)','Total time(PSTD)','Calculation time(PSTD)','I/O time(PSTD)')
+export_fig("time vs cores(threads)_all_in_one.png")
 %%
 figure(20)
 subplot(2,2,1)
 plot(np,t_cal_fdtd)
 title('Total calculate time of FDTD');xlabel('num of cores');ylabel('time(s)')
+set(gca,'fontsize',18);
 subplot(2,2,2)
 plot(np,t_cal_pstd)
 title('Total calculate time of PSTD');xlabel('num of threads');ylabel('time(s)')
+set(gca,'fontsize',18);
 subplot(2,2,3)
 plot(np,t_io_fdtd)
 title('Total I/O time of FDTD');xlabel('num of cores');ylabel('time(s)')
+set(gca,'fontsize',18);
 subplot(2,2,4)
 plot(np,t_io_pstd)
 title('Total I/O time of PSTD');xlabel('num of threads');ylabel('time(s)')
-saveas(gcf,"time vs cores(threads).png")
+set(gca,'fontsize',18);
+export_fig("time vs cores(threads).png")

@@ -52,9 +52,9 @@ def corr_wavefield(isrc, workdir, dir1 = os.path.join('STD','Output'), dir2 = os
             data_backward += data2 * data2
 
 
-    np.savetxt(os.path.join(dir3,'result_wavefield_corr.dat'+'_'+str(isrc).zfill(4)),np.reshape(corr_data,[wvf_nx*wvf_ny,wvf_nz]))
-    np.savetxt(os.path.join(dir3,'result_wavefield_forward.dat'+'_'+str(isrc).zfill(4)),np.reshape(data_forward,[wvf_nx*wvf_ny,wvf_nz]))
-    np.savetxt(os.path.join(dir3,'result_wavefield_backward.dat'+'_'+str(isrc).zfill(4)),np.reshape(data_backward,[wvf_nx*wvf_ny,wvf_nz]))
+    np.savetxt(os.path.join(dir3,'result_wavefield_corr_' + +str(isrc).zfill(4) + '.dat'),np.reshape(corr_data,[wvf_nx*wvf_ny,wvf_nz]))
+    np.savetxt(os.path.join(dir3,'result_wavefield_forward_' + +str(isrc).zfill(4) + '.dat'),np.reshape(data_forward,[wvf_nx*wvf_ny,wvf_nz]))
+    np.savetxt(os.path.join(dir3,'result_wavefield_backward_' + +str(isrc).zfill(4) + '.dat'),np.reshape(data_backward,[wvf_nx*wvf_ny,wvf_nz]))
     return 1
 
 

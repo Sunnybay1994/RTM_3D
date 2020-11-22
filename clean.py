@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 import sys,os,logging,getopt
 from corr_RTM_slice_sub import get_fn_from_dir
+from par_RTM import *
+
 
 #logger
 logger = logging.getLogger('clean')
@@ -58,18 +60,21 @@ def check_file(isrc,result_dir='Result'):
     logger.info("Checking files of src%d"%isrc)
     dum_s = True
     dum_w = True
-    dum_s = os.path.isfile(os.path.join(result_dir, 'result_xcorr.dat'+'_'+str(isrc).zfill(4))) and dum_s
-    dum_s = os.path.isfile(os.path.join(result_dir, 'result_ycorr.dat'+'_'+str(isrc).zfill(4))) and dum_s
-    dum_s = os.path.isfile(os.path.join(result_dir, 'result_zcorr.dat'+'_'+str(isrc).zfill(4))) and dum_s
-    dum_s = os.path.isfile(os.path.join(result_dir, 'result_xcorr_normal_forward.dat'+'_'+str(isrc).zfill(4))) and dum_s
-    dum_s = os.path.isfile(os.path.join(result_dir, 'result_ycorr_normal_forward.dat'+'_'+str(isrc).zfill(4))) and dum_s
-    dum_s = os.path.isfile(os.path.join(result_dir, 'result_zcorr_normal_forward.dat'+'_'+str(isrc).zfill(4))) and dum_s
-    dum_s = os.path.isfile(os.path.join(result_dir, 'result_xcorr_normal_backward.dat'+'_'+str(isrc).zfill(4))) and dum_s
-    dum_s = os.path.isfile(os.path.join(result_dir, 'result_ycorr_normal_backward.dat'+'_'+str(isrc).zfill(4))) and dum_s
-    dum_s = os.path.isfile(os.path.join(result_dir, 'result_zcorr_normal_backward.dat'+'_'+str(isrc).zfill(4))) and dum_s
-    dum_w = os.path.isfile(os.path.join(result_dir, 'result_wavefield_corr.dat'+'_'+str(isrc).zfill(4))) and dum_w
-    dum_w = os.path.isfile(os.path.join(result_dir, 'result_wavefield_forward.dat'+'_'+str(isrc).zfill(4))) and dum_w
-    dum_w = os.path.isfile(os.path.join(result_dir, 'result_wavefield_backward.dat'+'_'+str(isrc).zfill(4))) and dum_w
+    for i in range(slice_nx):
+        dum_s = os.path.isfile(os.path.join(result_dir, 'result_xcorr_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.dat')) and dum_s
+        dum_s = os.path.isfile(os.path.join(result_dir, 'result_xcorr_normal_forward_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.dat')) and dum_s
+        dum_s = os.path.isfile(os.path.join(result_dir, 'result_xcorr_normal_backward_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.dat')) and dum_s
+    for i in range(slice_ny):
+        dum_s = os.path.isfile(os.path.join(result_dir, 'result_ycorr_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.dat')) and dum_s
+        dum_s = os.path.isfile(os.path.join(result_dir, 'result_ycorr_normal_forward_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.dat')) and dum_s
+        dum_s = os.path.isfile(os.path.join(result_dir, 'result_ycorr_normal_backward_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.dat')) and dum_s
+    for i in range(slice_nz):
+        dum_s = os.path.isfile(os.path.join(result_dir, 'result_zcorr_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.dat')) and dum_s
+        dum_s = os.path.isfile(os.path.join(result_dir, 'result_zcorr_normal_forward_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.dat')) and dum_s
+        dum_s = os.path.isfile(os.path.join(result_dir, 'result_zcorr_normal_backward_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.dat')) and dum_s
+    dum_w = os.path.isfile(os.path.join(result_dir, 'result_wavefield_corr_' + str(isrc).zfill(4) + '.dat')) and dum_w
+    dum_w = os.path.isfile(os.path.join(result_dir, 'result_wavefield_forward_' + str(isrc).zfill(4) + '.dat')) and dum_w
+    dum_w = os.path.isfile(os.path.join(result_dir, 'result_wavefield_backward_' + str(isrc).zfill(4) + '.dat')) and dum_w
     return dum_s,dum_w
 
 
