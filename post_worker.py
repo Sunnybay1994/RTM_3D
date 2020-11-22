@@ -38,12 +38,12 @@ if __name__ == '__main__':
     cwd = os.getcwd()
 
     pypath = cwd
+    logger.info('Current folder: %s'%cwd)
+
     py1 = os.path.join(pypath,'corr_RTM_wavefield_sub.py')
     py2 = os.path.join(pypath,'corr_RTM_slice_sub.py')
     py3 = os.path.join(pypath,'clean.py')
     
-    logger.info('Current folder: %s'%cwd)
-
 ############## jobs here ##############
     while 1:
         try:

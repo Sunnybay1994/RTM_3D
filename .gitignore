@@ -14,7 +14,7 @@ src_rec/*.in_0000
 *NMO*.dat
 *.out
 .vscode/
-PSTD
+*.exe
 *.txt
 
 ## C++

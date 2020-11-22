@@ -459,7 +459,7 @@ def cleanfiles(paths):
 ##############################################################################
 if __name__ == '__main__':
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "z:m:f:", ["zero-offset=","model=","freq=","dx_src=","dy_src=","dx_rec=","no_gen_model","np=","nthrd=","half_span=","pstd"])
+        opts, args = getopt.getopt(sys.argv[1:], "z:m:f:", ["zero-offset=","model=","freq=","dx_src=","dy_src=","dx_rec=","no_gen_model","np=","nthrd=","half_span=","pstd","server="])
     except getopt.GetoptError as err:
         # print help information and exit:
         logger.error(err)  # will print something like "option -a not recognized"
@@ -477,6 +477,7 @@ if __name__ == '__main__':
     nthreads = pnum*2
     half_span = 2
     forward_method = 'fdtd'
+    server_name = 'local'
     for o, a in opts:
         if o in ('-z','--zero-offset'):
             is_zRTM = int(a)
@@ -505,6 +506,8 @@ if __name__ == '__main__':
             half_span = int(a)
         elif o in ('--pstd',):
             forward_method = 'pstd'
+        elif o in ('--server',):
+            server_name = a
         else:
             assert False, "unhandled option"
 
@@ -579,9 +582,9 @@ if __name__ == '__main__':
     cleanfiles(cleanlist)
 
     if forward_method == 'fdtd':
-        forward_fn = "FDTD_MPI"
+        forward_fn = "FDTD_MPI.exe"
     elif forward_method == 'pstd':
-        forward_fn = "PSTD"
+        forward_fn = "PSTD.exe"
         shutil.copy(forward_fn,workdir)
         shutil.copy(forward_fn,std_dir)
         if is_zRTM == 0 or is_zRTM == 2:
@@ -679,7 +682,7 @@ if __name__ == '__main__':
         forward_method = '--pstd'
     elif forward_method == 'fdtd':
         forward_method = ''
-    subtxt = 'python batchgen_bash.py -d %s -s %d -p %d -z %d -c %d %s'%(dirname,nsrc,pnum,is_zRTM,1,forward_method)
+    subtxt = 'python batchgen_bash.py -d %s -s %d -p %d -z %d -c %d --server %s %s '%(dirname,nsrc,pnum,is_zRTM,1,server_name,forward_method)
     logger.info(subtxt)
     os.system(subtxt)
 
