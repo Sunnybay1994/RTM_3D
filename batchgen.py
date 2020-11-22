@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import os,sys,getopt
+import numpy as np
 from model_em import cleanfiles
 
 def subg(dirname,nsrc,job_cap=8,proc_num=12):
@@ -109,7 +110,7 @@ cd $WORKPATH'''
 #SBATCH -e slurm-%j.err
 
 ######### set NODE and TASK values(CORES = nodes * ntasks-per-node)
-#SBATCH --nodes=''' + str(proc_num//ntasks_per_node+1) + '''
+#SBATCH --nodes=''' + str(int(np.ceil(proc_num/ntasks_per_node))) + '''
 #SBATCH --ntasks-per-node=''' + str(ntasks_per_node) + '''
 NSLOTS=''' + str(proc_num) + '''
 echo "Got $NSLOTS slots."
@@ -197,11 +198,11 @@ echo "Computing is stopped at $(date)."
         if server_name != 'local':
             if is_zRTM == 1:
                 text_tail += '''
-    python $EXEPATH/post_put.py -z -t ''' + dirname + ' ' + str(isrc) +'''
+python $EXEPATH/post_put.py -z -t ''' + dirname + ' ' + str(isrc) +'''
     '''
             else:
                 text_tail += '''
-    python $EXEPATH/post_put.py -t ''' + dirname + ' ' + str(isrc) +'''
+python $EXEPATH/post_put.py -t ''' + dirname + ' ' + str(isrc) +'''
     '''
 
         text_tail += '\nexit $exit_code\n'

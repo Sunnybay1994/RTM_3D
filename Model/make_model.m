@@ -69,10 +69,10 @@ slicez = [nz/3,nz/2];
 %     ep(:,:,z >= layer_z_begin & z<=layer_z_end) = surf_ep(i);
 % end
 %% dot
-r = dx*30;
+r = dx*10;
 posx = X/2;
 posy = Y/2;
-posz = Z/2;
+posz = Z/3;
 for ix = 1:nx
     xi = ix * dx;
     for iy = 1:ny
