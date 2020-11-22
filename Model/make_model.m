@@ -1,6 +1,7 @@
+dx = 0.1;
 %% modelname
-modelname = 'pstdtestbig';
-fn = 'model';
+modelname = ['testgrid' , num2str(dx)];
+fn = 'model1';
 fn_save = [fn '.mat'];
 fig_save = [fn '.png'];
 
@@ -13,19 +14,20 @@ fmax = 300*1e6;
 dxmax = finddx(epr_max, miur_max, fmax);
 disp(['dxmax=' num2str(dxmax) 'm'])
 
-nx = 256;
-ny = 256;
-nz_air = 10;
-nz = 128;% + nz_air;
 
-dx = 0.02; %m
+X = 5;
+Y = 5;
+Z = 3;
+T = 60 * 1e-9;%s
+
+dx = dx; %m
 dy = dx;
 dz = dx;
 
-X = dx*nx;
-Y = dy*ny;
-Z = dz*nz;
-T = 60 * 1e-9;%s
+nx = round(X/dx);
+ny = round(Y/dy);
+nz_air = 10;
+nz = round(Z/dz) + nz_air;
 
 npmlx = 8;
 npmly = npmlx;
@@ -46,10 +48,12 @@ ep_bg(:,:,1:nz_air) = 1; % air layer
 
 ep = ep_bg;
 
+nz_m = round(1/dz);
+
 %% slice
-slicex = [nx/2];
-slicey = [ny/2];
-slicez = [nz/3,nz/2];
+slicex = [round(nx/2)];
+slicey = [round(ny/2)];
+slicez = [nz_m + nz_air];
 
 %%% the parameter names above should be changed togather with those in 'model_em.py' %%%
 
@@ -69,17 +73,17 @@ slicez = [nz/3,nz/2];
 %     ep(:,:,z >= layer_z_begin & z<=layer_z_end) = surf_ep(i);
 % end
 %% dot
-r = dx*10;
+r = 0.1;
 posx = X/2;
 posy = Y/2;
-posz = Z/3;
+posz = nz_m * dz;
 for ix = 1:nx
     xi = ix * dx;
     for iy = 1:ny
         yi = iy * dy;
         for iz = 1:nz
             zi = (iz - nz_air) * dz;
-            if ((xi - posx)^2 + (yi - posy)^2 + (zi - posz)^2) < r^2
+            if ((xi - posx)^2 + (yi - posy)^2 + (zi - posz)^2) <= r^2
                 ep(ix,iy,iz) = 15;
             end
         end
@@ -106,6 +110,7 @@ save(fn_save,'modelname','dx','dy','dz','nx','ny','nz','nz_air','T','dt',...
 
 %% 3D-view
 figure(1)
+clf;
 x = (1:nx)*dx;
 y = (1:ny)*dy;
 z = ((1:nz)-nz_air)*dz;
@@ -129,7 +134,7 @@ set(gca,'YDir','reverse')
 xlim([x(1),x(end)]);
 ylim([y(1),y(end)]);
 zlim([z(1),z(end)]);
-title('layers with fault')
+title(modelname)
 xlabel('y(m)');ylabel('x(m)');zlabel('depth(m)');
 % 下面装灯，我感觉放两个灯（拷贝两遍）比较合适，一个太暗了。
 % 最多可以放8个灯，headlight表示头灯，还有left和right。
@@ -140,7 +145,7 @@ lighting gouraud
 
 %% place src and rec
 hold on
-dx_src = 1;
+dx_src = 10;
 dx_rec = 0.2;
 dnx_src = dx_src / dx;
 dnx_rec = dx_rec / dx;
