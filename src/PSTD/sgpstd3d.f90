@@ -179,7 +179,7 @@ program SGPSTD3D
     print *, "isrc:",isrc
     
     
-    open(1,file = 'input/par.in',status = 'old',action = 'read')   
+    open(1,file = 'Input/par.in',status = 'old',action = 'read')   
     read(1,*)
     read(1,*) dx,dy,dz,dt
     print *, "dx=",dx,", dy=",dy,", dz=",dz,", dt=",dt,'\n'
@@ -212,7 +212,7 @@ program SGPSTD3D
     ! read(1,*)
     close(1)
 	
-    open(6,file = 'input/slice.in',status = 'old',action = 'read')
+    open(6,file = 'Input/slice.in',status = 'old',action = 'read')
     read(6,*) nslicex,nslicey,nslicez
     print *, "nslicex=",nslicex,", nslicey=",nslicey,", nslicez=",nslicez,'\n'
     allocate(islicex(nslicex),islicey(nslicey),islicez(nslicez))
@@ -258,8 +258,8 @@ program SGPSTD3D
     !sigma   = 0.
 	
     ! load 3D model
-	open(2,file = 'input/eps.in',status = 'old')
-	open(3,file = 'input/sig.in',status = 'old')
+	open(2,file = 'Input/eps.in',status = 'old')
+	open(3,file = 'Input/sig.in',status = 'old')
 	do i = 1,nx
 		do j = 1,ny
 			!print *,i*100+j
@@ -272,7 +272,7 @@ program SGPSTD3D
 	epsl = epsl * epsl0
 	
 	! load source
-	open(4,file = 'input/src.in_'//isrc_s,status = 'old',action = 'read')   
+	open(4,file = 'Input/src.in_'//isrc_s,status = 'old',action = 'read')   
     read(4,*), nsrc, nt_src
 	allocate(sourcex_idx(nsrc), sourcey_idx(nsrc), sourcez_idx(nsrc),compnt(nsrc))
 	allocate(srcpulse(nsrc,nt_src))
@@ -303,7 +303,7 @@ program SGPSTD3D
     close(4)
 	
 	
-	open(5,file = 'input/rec.in',status = 'old',action = 'read')
+	open(5,file = 'Input/rec.in',status = 'old',action = 'read')
 	read(5,*), nrec
 	allocate(recx(nrec), recy(nrec), recz(nrec),compnt_rec(nrec))
 	allocate(gather(nt,nrec))
@@ -546,7 +546,7 @@ program SGPSTD3D
     !open(996,file = 'travelTimeE.txt',status = 'replace')
     !!open(995,file = 'travelTimeH.txt',status = 'replace')
 	
-    open(11,file = 'output/time_usage.txt',status = 'replace')
+    open(11,file = 'Output/time_usage.txt',status = 'replace')
 
     print*, 'nthreads = ',nthreads
 	
@@ -1053,7 +1053,7 @@ subroutine data_output_vector(field, field_name, Nx, Ny, Nz, t)
     
     write(a,'(i5.5)') t
 	
-    s = 'output/'//trim(adjustl(field_name))//'_'//trim(adjustl(a))//'.bin'
+    s = 'Output/'//trim(adjustl(field_name))//'_'//trim(adjustl(a))//'.bin'
 	open(1, file = trim(s), access = 'stream', form = 'unformatted', status = 'replace')
     ! NOTICE:
     ! Matlab & Fortran: store element in the first dimension first 
@@ -1075,7 +1075,7 @@ subroutine data_output_scalar(field,field_name, t)
     write(a,'(i10)') t
 	
         
-    s = 'output/'//trim(adjustl(field_name))//trim(adjustl(a))//'.txt'
+    s = 'Output/'//trim(adjustl(field_name))//trim(adjustl(a))//'.txt'
     open(1,file = trim(s), status = 'replace')
     write(1,*) field
     close(1)
