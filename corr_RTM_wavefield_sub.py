@@ -27,7 +27,7 @@ def corr_wavefield(isrc, workdir, dir1 = os.path.join('STD','Output'), dir2 = os
     logger.info('corr_wavefield src%d'%isrc)
     
     list1 = get_fn_from_dir(os.path.join(dir1, 'wvf_Ey_'+str(isrc).zfill(4)+'*.bin'))
-    list2 = get_fn_from_dir(os.path.join(dir2, 'wvf_Ey_'+str(isrc).zfill(4)+'*.bin'))
+    list2 = get_fn_from_dir(os.path.join(dir2, 'wvf_Ey_'+str(isrc).zfill(4)+'*.bin'),-1)
     
     if len(list1) != len(list2):
         logger.error("src%d: The number of wavefiled are different!(std:%d,rtm:%d)"%(isrc,len(list1),len(list2))) 
@@ -52,9 +52,9 @@ def corr_wavefield(isrc, workdir, dir1 = os.path.join('STD','Output'), dir2 = os
             data_backward += data2 * data2
 
 
-    np.savetxt(os.path.join(dir3,'result_wavefield_corr_' + +str(isrc).zfill(4) + '.dat'),np.reshape(corr_data,[wvf_nx*wvf_ny,wvf_nz]))
-    np.savetxt(os.path.join(dir3,'result_wavefield_forward_' + +str(isrc).zfill(4) + '.dat'),np.reshape(data_forward,[wvf_nx*wvf_ny,wvf_nz]))
-    np.savetxt(os.path.join(dir3,'result_wavefield_backward_' + +str(isrc).zfill(4) + '.dat'),np.reshape(data_backward,[wvf_nx*wvf_ny,wvf_nz]))
+    np.savetxt(os.path.join(dir3,'result_wavefield_corr_' + str(isrc).zfill(4) + '.dat'),np.reshape(corr_data,[wvf_nx*wvf_ny,wvf_nz]))
+    np.savetxt(os.path.join(dir3,'result_wavefield_forward_' + str(isrc).zfill(4) + '.dat'),np.reshape(data_forward,[wvf_nx*wvf_ny,wvf_nz]))
+    np.savetxt(os.path.join(dir3,'result_wavefield_backward_' + str(isrc).zfill(4) + '.dat'),np.reshape(data_backward,[wvf_nx*wvf_ny,wvf_nz]))
     return 1
 
 

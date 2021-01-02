@@ -41,7 +41,7 @@ def read_bin_data(fn, dims):
     dims.reverse()
     data = np.reshape(data_raw,dims)
     data = data.transpose(2,1,0)
-    print(np.shape(data))
+    # print(np.shape(data))
     return data
 
 
