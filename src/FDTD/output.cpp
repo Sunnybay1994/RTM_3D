@@ -117,7 +117,7 @@ void output_wavefield(int it,double *EH_total)
             for(i=0;i<nx;i+=output_step_x_of_wavefield)
             {
                 int ii = int(i/output_step_x_of_wavefield);
-                EH_wvf[((ik*inz+ij)*iny+ii)] = EH_total(i+order,j,k);
+                EH_wvf[((ik*iny+ij)*inx+ii)] = EH_total(i+order,j,k);
                 // fprintf(fp, "%e ", EH_total(i+order,j,k));
             }
         }
