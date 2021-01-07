@@ -1,8 +1,8 @@
 %% load files and parameters
-workdir = 'pstdtest_800MHz_2.0m_0.5m';
+workdir = '3vs2_800MHz_0.2m_0.04m_fdtd_6';
 resultdir = fullfile(workdir,'Result');
 outdir = fullfile(workdir,'Result');
-f_wavefield_corr = dir(fullfile(resultdir,'result_wavefield_corr.dat*'));
+f_wavefield_corr = dir(fullfile(resultdir,'result_wavefield_corr*.dat'));
 
 modelfiles = dir(fullfile(workdir,'model.mat'));
 modelfn = fullfile(modelfiles.folder,modelfiles.name);
@@ -40,16 +40,38 @@ draw_xslice = true;
 draw_yslice = true;
 draw_zslice = true;
 
+%% read middle result of wavefield
+out_folder = fullfile(workdir,'Output');
+f_wavefield_out = dir(fullfile(out_folder,'wvf_Ey_0004_*.bin'));
+for i = 1:length(f_wavefield_out)
+    fname = fullfile(out_folder,f_wavefield_out(i).name);
+    disp("loading " + fname + "...");
+    fo = fopen(fname);
+    temp = fread(fo,[nx*ny*nz],'single');
+    fclose(fo);
+    wvf{i} = reshape(temp,nx,ny,nz);
+    imagesc(squeeze(wvf{i}(:,:,12))');colorbar
+%     caxis([-0.1,0.1])
+%     imagesc(wvf{i})
+    pause(0.1)
+end
+
 %%
 if ~result_exist
     wavefield = {[]};
-    parfor i = 1:length(f_wavefield_corr)
+    parfor i = 1:7%length(f_wavefield_corr)
         disp(['Loading ' num2str(i) 'th file:' f_wavefield_corr(i).name])
-        wavefield{i} = reshape(load(fullfile(resultdir,f_wavefield_corr(i).name)),nz,ny,nx);
+        wavefield{i} = reshape(load(fullfile(resultdir,f_wavefield_corr(i).name)),nx,ny,nz);
     end
     save(fullfile(outdir,'result_wavefield'),'wavefield','-v7.3')
 else
     load(fullfile(outdir,'result_wavefield'))
+end
+%%
+for i=1:7
+wvfi = wavefield{i};
+imagesc(squeeze(wvfi(:,40,:))')
+pause(0.1)
 end
 %%
 if ~amp_exist

@@ -252,7 +252,7 @@ if __name__ == "__main__":
             no_nmo = True
         elif o in ("--pstd",):
             forward_method = 'pstd'
-            print('pstd')
+            logger.info('PSTD mode.')
         else:
             assert False, "unhandled option"
 

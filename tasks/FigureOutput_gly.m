@@ -77,19 +77,22 @@ win_size = info.ScreenSize;% 获取显示屏的像素尺寸
 fh = figure();
 set(fh, 'outerposition', win_size);	% 设置图形窗口位置和外尺寸为屏幕大小
 %%
-z_slice = 0.8;
-iz_zslice = find(abs(zz_1-z_slice)<(dzz/2));
-draw_wavefield_zslice(outdir_1,wi1,iz_zslice,xx_1,yy_1,zz_1,[27,1,[1,5]],fh);
+z_slice1 = 0.8;
+iz_zslice1 = find(abs(zz_1-z_slice1)<(dzz/2));
+draw_wavefield_zslice(outdir_1,wi1,iz_zslice1,xx_1,yy_1,zz_1,[32,1,[1,5]],fh);
+z_slice4 = 0.9;
+iz_zslice4 = find(abs(zz_1-z_slice1)<(dzz/2));
+draw_wavefield_zslice(outdir_4,wi4,iz_zslice4,xx_4,yy_4,zz_4,[32,1,[6,10]],fh);
 
 y_slice = 4;
 iy1_yslice = find(abs(yy_1-y_slice)<(dyy/2));
 iy4_yslice = find(abs(yy_4-(y_slice+1))<(dyy/2)); % survey lines of 400MHz is 1m south of those of 100MHz
-draw_wavefield_yslice(outdir_1,wi1,iy1_yslice,xx_1,yy_1,zz_1,z_slice,[27,1,[6,17]],fh);
-draw_wavefield_yslice(outdir_4,wi4,iy4_yslice,xx_4,yy_4,zz_4,false,[27,1,[18,27]],fh);
+draw_wavefield_yslice(outdir_1,wi1,iy1_yslice,xx_1,yy_1,zz_1,z_slice1,[32,1,[11,22]],fh);
+draw_wavefield_yslice(outdir_4,wi4,iy4_yslice,xx_4,yy_4,zz_4,false,[32,1,[23,32]],fh);
 
 xlabel('x(m)','fontsize',24);
 %%
-export_fig(fh,fullfile(outdir_4,['y=' num2str(y_slice) 'm, z=' num2str(z_slice) 'm.png']))
+export_fig(fh,fullfile(outdir_4,['y=' num2str(y_slice) 'm, z=' num2str(z_slice1) 'm.png']))
 
 
 %% 3D figure

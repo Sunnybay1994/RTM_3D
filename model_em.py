@@ -62,11 +62,11 @@ def src_rec(dnx_src,dny_src=False,dnx_rec=False,dny_rec=False,nzp_src=False,nzp_
         if not nx_ant:
             nx_ant = int((nx - 2*marginx) // dnx_ant)
             if nx_ant % 2 == 0:
-                nx_ant += 1
+                nx_ant -= 1
         if not ny_ant:
             ny_ant = int((ny - 2*marginy) // dny_ant)
             if ny_ant % 2 == 0:
-                ny_ant += 1
+                ny_ant -= 1
         
         for i in range(-(nx_ant-1)//2,(nx_ant+1)//2):
             dumx = nx0 + i*dnx_ant
@@ -475,7 +475,7 @@ if __name__ == '__main__':
     dx_rec = 0.2
     pnum = 8
     nthreads = pnum*2
-    half_span = 2
+    half_span = 0
     forward_method = 'fdtd'
     server_name = 'local'
     for o, a in opts:
@@ -543,7 +543,7 @@ if __name__ == '__main__':
     if is_zRTM==1:
         dir_suffix += '_0o'
 
-    dirname = '%s_%dMHz_%.1fm_%.1fm%s'%(modelname,freq,dx_src,dx_rec,dir_suffix)
+    dirname = '%s_%dMHz_%gm_%gm%s'%(modelname,freq,dx_src,dx_rec,dir_suffix)
     workdir = os.path.join('tasks',dirname)
     logger.info('workdir="%s"'%(workdir))
     ### init workdir end ###
