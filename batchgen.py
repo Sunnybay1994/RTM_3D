@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import os,sys,getopt
+import os,sys,argparse
 import numpy as np
 from model_em import cleanfiles
 
@@ -20,7 +20,7 @@ def subg(dirname,nsrc,job_cap=8,proc_num=12):
             fp.write('''#!/bin/sh
 var1="sub_"; var3=".sh"; for((i=0;i<''' + str(job_cap) + ''';i++)); do var2=`echo $i | awk '{printf("%04d\\n",$0)}'`; sbatch ${var1}${var2}${var3}; done''')
 
-    if is_zRTM:
+    if mode == 'z':
         isrc = 0
         if forward_method == 'fdtd':
             pstd_tag = ''
@@ -91,6 +91,11 @@ cd $WORKPATH'''
 
         if server_name == 'freeosc':
             ntasks_per_node = 24
+            if ntasks_per_node > proc_num:
+                ntasks_per_node = proc_num
+                nodes = 1
+            else:
+                nodes = int(np.ceil(proc_num/ntasks_per_node))
             text_sub_next = "sbatch " + fname_next
             text_head = '''#!/bin/sh
 
@@ -110,7 +115,7 @@ cd $WORKPATH'''
 #SBATCH -e slurm-%j.err
 
 ######### set NODE and TASK values(CORES = nodes * ntasks-per-node)
-#SBATCH --nodes=''' + str(int(np.ceil(proc_num/ntasks_per_node))) + '''
+#SBATCH --nodes=''' + str(nodes) + '''
 #SBATCH --ntasks-per-node=''' + str(ntasks_per_node) + '''
 NSLOTS=''' + str(proc_num) + '''
 echo "Got $NSLOTS slots."
@@ -164,7 +169,7 @@ echo
 #########  execute PROGRAM_NAME
 echo "Computing is started at $(date)."
 '''
-        if is_zRTM==1:
+        if mode == 'z':
             text = '''
 ''' + execmd +'''
 ''' + execmd_cmd + '''
@@ -191,12 +196,12 @@ python $EXEPATH/pre_RTM_sub.py ''' + pstd_tag + ' ' + str(isrc) + '''
 echo "Computing is stopped at $(date)."
 '''
 
-        if is_zRTM==1 or is_zRTM==2:
+        if 'z' in mode:
             if isrc == list_src[-1]:
                 text_tail += '\ncd $WORKPATH\nsh sub_0offset.sh\n'
 
         if server_name != 'local':
-            if is_zRTM == 1:
+            if mode == 'z':
                 text_tail += '''
 python $EXEPATH/post_put.py -z -t ''' + dirname + ' ' + str(isrc) +'''
     '''
@@ -218,7 +223,7 @@ python $EXEPATH/post_put.py -t ''' + dirname + ' ' + str(isrc) +'''
 ###########################################################
 
 
-#         if not is_zRTM:
+#         if mode == 'm':
 #             with open(os.path.join(workpath,'log',fname_post), 'w') as fp:
 #                 fp.write('''#!/bin/sh
 
@@ -262,44 +267,45 @@ python $EXEPATH/post_put.py -t ''' + dirname + ' ' + str(isrc) +'''
 
 
 if __name__ == '__main__':
-    try:
-        opts, args = getopt.getopt(sys.argv[1:], "z:s:d:c:p:", ["zero-offset=","src_num=","workdir=","job_capacity=","proc_num=","pstd","server="])
-    except getopt.GetoptError as err:
-        # print help information and exit:
-        print(err)  # will print something like "option -a not recognized"
-        # usage()
-        sys.exit(2)
+    parser = argparse.ArgumentParser(description='Generate batch jobs for server to run.',conflict_handler='resolve')
+    parser.add_argument('-d','--workdir',default='default',dest='dirname',help="work directory of the task.")
+    parser.add_argument('-s','--src_num',type=int,required=True,help="The total number of shot gathers (sources).")
+    parser.add_argument('-m','--mode',choices=['m','z','mz'],default='m',help="Mode: 'm' for multi-offset, 'z' for zero-offset, 'mz' for both multi- and zero-offset.")
+    parser.add_argument('--forward_method',choices=['fdtd','pstd'],default='fdtd',help="Forward method used in RTM.")
+    parser.add_argument('--fdtd',action='store_const',const='fdtd',dest='forward_method',help='Use finite difference time domain as the forward method.')
+    parser.add_argument('--pstd',action='store_const',const='pstd',dest='forward_method',help='Use pseudo spectral time domain as the forward method.')
+    parser.add_argument('--server',choices=['local','freeosc','x3850'],default='local',help="Where to run the code.")
+    parser.add_argument('-p','--np',type=int,default=-1,help='Number of processers/threads used in parallel FDTD/PSTD. Default: 6/12 for local, 8/16 for x3850 and freeosc.')
+    parser.add_argument('-c','--job_cap',type=int,default=-1,help='How may shot gathers (sources) should the server handle at the same time. Default: 1 for local, 8 for x3850 and 32 for freeosc.')
+    args = parser.parse_args()
+    
+    forward_method = args.forward_method
+    server = args.server
+    if server == 'local':
+        pnum = 6
+        job_cap = 1
+    else:
+        pnum = 8
+        if server == 'x3850':
+            job_cap = 8
+        elif server == 'freeosc':
+            job_cap = 32
+    if forward_method == 'pstd':
+        pnum *= 2
+    if args.np > 0:
+        pnum = args.np
+    if args.job_cap > 0:
+        job_cap = args.job_cap
+    print('pnum=%d, job_capacity=%d'%(pnum,job_cap))
 
-    is_zRTM = 0
-    dirname = 'default'
-    job_capacity = 8
-    proc_num = 8
-    forward_method = 'fdtd'
-    server_name = 'local'
-    for o, a in opts:
-        if o in ('-z','--zero-offset'):
-            is_zRTM = int(a)
-            print('Zero-offset Mode: %d'%is_zRTM)
-        elif o in ('-s','--src_num'):
-            src_num = int(a)
-        elif o in ('-d','--workdir'):
-            dirname = a
-        elif o in ('-c','--job_capacity'):
-            job_capacity = int(a)
-        elif o in ('-p','--proc_num'):
-            proc_num = int(a)
-        elif o in ('--pstd',):
-            forward_method = 'pstd'
-        elif o in ('--server',):
-            server_name = a
-            print('servername:"' + server_name + '"')
-        else:
-            assert False, "unhandled option"
+    mode = args.mode
+    server_name = args.server
+    print('servername:"%s", mode:"%s"'%(server_name,mode))
 
-    logdir = os.path.join('tasks',dirname,'log')
+    logdir = os.path.join('tasks',args.dirname,'log')
     if not os.path.exists(logdir):
         os.mkdir(logdir)
     else:
         cleanfiles(logdir)
-    print(forward_method)
-    subg(dirname,src_num,job_capacity,proc_num)
+    print('forward_method:%s'%forward_method)
+    subg(args.dirname,args.src_num,job_cap,pnum)

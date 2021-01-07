@@ -9,8 +9,8 @@ epr_max = 15;
 epr_min = 1;
 miur_max = 1;
 miur_min = 1;
-fmax = 800*1e6;
-dxmax = finddx(epr_max, miur_max, fmax);
+freq_src = 800*1e6;
+dxmax = finddx(epr_max, miur_max, freq_src);
 disp(['dxmax=' num2str(dxmax) 'm'])
 
 X = 2;
@@ -76,9 +76,16 @@ for ix = 1:nx
         end
 end
 
+%% src and rec para
+dx_src = 0.2;
+dx_rec = 0.04;
+dy_src = dx_src;
+dy_rec = dx_rec;
+
 
 %%
 save(fn_save,'modelname','dx','dy','dz','nx','ny','nz','nz_air','T','dt',...
+    'freq_src','dx_src','dx_rec','dy_src','dy_rec',....
     'npmlx','npmly','npmlz','outstep_t_wavefield','outstep_x_wavefield',...
     'outstep_slice','slicex','slicey','slicez','ep_bg','ep');
 
@@ -122,19 +129,14 @@ zlim([z(1),z(end)]);
 % title('layers with fault')
 set(gca,'fontsize',20);
 xlabel('x(m)','Fontsize',24);ylabel('y(m)','Fontsize',24);zlabel('depth(m)','Fontsize',24);
-% ÏÂÃæ×°µÆ£¬ÎÒ¸Ð¾õ·ÅÁ½¸öµÆ£¨¿½±´Á½±é£©±È½ÏºÏÊÊ£¬Ò»¸öÌ«°µÁË¡£
-% ×î¶à¿ÉÒÔ·Å8¸öµÆ£¬headlight±íÊ¾Í·µÆ£¬»¹ÓÐleftºÍright¡£
+% ï¿½ï¿½ï¿½ï¿½×°ï¿½Æ£ï¿½ï¿½Ò¸Ð¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½é£©ï¿½È½Ïºï¿½ï¿½Ê£ï¿½Ò»ï¿½ï¿½Ì«ï¿½ï¿½ï¿½Ë¡ï¿½
+% ï¿½ï¿½ï¿½ï¿½ï¿½Ô·ï¿½8ï¿½ï¿½ï¿½Æ£ï¿½headlightï¿½ï¿½Ê¾Í·ï¿½Æ£ï¿½ï¿½ï¿½ï¿½ï¿½leftï¿½ï¿½rightï¿½ï¿½
 camlight('headlight') 
 lighting gouraud
 camlight('right')
 lighting gouraud
 
 % place src and rec
-dx_src = 0.2;
-dx_rec = 0.04;
-dy_src = dx_src;
-dy_rec = dx_rec;
-
 dnx_src = dx_src / dx;
 dnx_rec = dx_rec / dx;
 nx_src = round((nx-2*npmlx)/dnx_src);

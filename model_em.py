@@ -6,7 +6,7 @@ import scipy.io as sio
 import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use('Agg')
-import os,sys,shutil,logging,getopt,datetime
+import os,sys,shutil,logging,argparse,datetime
 import glob
 from writesource import *
 
@@ -95,11 +95,11 @@ def src_rec(dnx_src,dny_src=False,dnx_rec=False,dny_rec=False,nzp_src=False,nzp_
 
     cp(os.path.join(indir,'src.in*'),std_indir)
     cp(os.path.join(indir,'rec.in'),os.path.join(std_indir,'rec.in'))
-    if is_zRTM==1 or is_zRTM==2:
+    if 'z' in mode:
         with open(os.path.join(rtm0_indir,'rec.in'),'w+') as fo:
             fo.write('1\n')
             fo.write('%d,%d,%d,Ey\n'%(nx0,ny0,nz_air-2))
-    if is_zRTM==0 or is_zRTM==2:
+    if 'm' in mode:
         with open(os.path.join(rtm_indir,'rec.in'),'w+') as fo:
             fo.write('1\n')
             fo.write('%d,%d,%d,Ey\n'%(nx0,ny0,nz_air-2))
@@ -225,11 +225,11 @@ def eps_sig_mu(meps=1,meps_bg=False,msig=1e-5,msig_bg=False,mmiu=1,mmiu_bg=False
     if isinstance(mmiu_bg,bool):
         cp(os.path.join(indir, 'mu.in*'), std_indir)
 
-    if is_zRTM==1 or is_zRTM==2:
+    if 'z' in mode:
         cp(os.path.join(std_indir, 'eps.in*'), rtm0_indir)
         cp(os.path.join(std_indir, 'sig.in*'), rtm0_indir)
         cp(os.path.join(std_indir, 'mu.in*'), rtm0_indir)
-    if is_zRTM==0 or is_zRTM==2:
+    if 'm' in mode:
         cp(os.path.join(std_indir, 'eps.in*'), rtm_indir)
         cp(os.path.join(std_indir, 'sig.in*'), rtm_indir)
         cp(os.path.join(std_indir, 'mu.in*'), rtm_indir)
@@ -355,11 +355,11 @@ def par():
         fpar.write(''.join(content))
 
     cp(os.path.join(indir, 'par.in'), std_indir)
-    if is_zRTM==1 or is_zRTM==2:
+    if 'z' in mode:
         content[1] = "%e,%e,%e,%e\n" % (dx, dy, dz, dt/2)
         with open(os.path.join(rtm0_indir, 'par.in'), 'w') as fpar:
             fpar.write(''.join(content))
-    if is_zRTM==0 or is_zRTM==2:
+    if 'm' in mode:
         cp(os.path.join(indir, 'par.in'), rtm_indir)
 
 
@@ -411,9 +411,9 @@ def islice(sxl,syl,szl):
             fslice.write("%d,%s\n" % (slicez[i][0], slicez[i][1]))
     
     cp(fn_slice, std_indir)
-    if is_zRTM==1 or is_zRTM==2:
+    if 'z' in mode:
         cp(fn_slice, rtm0_indir)
-    if is_zRTM==0 or is_zRTM==2:
+    if 'm' in mode:
         cp(fn_slice, rtm_indir)
 
     return sxl[0],syl[0],szl[0]
@@ -458,62 +458,52 @@ def cleanfiles(paths):
 
 ##############################################################################
 if __name__ == '__main__':
-    try:
-        opts, args = getopt.getopt(sys.argv[1:], "z:m:f:", ["zero-offset=","model=","freq=","dx_src=","dy_src=","dx_rec=","no_gen_model","np=","nthrd=","half_span=","pstd","server="])
-    except getopt.GetoptError as err:
-        # print help information and exit:
-        logger.error(err)  # will print something like "option -a not recognized"
-        # usage()
-        sys.exit(2)
+    parser = argparse.ArgumentParser(description='Generate model for RTM',conflict_handler='resolve')
+    parser.add_argument('--model',default=os.path.join('Model','model.mat'),help='An .mat file stores all the parameters for simulated data for RTM.')
+    parser.add_argument('-f','--freq',type=float,default=-1.0,help='Appoint the main frequency (MHz) of the source to replace the one in the model file.')
+    parser.add_argument('--dx_src',type=float,default=-1.0,help='Appoint the x space interval (m) of the source to replace the one in the model file.')
+    parser.add_argument('--dy_src',type=float,default=-1.0,help='Appoint the y space interval (m) of the source to replace the one in the model file.')
+    parser.add_argument('--dx_rec',type=float,default=-1.0,help='Appoint the x space interval (m) of the receiver to replace the one in the model file.')
+    parser.add_argument('--dy_rec',type=float,default=-1.0,help='Appoint the y space interval (m) of the receiver to replace the one in the model file.')
+    parser.add_argument('-m','--mode',choices=['m','z','mz'],default='m',help="Mode: 'm' for multi-offset, 'z' for zero-offset, 'mz' for both multi- and zero-offset.")
+    parser.add_argument('--forward_method',choices=['fdtd','pstd'],default='fdtd',help="Forward method used in RTM.")
+    parser.add_argument('--fdtd',action='store_const',const='fdtd',dest='forward_method',help='Use finite difference time domain as the forward method.')
+    parser.add_argument('--pstd',action='store_const',const='pstd',dest='forward_method',help='Use pseudo spectral time domain as the forward method.')
+    parser.add_argument('--gen_model',type=int,choices=[0,1],default=1,help="Set to 0 if just want to modifiy some parameter as generate model needs a lot of time.")
+    parser.add_argument('--half_span',type=int,default=0,help='Span the point source to a (1+2*half_span)x(1+2*half_span) source while forwarding. It helps to reduce the sideslobe in FDTD forwarding.')
+    parser.add_argument('--server',choices=['local','freeosc','x3850'],default='local',help="Where to run the code.")
+    parser.add_argument('-p','--np',type=int,default=-1,help='Number of processers/threads used in parallel FDTD/PSTD. Default: 6/12 for local, 8/16 for x3850 and freeosc.')
+    parser.add_argument('-c','--job_cap',type=int,default=-1,help='How may shot gathers (sources) should the server handle at the same time. Default: 1 for local, 8 for x3850 and 32 for freeosc.')
+    args = parser.parse_args()
 
-    is_zRTM = 0
-    model = "model.mat"
-    gen_model = True
-    workdir = os.path.join('tasks','default')
-    freq = 300  #MHz
-    dx_src = 0.4
-    dx_rec = 0.2
-    pnum = 8
-    nthreads = pnum*2
-    half_span = 0
-    forward_method = 'fdtd'
-    server_name = 'local'
-    for o, a in opts:
-        if o in ('-z','--zero-offset'):
-            is_zRTM = int(a)
-            logger.info('Zero-offset Mode: %d'%is_zRTM)
-            if is_zRTM == 1:
-                dx_src = 0.2
-                dy_src = 0.5
-        elif o in ('-m','--model'):
-            model = a
-        elif o in ('-f','--freq'):
-            freq = float(a)  #MHz
-        elif o in ('--dx_src',):
-            dx_src = float(a)
-        elif o in ('--dy_src',):
-            dy_src = float(a)
-        elif o in ('--dx_rec',):
-            dx_rec = float(a)
-        elif o in ('--no_gen_model',):
-            gen_model = False
-        elif o in ('--np',):
-            pnum = int(a)
-            nthreads = 2*pnum
-        elif o in ('--nthrd',):
-            nthreads = int(a)
-        elif o in ('--half_span',):
-            half_span = int(a)
-        elif o in ('--pstd',):
-            forward_method = 'pstd'
-        elif o in ('--server',):
-            server_name = a
-        else:
-            assert False, "unhandled option"
+    model = args.model
+    mode = args.mode
+    forward_method = args.forward_method
+    server = args.server
+    gen_model = not args.gen_model == 0
+    half_span = args.half_span
+
+    if server == 'local':
+        pnum = 6
+        job_cap = 1
+    else:
+        pnum = 8
+        if server == 'x3850':
+            job_cap = 8
+        elif server == 'freeosc':
+            job_cap = 32
+    if forward_method == 'pstd':
+        pnum *= 2
+    if args.np > 0:
+        pnum = args.np
+    if args.job_cap > 0:
+        job_cap = args.job_cap
+    logger.info('pnum=%d, job_capacity=%d'%(pnum,job_cap))
+
 
     ### load model ###
     try:
-        dic_model = sio.loadmat(os.path.join('Model',model))
+        dic_model = sio.loadmat(model)
     except Exception as e:
         logger.error(e)
         raise e
@@ -524,6 +514,11 @@ if __name__ == '__main__':
     ### load model end ###
 
     ### parameter ###
+    if args.freq > 0:
+        freq = args.freq * 1e6
+    else:
+        freq = float(dic_model['freq_src'])
+
     mu0 = 1.2566370614e-6
     ep0 = 8.8541878176e-12
 
@@ -531,19 +526,39 @@ if __name__ == '__main__':
     mumin = 1.0
     epmax = 15.0
     mumax = 1.0
-    fmax = freq * 1e6 #Hz
+    fmax = freq #Hz
     ### parameter end ###
+
+
+    ### src & rec ###
+    if args.dx_src > 0:
+        dx_src = args.dx_src
+    else:
+        dx_src = float(dic_model['dx_src'])
+    if args.dy_src > 0:
+        dy_src = args.dy_src
+    else:
+        dy_src = float(dic_model['dy_src'])
+    if args.dx_rec > 0:
+        dx_rec = args.dx_rec
+    else:
+        dx_rec = float(dic_model['dx_rec'])
+    if args.dy_rec > 0:
+        dy_rec = args.dy_rec
+    else:
+        dy_rec = float(dic_model['dy_rec'])
+    ### src & rec end ###
 
     ### init workdir ###
     dir_suffix = ''
     if forward_method == 'pstd':
-        dir_suffix += '_pstd'
+        dir_suffix += '_pstd_%d'%pnum
     elif forward_method == 'fdtd':
         dir_suffix += '_fdtd_%d'%pnum
-    if is_zRTM==1:
+    if mode=='z':
         dir_suffix += '_0o'
 
-    dirname = '%s_%dMHz_%gm_%gm%s'%(modelname,freq,dx_src,dx_rec,dir_suffix)
+    dirname = '%s_%dMHz_%gm_%gm%s'%(modelname,freq/1e6,dx_src,dx_rec if dx_rec!=dx_src else dy_src, dir_suffix)
     workdir = os.path.join('tasks',dirname)
     logger.info('workdir="%s"'%(workdir))
     ### init workdir end ###
@@ -563,11 +578,11 @@ if __name__ == '__main__':
     dirlist1 = [workdir,std_dir]
     dirlist2 = [indir,std_indir]
     dirlist3 = [outdir,std_outdir]
-    if is_zRTM == 0 or is_zRTM == 2:
+    if 'm' in mode:
         dirlist1 += [rtm_dir]
         dirlist2 += [rtm_indir]
         dirlist3 += [rtm_outdir]
-    if is_zRTM == 1 or is_zRTM == 2:
+    if 'z' in  mode:
         dirlist1 += [rtm0_dir]
         dirlist2 += [rtm0_indir]
         dirlist3 += [rtm0_outdir]
@@ -587,9 +602,9 @@ if __name__ == '__main__':
         forward_fn = "PSTD.exe"
         shutil.copy(forward_fn,workdir)
         shutil.copy(forward_fn,std_dir)
-        if is_zRTM == 0 or is_zRTM == 2:
+        if 'm' in mode:
             shutil.copy(forward_fn,rtm_dir)
-        if is_zRTM == 1 or is_zRTM == 2:
+        if 'z' in mode:
             shutil.copy(forward_fn,rtm0_dir)
     ### directories end ###
 
@@ -638,33 +653,26 @@ if __name__ == '__main__':
     ### source end ###
 
     ### generate src & rec ###
-    if is_zRTM == 1:
-        dnx_src = round(dx_src/dx)
-        dny_src = round(dy_src/dy)
-        mx = npmlx
-        my = npmly
-        logger.info('dnxs=%d,dnys=%d,mx=%d,my=%d'%(dnx_src,dny_src,mx,my))
-        [nsrc,nrec] = src_rec(dnx_src,dny_src, marginx=mx, marginy=my)
-    else:
-        dnx_src = round(dx_src/dx)
-        dnx_rec = round(dx_rec/dx)
-        ms = npmlx
-        mr = npmlx
-        logger.info('dnxs=%d,dnxr=%d,ms=%d,mr=%d'%(dnx_src,dnx_rec,ms,mr))
-        [nsrc,nrec] = src_rec(dnx_src,dnx_rec=dnx_rec, marginx=ms, marginx_rec=mr)
+    dnx_src = round(dx_src/dx)
+    dny_src = round(dy_src/dy)
+    dnx_rec = round(dx_rec/dx)
+    mx = npmlx
+    my = npmly
+    mxr = npmlx
+    logger.info('dnxs=%d,dnys=%d,dnxr=%d,mx=%d,my=%d,mxr=%d'%(dnx_src,dny_src,dnx_rec,mx,my,mxr))
+    [nsrc,nrec] = src_rec(dnx_src,dny_src,dnx_rec,marginx=mx, marginy=my, marginx_rec=mxr)
     ### generate src & rec end ###
 
     ### generate model ###
-    if forward_method == 'fdtd':
-        NUM_OF_PROCESS = pnum
-    elif forward_method == 'pstd':
-        NUM_OF_PROCESS = 1
     if gen_model:
+        if forward_method == 'fdtd':
+            NUM_OF_PROCESS = pnum
+        elif forward_method == 'pstd':
+            NUM_OF_PROCESS = 1
         order = 2 # num of interchange layers of each process
         logger.info("NUM_OF_PROCESS: %d"%NUM_OF_PROCESS) 
         rangex, nxSize = X_partition(nx, NUM_OF_PROCESS)
-        eps_sig_mu(dic_model['ep'],dic_model['ep_bg'])
-        eps_sig_mu(dic_model['ep'],dic_model['ep_bg'],pstd=True)
+        eps_sig_mu(dic_model['ep'],dic_model['ep_bg'],pstd=forward_method=='pstd')
     ### generate model end ###
 
     slx,sly,slz = islice(dic_model['slicex'][0].tolist(),dic_model['slicey'][0].tolist(),dic_model['slicez'][0].tolist())
@@ -678,13 +686,12 @@ if __name__ == '__main__':
 
     
     if forward_method == 'pstd':
-        pnum = nthreads
         forward_method = '--pstd'
     elif forward_method == 'fdtd':
-        forward_method = ''
-    subtxt = 'python batchgen.py -d %s -s %d -p %d -z %d -c %d --server %s %s '%(dirname,nsrc,pnum,is_zRTM,1,server_name,forward_method)
+        forward_method = '--fdtd'
+    subtxt = 'python batchgen.py -d %s -s %d -p %d -m %s -c %d --server %s %s '%(dirname,nsrc,pnum,mode,job_cap,server,forward_method)
     logger.info(subtxt)
     os.system(subtxt)
 
     # python model_em.py -f 800 --dx_src 1 --dx_rec 0.2 --np 24 --half_span 0
-    # python model_em.py -f 800 --dx_src 1 --dx_rec 0.2 --nthrd 24 --pstd --half_span 0
+    # python model_em.py -f 800 --dx_src 1 --dx_rec 0.2 --np 24 --pstd --half_span 0
