@@ -419,9 +419,14 @@ def islice(sxl,syl,szl):
     return sxl[0],syl[0],szl[0]
 
 
-def cleanfiles(paths):
+def cleanfiles(paths,noprompt=False):
 
-    def cleanChoice(path):
+    def cleanChoice(path,noprompt):
+        if noprompt == 'y':
+            return 1
+        elif noprompt == 'n':
+            return 0
+
         if not paths:
             choice = input('Clear %s? Y/(N)'%path).lower()
             if choice in ['yes','y']:
@@ -434,7 +439,7 @@ def cleanfiles(paths):
             if confirm in ['yes','y']:
                 return 2
             else:
-                return cleanChoice(path)
+                return cleanChoice(path,noprompt)
         elif choice in ['yes','y']:
             return 1
         else:
@@ -446,7 +451,7 @@ def cleanfiles(paths):
     while len(paths) > 0:
         path = paths.pop()
         if not choice == 2:
-            choice = cleanChoice(path)
+            choice = cleanChoice(path,noprompt)
         if not choice == 0:
             logger.info('cleaning %s...'%path)
             for f in os.listdir(path):
@@ -466,23 +471,25 @@ if __name__ == '__main__':
     parser.add_argument('--dx_rec',type=float,default=-1.0,help='Appoint the x space interval (m) of the receiver to replace the one in the model file.')
     parser.add_argument('--dy_rec',type=float,default=-1.0,help='Appoint the y space interval (m) of the receiver to replace the one in the model file.')
     parser.add_argument('-m','--mode',choices=['m','z','mz'],default='m',help="Mode: 'm' for multi-offset, 'z' for zero-offset, 'mz' for both multi- and zero-offset.")
-    parser.add_argument('--forward_method',choices=['fdtd','pstd'],default='fdtd',help="Forward method used in RTM.")
-    parser.add_argument('--fdtd',action='store_const',const='fdtd',dest='forward_method',help='Use finite difference time domain as the forward method.')
-    parser.add_argument('--pstd',action='store_const',const='pstd',dest='forward_method',help='Use pseudo spectral time domain as the forward method.')
-    parser.add_argument('--gen_model',type=int,choices=[0,1],default=1,help="Set to 0 if just want to modifiy some parameter as generate model needs a lot of time.")
+    # parser.add_argument('--forward_method',choices=['fdtd','pstd'],default='fdtd',help="Forward method used in RTM.")
+    parser.add_argument('--fdtd',action='store_const',const='fdtd',dest='forward_method',default='fdtd',help='Use finite difference time domain as the forward method.')
+    parser.add_argument('--pstd',action='store_const',const='pstd',dest='forward_method',default='fdtd',help='Use pseudo spectral time domain as the forward method.')
+    parser.add_argument('--no_gen_model',action='store_const',const=True,default=False,help="Just modifiy parameters without generating model as generating model needs a lot of time.")
     parser.add_argument('--half_span',type=int,default=0,help='Span the point source to a (1+2*half_span)x(1+2*half_span) source while forwarding. It helps to reduce the sideslobe in FDTD forwarding.')
     parser.add_argument('--server',choices=['local','freeosc','x3850'],default='local',help="Where to run the code.")
     parser.add_argument('-p','--np',type=int,default=-1,help='Number of processers/threads used in parallel FDTD/PSTD. Default: 6/12 for local, 8/16 for x3850 and freeosc.')
     parser.add_argument('-c','--job_cap',type=int,default=-1,help='How may shot gathers (sources) should the server handle at the same time. Default: 1 for local, 8 for x3850 and 32 for freeosc.')
+    parser.add_argument('-y',action='store_const',const='y',dest='noprompt',default=False,help="Input 'y' in all input prompts with no disturbing.")
+    parser.add_argument('-n',action='store_const',const='n',dest='noprompt',default=False,help="Input 'n' in all input prompts with no disturbing.")
     args = parser.parse_args()
 
     model = args.model
     mode = args.mode
     forward_method = args.forward_method
     server = args.server
-    gen_model = not args.gen_model == 0
+    gen_model = not args.no_gen_model
     half_span = args.half_span
-
+    noprompt = args.noprompt
     if server == 'local':
         pnum = 6
         job_cap = 1
@@ -594,7 +601,7 @@ if __name__ == '__main__':
                 os.mkdir(idir)
             elif not idir in dirlist1:
                 cleanlist += [idir]
-    cleanfiles(cleanlist)
+    cleanfiles(cleanlist,noprompt)
 
     if forward_method == 'fdtd':
         forward_fn = "FDTD_MPI.exe"
@@ -689,9 +696,6 @@ if __name__ == '__main__':
         forward_method = '--pstd'
     elif forward_method == 'fdtd':
         forward_method = '--fdtd'
-    subtxt = 'python batchgen.py -d %s -s %d -p %d -m %s -c %d --server %s %s '%(dirname,nsrc,pnum,mode,job_cap,server,forward_method)
+    subtxt = 'python batchgen.py -d %s -s %d -p %d -m %s -c %d --server %s %s %s'%(dirname,nsrc,pnum,mode,job_cap,server,forward_method,'-'+noprompt if noprompt else '')
     logger.info(subtxt)
     os.system(subtxt)
-
-    # python model_em.py -f 800 --dx_src 1 --dx_rec 0.2 --np 24 --half_span 0
-    # python model_em.py -f 800 --dx_src 1 --dx_rec 0.2 --np 24 --pstd --half_span 0

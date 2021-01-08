@@ -140,11 +140,11 @@ lighting gouraud
 dnx_src = dx_src / dx;
 dnx_rec = dx_rec / dx;
 nx_src = round((nx-2*npmlx)/dnx_src);
-if iseven(nx_src)
+if mod(nx_src,2) == 0
     nx_src = nx_src-1;
 end
 nx_rec = round((nx-2*npmlx)/dnx_rec);
-if iseven(nx_rec)
+if mod(nx_rec,2) == 0
     nx_rec = nx_rec-1;
 end
 srcx = ((-floor(nx_src/2):floor(nx_src/2)) * dx_src) + nx/2*dx;
@@ -153,11 +153,11 @@ recx = ((-floor(nx_rec/2):floor(nx_rec/2)) * dx_rec) + nx/2*dx;
 dny_src = dy_src / dy;
 dny_rec = dy_rec / dy;
 ny_src = round((ny-2*npmly)/dny_src);
-if iseven(ny_src)
+if mod(ny_src,2) == 0
     ny_src = ny_src-1;
 end
 ny_rec = round((ny-2*npmly)/dny_rec);
-if iseven(ny_rec)
+if mod(ny_rec,2) == 0
     ny_rec = ny_rec-1;
 end
 srcy = ((-floor(ny_src/2):floor(ny_src/2)) * dy_src) + ny/2*dy;
@@ -179,5 +179,5 @@ plot3(Xr,Yr,Zr,'b.')
 % xlim([0 10]);ylim([0 10]);zlim([-0.5 5])
 hold off
 
-% saveas(gcf,fig_save)
+saveas(gcf,fig_save)
 

@@ -66,22 +66,22 @@ exit 0
         mpicmd = "mpiexec -np $NSLOTS "
     elif server_name == 'freeosc':
         mpicmd = "$MPI_HOME/bin/mpiexec -n $NSLOTS -iface ib0 -machinefile slurm.hosts "
-        post_tag = '#'
+        post_tag = ''
 
     for isrc in list_src:
         if forward_method == 'fdtd':
             pstd_tag = ''
-            execmd = mpicmd + '-wdir $WORKPATH $EXEPATH/FDTD_MPI.exe '+ str(isrc) +' > $WORKPATH/Output/' + str(isrc) + '.out'
-            execmd_std = mpicmd + '-wdir $WORKPATHSTD $EXEPATH/FDTD_MPI.exe '+ str(isrc) +' > $WORKPATHSTD/Output/' + str(isrc) + '.out'
-            execmd_rtm = mpicmd + '-wdir $WORKPATHRTM $EXEPATH/FDTD_MPI.exe '+ str(isrc) +' > $WORKPATHRTM/Output/' + str(isrc) + '.out'
+            execmd = 'echo "($(date))Genrate data..."\n' + mpicmd + '-wdir $WORKPATH $EXEPATH/FDTD_MPI.exe '+ str(isrc) +' > $WORKPATH/Output/' + str(isrc) + '.out'
+            execmd_std = 'echo "($(date))Calculate forward wavafield..."\n' + mpicmd + '-wdir $WORKPATHSTD $EXEPATH/FDTD_MPI.exe '+ str(isrc) +' > $WORKPATHSTD/Output/' + str(isrc) + '.out'
+            execmd_rtm = 'echo "($(date))Calculate backward wavafield..."\n' + mpicmd + '-wdir $WORKPATHRTM $EXEPATH/FDTD_MPI.exe '+ str(isrc) +' > $WORKPATHRTM/Output/' + str(isrc) + '.out'
         elif forward_method == 'pstd':
             pstd_tag = ' --pstd'
-            execmd = '''cd $WORKPATH
+            execmd = '''cd $WORKPATH;echo $PWD
 ./PSTD.exe $NSLOTS '''+ str(isrc) +' > '+ str(proc_num) +'_threads.out'
-            execmd_std = '''cd $WORKPATHSTD
+            execmd_std = '''cd $WORKPATHSTD;echo $PWD
 ./PSTD.exe $NSLOTS '''+ str(isrc) +'''
 cd $WORKPATH'''
-            execmd_rtm ='''cd $WORKPATHRTM
+            execmd_rtm ='''cd $WORKPATHRTM;echo $PWD
 ./PSTD.exe $NSLOTS '''+ str(isrc) +'''
 cd $WORKPATH'''
 
@@ -96,7 +96,7 @@ cd $WORKPATH'''
                 nodes = 1
             else:
                 nodes = int(np.ceil(proc_num/ntasks_per_node))
-            text_sub_next = "sbatch " + fname_next
+            text_sub_next = "cd log;sbatch " + fname_next + ";cd .."
             text_head = '''#!/bin/sh
 
 # Lines begin with "#SBATCH" set slurm parameters.
@@ -110,7 +110,7 @@ cd $WORKPATH'''
 #SBATCH --mail-type=end
 
 ######### set job's name
-#SBATCH -J ''' + os.path.basename(workpath) + '(' + str(isrc) + ''')
+#SBATCH -J (''' + str(isrc) + ')' + os.path.basename(workpath) + '''
 #SBATCH -o slurm-%j.out
 #SBATCH -e slurm-%j.err
 
@@ -135,7 +135,10 @@ WORKPATH="''' + workpath + '''"
 WORKPATHSTD="''' + stdpath + '''"
 WORKPATHRTM="''' + rtmpath + '''"
 WORKPATHRTM0="''' + rtm0path + '''"
+
+cd $WORKPATH
 echo "Current Directory = $WORKPATH"
+echo "Current Source = ''' + str(isrc) + '''"
 
 #env|sort|grep "SLURM"
 
@@ -182,13 +185,18 @@ python $EXEPATH/clean.py -f '''+ str(isrc) +'''
             text = '''
 ''' + execmd +'''
 ''' + execmd_std + '''
+echo "($(date))Prepare for RTM..."
 python $EXEPATH/pre_RTM_sub.py ''' + pstd_tag + ' ' + str(isrc) + '''
 ''' + execmd_rtm +'''
 
+echo "($(date))Submitting next task..."
 ''' + text_sub_next + '''
 
-''' + post_tag + '''python $EXEPATH/corr_RTM_wavefield_sub.py '''+ str(isrc) +'''
-''' + post_tag + '''python $EXEPATH/corr_RTM_slice_sub.py '''+ str(isrc) +'''
+echo "($(date))Applying image condition..."
+''' + post_tag + '''python $EXEPATH/corr_RTM_wavefield_sub.py '''+ str(isrc) +''' &
+''' + post_tag + '''python $EXEPATH/corr_RTM_slice_sub.py '''+ str(isrc) +''' &
+wait
+echo "($(date))Cleaning..."
 ''' + post_tag + '''python $EXEPATH/clean.py '''+ str(isrc) +'''
 '''
 
@@ -200,7 +208,7 @@ echo "Computing is stopped at $(date)."
             if isrc == list_src[-1]:
                 text_tail += '\ncd $WORKPATH\nsh sub_0offset.sh\n'
 
-        if server_name != 'local':
+        if server_name == 'x3850':
             if mode == 'z':
                 text_tail += '''
 python $EXEPATH/post_put.py -z -t ''' + dirname + ' ' + str(isrc) +'''
@@ -277,10 +285,13 @@ if __name__ == '__main__':
     parser.add_argument('--server',choices=['local','freeosc','x3850'],default='local',help="Where to run the code.")
     parser.add_argument('-p','--np',type=int,default=-1,help='Number of processers/threads used in parallel FDTD/PSTD. Default: 6/12 for local, 8/16 for x3850 and freeosc.')
     parser.add_argument('-c','--job_cap',type=int,default=-1,help='How may shot gathers (sources) should the server handle at the same time. Default: 1 for local, 8 for x3850 and 32 for freeosc.')
+    parser.add_argument('-y',action='store_const',const='y',dest='noprompt',default=False,help="Input 'y' in all input prompts with no disturbing.")
+    parser.add_argument('-n',action='store_const',const='n',dest='noprompt',default=False,help="Input 'n' in all input prompts with no disturbing.")
     args = parser.parse_args()
     
     forward_method = args.forward_method
     server = args.server
+    noprompt = args.noprompt
     if server == 'local':
         pnum = 6
         job_cap = 1
@@ -306,6 +317,6 @@ if __name__ == '__main__':
     if not os.path.exists(logdir):
         os.mkdir(logdir)
     else:
-        cleanfiles(logdir)
+        cleanfiles(logdir,noprompt)
     print('forward_method:%s'%forward_method)
     subg(args.dirname,args.src_num,job_cap,pnum)
