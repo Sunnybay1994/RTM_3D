@@ -61,19 +61,21 @@ echo "Computing is stopped at $(date)."
 exit 0
 ''')
 
-    if server_name == 'local':
-        post_tag = ""
-        mpicmd = "mpiexec -np $NSLOTS "
-    elif server_name == 'freeosc':
-        mpicmd = "$MPI_HOME/bin/mpiexec -n $NSLOTS -iface ib0 -machinefile slurm.hosts "
-        post_tag = ''
-
     for isrc in list_src:
+        if server_name == 'local':
+            post_tag = ""
+            mpicmd = "mpiexec -np $NSLOTS "
+        elif server_name == 'freeosc':
+            hostfile = "slurm" + str(isrc).zfill(4) + ".hosts"
+            mpicmd = "$MPI_HOME/bin/mpiexec -n $NSLOTS -iface ib0 -machinefile " + hostfile + " "
+            post_tag = ''
         if forward_method == 'fdtd':
             pstd_tag = ''
-            execmd = 'echo "($(date))Genrate data..."\n' + mpicmd + '-wdir $WORKPATH $EXEPATH/FDTD_MPI.exe '+ str(isrc) +' > $WORKPATH/Output/' + str(isrc) + '.out'
-            execmd_std = 'echo "($(date))Calculate forward wavafield..."\n' + mpicmd + '-wdir $WORKPATHSTD $EXEPATH/FDTD_MPI.exe '+ str(isrc) +' > $WORKPATHSTD/Output/' + str(isrc) + '.out'
-            execmd_rtm = 'echo "($(date))Calculate backward wavafield..."\n' + mpicmd + '-wdir $WORKPATHRTM $EXEPATH/FDTD_MPI.exe '+ str(isrc) +' > $WORKPATHRTM/Output/' + str(isrc) + '.out'
+            exit_txt = 'exit_code=$?;echo $exit_code;'
+            execmd = 'echo "($(date))Generate data..."\n' + mpicmd + '-wdir $WORKPATH $EXEPATH/FDTD_MPI.exe '+ str(isrc) +' > $WORKPATH/Output/' + str(isrc) + '.out\n' + exit_txt
+            execmd_std = 'echo "($(date))Calculate forward wavafield..."\n' + mpicmd + '-wdir $WORKPATHSTD $EXEPATH/FDTD_MPI.exe '+ str(isrc) +' > $WORKPATHSTD/Output/' + str(isrc) + '.out\n' + exit_txt
+            execmd_rtm = 'echo "($(date))Calculate backward wavafield..."\n' + mpicmd + '-wdir $WORKPATHRTM $EXEPATH/FDTD_MPI.exe '+ str(isrc) +' > $WORKPATHRTM/Output/' + str(isrc) + '.out\n' + exit_txt
+            execmd_rtm0 = 'echo "($(date))Calculate backward wavafield..."\n' + mpicmd + '-wdir $WORKPATHRTM0 $EXEPATH/FDTD_MPI.exe '+ str(isrc) +' > $WORKPATHRTM0/Output/' + str(isrc) + '.out\n' + exit_txt
         elif forward_method == 'pstd':
             pstd_tag = ' --pstd'
             execmd = '''cd $WORKPATH;echo $PWD
@@ -138,15 +140,16 @@ WORKPATHRTM0="''' + rtm0path + '''"
 
 cd $WORKPATH
 echo "Current Directory = $WORKPATH"
-echo "Current Source = ''' + str(isrc) + '''"
+echo "Current Source NO.: ''' + str(isrc) + '''"
 
 #env|sort|grep "SLURM"
 
+# sleep ''' + str(isrc*5) + '''
 #########  execute PROGRAM_NAME
 echo  "Computing is started at $(date)."
 
-srun hostname | sort -n > slurm.hosts
-#sed -i -e 's|compute|fast|g' -e 's|.local||g' slurm.hosts
+srun hostname | sort -n > ''' + hostfile + '''
+#sed -i -e 's|compute|fast|g' -e 's|.local||g' ''' + hostfile + '''
 
 # -n CORES
 '''
@@ -175,7 +178,11 @@ echo "Computing is started at $(date)."
         if mode == 'z':
             text = '''
 ''' + execmd +'''
-''' + execmd_cmd + '''
+''' + execmd_std + '''
+echo "($(date))Prepare for RTM..."
+python $EXEPATH/pre_RTM_sub.py ''' + pstd_tag + ' ' + str(isrc) + ''' -m 0
+''' + execmd_rtm0 +'''
+/bin/rm -f ''' + hostfile + '''
 
 ''' + text_sub_next + '''
 
@@ -188,6 +195,7 @@ python $EXEPATH/clean.py -f '''+ str(isrc) +'''
 echo "($(date))Prepare for RTM..."
 python $EXEPATH/pre_RTM_sub.py ''' + pstd_tag + ' ' + str(isrc) + '''
 ''' + execmd_rtm +'''
+/bin/rm -f ''' + hostfile + '''
 
 echo "($(date))Submitting next task..."
 ''' + text_sub_next + '''
