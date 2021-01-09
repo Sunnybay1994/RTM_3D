@@ -6,12 +6,53 @@ static char eps_file[MAX_NAME_LEN], mu_file[MAX_NAME_LEN], sigma_file[MAX_NAME_L
 char dummy_str[10];
 double dummy;
 
+void mysleep(int time){//milisec
+    clock_t now = clock();
+    while(clock() - now < time);
+}
+
+int myrand(int min, int max){
+    if(max<min){
+        printf("[WARNING]myrand: max(%d) smaller than min(%d).",max,min);
+    }
+    return rand()%(max-min) + min;
+}
+
+FILE * fopen_with_lock(const char * filename, const char * mode, int max_delay){
+    FILE *fp, *fp_lock;
+    // char lockname[80];
+    // int sleeptime,total_sleeptime;
+    // strcpy(lockname, filename) ;
+    // strcat(lockname,"_lock");
+
+    // total_sleeptime = 0;
+    // for (fp_lock = fopen(lockname, "r");fp_lock != NULL;fp_lock = fopen(lockname, "r")){
+    //     fclose(fp_lock);
+    //     sleeptime = myrand(0*1000,max_delay*1000);//ms
+    //     total_sleeptime += sleeptime;
+    //     mysleep(sleeptime);
+    // }
+    // fp_lock = fopen(lockname, "w");
+    fp = fopen(filename, mode);
+    // fclose(fp_lock);
+    // printf("Slept for %d s.\n",sleeptime/1000);
+    return fp;
+}
+
+int fclose_with_lock( FILE * stream, const char * filename){
+    // char lockname[80];
+    // strcpy(lockname, filename) ;
+    // strcat(lockname,"_lock");
+    fclose(stream);
+    // remove(lockname);
+}
 
 void getParameters()
 {
     char str[MAX_NAME_LEN];
+    char filename[]="./Input/par.in";
     FILE *fp;
-    fp = fopen("./Input/par.in","r");
+    fp = fopen(filename,"r");
 
     if (fp==NULL)
     {
@@ -79,10 +120,11 @@ void getParameters()
 void readSource()
 {
     if(myRank == 0) cout << "call read source" << endl;
-    char read[MAX_NAME_LEN] = "./Input/";
+    char filename[MAX_NAME_LEN] = "./Input/";
     FILE *fp;
+
     //cout << 'Reading source: ' << src_file << tag << endl;   //modified by mbw at 20180703
-    fp = fopen(strcat(strcat(read, src_file),tag),"r");
+    fp = fopen(strcat(strcat(filename, src_file),tag),"r");
     if (fp==NULL)
     {
         printf("Open src.in error!");
@@ -106,7 +148,7 @@ void readSource()
         }
         if (strcmp(dummy_str,"Ez")==0) {
             if(src_type == 2) {src[i].component = Ez; src_type = 3;}
-            else {src[i].component = Ez; src_type = 1;}            
+            else {src[i].component = Ez; src_type = 1;}
         }
         if (strcmp(dummy_str,"Hx")==0) {
             if(src_type == 1) {src[i].component = Hx; src_type = 3;}
@@ -114,7 +156,7 @@ void readSource()
         }
         if (strcmp(dummy_str,"Hy")==0) {
             if(src_type == 1) {src[i].component = Hy; src_type = 3;}
-            else{src[i].component = Hy; src_type = 2;}            
+            else{src[i].component = Hy; src_type = 2;}
         }
         if (strcmp(dummy_str,"Hz")==0) {
             if(src_type == 1) {src[i].component = Hz; src_type = 3;}
@@ -150,9 +192,9 @@ void readSource()
 void readReceive()
 {
     if(myRank == 0) cout << "call read recv" << endl;
-    char read[MAX_NAME_LEN] = "./Input/";
+    char filename[MAX_NAME_LEN] = "./Input/";
     FILE *fp;
-    fp = fopen(strcat(read, rec_file),"r");
+    fp = fopen(strcat(filename, rec_file),"r");
     if (fp==NULL)
     {
         printf("Open rec.in error!");
@@ -187,14 +229,14 @@ void readSig()
 {
     if(myRank == 0) cout << "call read sig" << endl;
     // char filename[30];
-    char dir[MAX_NAME_LEN] = "./Input/";
+    char filename[MAX_NAME_LEN] = "./Input/";
     char tail[MAX_NAME_LEN] = "";
     sprintf(tail, "_%03d", myRank);
     // char read[MAX_NAME_LEN] = "./";
     FILE *fp;
-    fp = fopen(strcat(strcat(dir, sigma_file),tail),"r");
+    fp = fopen_with_lock(strcat(strcat(filename, sigma_file),tail),"r",20);
 
-    // fp = fopen(strcat(read, sigma_file),"r");
+    // fp = fopen_with_lock(strcat(read, sigma_file),"r");
     if (fp==NULL)
     {
         printf("Open sig.in error!");
@@ -207,19 +249,19 @@ void readSig()
                 // fscanf(fp,"%lf",&(sig_total(i+order,j,k)));
                 fscanf(fp,"%lf",&(sig(i,j,k)));
                 }
-    fclose(fp);
+    fclose_with_lock(fp, filename);
 }
 
 void readEps()
 {
     if(myRank == 0) cout << "call read eps" << endl;
     // char filename[30];
-    char dir[MAX_NAME_LEN] = "./Input/";
+    char filename[MAX_NAME_LEN] = "./Input/";
     char tail[MAX_NAME_LEN] = "";
     sprintf(tail, "_%03d", myRank);
     // char read[MAX_NAME_LEN] = "./";
     FILE *fp;
-    fp = fopen(strcat(strcat(dir, eps_file),tail),"r");
+    fp = fopen_with_lock(strcat(strcat(filename, eps_file),tail),"r",20);
 
     if (fp==NULL)
     {
@@ -233,19 +275,19 @@ void readEps()
                 // eps_total(i+order,j,k) = dummy * eps0;
                 eps(i,j,k) = dummy * eps0;
                 }
-    fclose(fp);
+    fclose_with_lock(fp, filename);
 }
 
 void readMu()
 {
     if(myRank == 0) cout << "call read mu" << endl;
     // char filename[30];
-    char dir[MAX_NAME_LEN] = "./Input/";
+    char filename[MAX_NAME_LEN] = "./Input/";
     char tail[MAX_NAME_LEN] = "";
     sprintf(tail, "_%03d", myRank);
     // char read[MAX_NAME_LEN] = "./";
     FILE *fp;
-    fp = fopen(strcat(strcat(dir, mu_file),tail),"r");
+    fp = fopen_with_lock(strcat(strcat(filename, mu_file),tail),"r",20);
     if (fp==NULL)
     {
         printf("Open mu.in error!");
@@ -258,15 +300,15 @@ void readMu()
                 // mu_total(i+order,j,k) = dummy * mu0;
                 mu(i,j,k) = dummy * mu0;
                 }
-    fclose(fp);
+    fclose_with_lock(fp, filename);
 }
 
 void readSlice()
 {
     if(myRank == 0) cout << "call read slice" << endl;
-    char read[MAX_NAME_LEN] = "./Input/";
+    char filename[MAX_NAME_LEN] = "./Input/";
     FILE *fp;
-    fp = fopen(strcat(read, slice_file),"r");
+    fp = fopen(strcat(filename, slice_file),"r");
     if (fp==NULL)
     {
         printf("Open slice.in error!");
