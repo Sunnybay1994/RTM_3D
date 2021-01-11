@@ -663,11 +663,13 @@ if __name__ == '__main__':
     dnx_src = round(dx_src/dx)
     dny_src = round(dy_src/dy)
     dnx_rec = round(dx_rec/dx)
+    dny_rec = round(dy_rec/dx)
     mx = npmlx
     my = npmly
     mxr = npmlx
-    logger.info('dnxs=%d,dnys=%d,dnxr=%d,mx=%d,my=%d,mxr=%d'%(dnx_src,dny_src,dnx_rec,mx,my,mxr))
-    [nsrc,nrec] = src_rec(dnx_src,dny_src,dnx_rec,marginx=mx, marginy=my, marginx_rec=mxr)
+    myr = npmly
+    logger.info('dnxs=%d,dnys=%d,dnxr=%d,mx=%d,my=%d,mxr=%d,myr=%d'%(dnx_src,dny_src,dnx_rec,mx,my,mxr,myr))
+    [nsrc,nrec] = src_rec(dnx_src,dny_src,dnx_rec,dny_rec,marginx=mx, marginy=my, marginx_rec=mxr,marginy_rec=myr)
     ### generate src & rec end ###
 
     ### generate model ###
@@ -687,8 +689,8 @@ if __name__ == '__main__':
 
     # backup this file
     cp('model_em.py', workdir)
-    cp(os.path.join('Model',model[:-4]+'_sr'+model[-4:]), workdir) # backup model_sr
-    cp(os.path.join('Model',model), workdir) # backup model
+    # cp(os.path.join('Model',model[:-4]+'_sr'+model[-4:]), workdir) # backup model_sr
+    cp(model, workdir) # backup model
     cp(os.path.join('Model','make_model.m'), workdir) # backup make_model
 
     

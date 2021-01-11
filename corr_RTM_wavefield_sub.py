@@ -55,8 +55,6 @@ def corr_wavefield(isrc, workdir, dir1 = os.path.join('STD','Output'), dir2 = os
     np.savetxt(os.path.join(dir3,'result_wavefield_corr_' + str(isrc).zfill(4) + '.dat'),np.reshape(corr_data,[wvf_nx*wvf_ny,wvf_nz]))
     np.savetxt(os.path.join(dir3,'result_wavefield_forward_' + str(isrc).zfill(4) + '.dat'),np.reshape(data_forward,[wvf_nx*wvf_ny,wvf_nz]))
     np.savetxt(os.path.join(dir3,'result_wavefield_backward_' + str(isrc).zfill(4) + '.dat'),np.reshape(data_backward,[wvf_nx*wvf_ny,wvf_nz]))
-    return 1
-
 
     # print len(corr_data)
     # print nx/step_x_wavefield, ny/step_x_wavefield, nz/step_x_wavefield
@@ -65,18 +63,21 @@ def corr_wavefield(isrc, workdir, dir1 = os.path.join('STD','Output'), dir2 = os
     #     int(ceil(float(nz)/float(step_x_wavefield)))))
     # savetxt('result_wavefield_corr.dat',result)
 
-    # clf()
-    # imshow(corr_data[20,:,:].T, interpolation='none')
-    # colorbar()
-    # savefig('xResult_Wavefield'+'_'+str(isrc).zfill(4)+'.png')
-    # clf()
-    # imshow(corr_data[:,71,:].T, interpolation='none',vmin = -0.002, vmax = 0.002)
-    # colorbar()
-    # savefig('yResult_Wavefield'+'_'+str(isrc).zfill(4)+'.png')
-    # clf()
-    # imshow(corr_data[:,:,29].T, interpolation='none')
-    # colorbar()
-    # savefig('zResult_Wavefield'+'_'+str(isrc).zfill(4)+'.png')
+    # print('Figuring wavefield.')
+    plt.clf()
+    plt.imshow(corr_data[int(slice_x[0]/step_x_wavefield),:,:].T, interpolation='none')
+    plt.colorbar()
+    plt.savefig(os.path.join(dir3,'xResult_Wavefield'+'_'+str(isrc).zfill(4)+'.png'))
+    plt.clf()
+    plt.imshow(corr_data[:,int(slice_y[0]/step_x_wavefield),:].T, interpolation='none')#,vmin = -0.002, vmax = 0.002)
+    plt.colorbar()
+    plt.savefig(os.path.join(dir3,'yResult_Wavefield'+'_'+str(isrc).zfill(4)+'.png'))
+    plt.clf()
+    plt.imshow(corr_data[:,:,int(slice_z[0]/step_x_wavefield)].T, interpolation='none')
+    plt.colorbar()
+    plt.savefig(os.path.join(dir3,'zResult_Wavefield'+'_'+str(isrc).zfill(4)+'.png'))
+
+    return 0
 
 if __name__ == "__main__":
     # nsrc = int(raw_input("How many sources? "))
@@ -100,7 +101,7 @@ if __name__ == "__main__":
     idir = os.path.join(workdir,'Result')
     if not os.path.exists(idir):
         os.mkdir(idir)
-
+    
     corr_wavefield(isrc,workdir)
 
     # list_src = range(200,210)

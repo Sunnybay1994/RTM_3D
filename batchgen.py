@@ -182,7 +182,6 @@ echo "Computing is started at $(date)."
 echo "($(date))Prepare for RTM..."
 python $EXEPATH/pre_RTM_sub.py ''' + pstd_tag + ' ' + str(isrc) + ''' -m 0
 ''' + execmd_rtm0 +'''
-/bin/rm -f ''' + hostfile + '''
 
 ''' + text_sub_next + '''
 
@@ -195,7 +194,6 @@ python $EXEPATH/clean.py -f '''+ str(isrc) +'''
 echo "($(date))Prepare for RTM..."
 python $EXEPATH/pre_RTM_sub.py ''' + pstd_tag + ' ' + str(isrc) + '''
 ''' + execmd_rtm +'''
-/bin/rm -f ''' + hostfile + '''
 
 echo "($(date))Submitting next task..."
 ''' + text_sub_next + '''
@@ -225,6 +223,10 @@ python $EXEPATH/post_put.py -z -t ''' + dirname + ' ' + str(isrc) +'''
                 text_tail += '''
 python $EXEPATH/post_put.py -t ''' + dirname + ' ' + str(isrc) +'''
     '''
+        if server_name == 'freeosc':
+            text_tail += '''
+/bin/rm -f ''' + hostfile + '''
+'''
 
         text_tail += '\nexit $exit_code\n'
 

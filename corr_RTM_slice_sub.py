@@ -35,9 +35,9 @@ def get_fn_from_dir(fn, order=1):
 
     return list(map(lambda x: x.strip('\n'), list1))
 
-def read_bin_data(fn, dims):
+def read_bin_data(fn, dims, type='f'):
     with open(fn,'rb') as fo:
-        data_raw = struct.unpack('f'*dims[0]*dims[1]*dims[2],fo.read())
+        data_raw = struct.unpack(type*dims[0]*dims[1]*dims[2],fo.read())
     dims.reverse()
     data = np.reshape(data_raw,dims)
     data = data.transpose(2,1,0)

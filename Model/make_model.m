@@ -1,5 +1,5 @@
 %% modelname
-modelname = '3vs2';
+modelname = '2vs3';
 fn = 'model';
 fn_save = [fn '.mat'];
 fig_save = [fn '.png'];
@@ -79,13 +79,48 @@ end
 %% src and rec para
 dx_src = 0.2;
 dx_rec = 0.04;
-dy_src = dx_src;
-dy_rec = dx_rec;
+dy_src = 1.2;
+dy_rec = 1.2;
 
+% place src and rec
+dnx_src = dx_src / dx;
+dnx_rec = dx_rec / dx;
+nx_src = round((nx-2*npmlx)/dnx_src);
+if mod(nx_src,2) == 0
+    nx_src = nx_src-1;
+end
+nx_rec = round((nx-2*npmlx)/dnx_rec);
+if mod(nx_rec,2) == 0
+    nx_rec = nx_rec-1;
+end
+srcx = ((-floor(nx_src/2):floor(nx_src/2)) * dx_src) + nx/2*dx;
+recx = ((-floor(nx_rec/2):floor(nx_rec/2)) * dx_rec) + nx/2*dx;
+
+dny_src = dy_src / dy;
+dny_rec = dy_rec / dy;
+ny_src = round((ny-2*npmly)/dny_src);
+if mod(ny_src,2) == 0
+    ny_src = ny_src-1;
+end
+ny_rec = round((ny-2*npmly)/dny_rec);
+if mod(ny_rec,2) == 0
+    ny_rec = ny_rec-1;
+end
+srcy = ((-floor(ny_src/2):floor(ny_src/2)) * dy_src) + ny/2*dy;
+recy = ((-floor(ny_rec/2):floor(ny_rec/2)) * dy_rec) + ny/2*dy;
+
+srcz = 0-dz;
+[Xs,Ys,Zs] = meshgrid(srcx,srcy,srcz);
+[Xr,Yr,Zr] = meshgrid(recx,recy,srcz);
+srcx = reshape(Xs,1,[]);
+srcy = reshape(Ys,1,[]);
+recx = reshape(Xr,1,[]);
+recy = reshape(Yr,1,[]);
+recz = srcz;
 
 %%
-save(fn_save,'modelname','dx','dy','dz','nx','ny','nz','nz_air','T','dt',...
-    'freq_src','dx_src','dx_rec','dy_src','dy_rec',....
+save(fn_save,'modelname','dx','dy','dz','nx','ny','nz','nz_air','T','dt','freq_src',...
+    'dx_src','dx_rec','dy_src','dy_rec','srcx','srcy','srcz','recx','recy','recz',....
     'npmlx','npmly','npmlz','outstep_t_wavefield','outstep_x_wavefield',...
     'outstep_slice','slicex','slicey','slicez','ep_bg','ep');
 
@@ -135,43 +170,6 @@ camlight('headlight')
 lighting gouraud
 camlight('right')
 lighting gouraud
-
-% place src and rec
-dnx_src = dx_src / dx;
-dnx_rec = dx_rec / dx;
-nx_src = round((nx-2*npmlx)/dnx_src);
-if mod(nx_src,2) == 0
-    nx_src = nx_src-1;
-end
-nx_rec = round((nx-2*npmlx)/dnx_rec);
-if mod(nx_rec,2) == 0
-    nx_rec = nx_rec-1;
-end
-srcx = ((-floor(nx_src/2):floor(nx_src/2)) * dx_src) + nx/2*dx;
-recx = ((-floor(nx_rec/2):floor(nx_rec/2)) * dx_rec) + nx/2*dx;
-
-dny_src = dy_src / dy;
-dny_rec = dy_rec / dy;
-ny_src = round((ny-2*npmly)/dny_src);
-if mod(ny_src,2) == 0
-    ny_src = ny_src-1;
-end
-ny_rec = round((ny-2*npmly)/dny_rec);
-if mod(ny_rec,2) == 0
-    ny_rec = ny_rec-1;
-end
-srcy = ((-floor(ny_src/2):floor(ny_src/2)) * dy_src) + ny/2*dy;
-recy = ((-floor(ny_rec/2):floor(ny_rec/2)) * dy_rec) + ny/2*dy;
-
-srcz = 0-dz;
-[Xs,Ys,Zs] = meshgrid(srcx,srcy,srcz);
-[Xr,Yr,Zr] = meshgrid(recx,recy,srcz);
-srcx = reshape(Xs,1,[]);
-srcy = reshape(Ys,1,[]);
-recx = reshape(Xr,1,[]);
-recy = reshape(Yr,1,[]);
-recz = srcz;
-save([fn,'_sr.mat'],'srcx','srcy','srcz','recx','recy','recz')
 
 hold on
 plot3(Xs,Ys,Zs,'r^')
