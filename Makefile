@@ -1,5 +1,5 @@
 fdtdcc=mpicxx
-fdtdcflags=
+fdtdcflags=-O3 -march=native
 fdtdsrc=src/FDTD
 fdtd : $(fdtdsrc)/main.cpp $(fdtdsrc)/updateEH.cpp $(fdtdsrc)/input.cpp $(fdtdsrc)/output.cpp 
 	$(fdtdcc) $(fdtdcflags) -o FDTD_MPI.exe  $(fdtdsrc)/fdtd.h $(fdtdsrc)/main.cpp $(fdtdsrc)/updateEH.cpp $(fdtdsrc)/input.cpp $(fdtdsrc)/output.cpp
