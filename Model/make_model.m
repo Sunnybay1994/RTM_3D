@@ -137,7 +137,11 @@ save(fn_save,'modelname','dx','dy','dz','nx','ny','nz','nz_air','T','dt','freq_s
 % end
 
 %% 3D-view
+figure(10)
 clf;
+set(gcf,'Unit','centimeters')
+set(gcf,'Position',[0,0,29.7,21])
+set(gca,'fontsize',30,'fontname','Times')
 x = (1:nx)*dx;
 y = (1:ny)*dy;
 z = ((1:nz)-nz_air)*dz;
@@ -164,8 +168,6 @@ zlim([z(1),z(end)]);
 % title('layers with fault')
 set(gca,'fontsize',20);
 xlabel('x(m)','Fontsize',24);ylabel('y(m)','Fontsize',24);zlabel('depth(m)','Fontsize',24);
-% ����װ�ƣ��Ҹо��������ƣ��������飩�ȽϺ��ʣ�һ��̫���ˡ�
-% �����Է�8���ƣ�headlight��ʾͷ�ƣ�����left��right��
 camlight('headlight') 
 lighting gouraud
 camlight('right')
@@ -176,6 +178,23 @@ plot3(Xs,Ys,Zs,'r^')
 plot3(Xr,Yr,Zr,'b.')
 % xlim([0 10]);ylim([0 10]);zlim([-0.5 5])
 hold off
+set(gca,'fontsize',20,'fontname','Times')
 
-saveas(gcf,fig_save)
+export_fig(fig_save)
 
+function dtmax = finddt(epr_min, miur_min, dx, dy, dz)
+    mu0 = 1.2566370614e-6;
+    ep0 = 8.8541878176e-12;
+    epmin = epr_min * ep0;
+    mumin = miur_min * mu0;
+    dtmax = 6.0 / 7.0 * sqrt(epmin * mumin / (dx^-2 + dy^-2 + dz^-2));
+end
+
+function dxmax = finddx(epr_max, miur_max, fmax)
+    mu0 = 1.2566370614e-6;
+    ep0 = 8.8541878176e-12;
+    epmax = epr_max * ep0;
+    mumax = miur_max * mu0;
+    wlmin = 1 / (fmax * sqrt(epmax * mumax));
+    dxmax = wlmin;
+end
