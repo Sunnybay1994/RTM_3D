@@ -43,7 +43,7 @@ int fclose_with_lock( FILE * stream, const char * filename){
     // char lockname[80];
     // strcpy(lockname, filename) ;
     // strcat(lockname,"_lock");
-    fclose(stream);
+    return fclose(stream);
     // remove(lockname);
 }
 
