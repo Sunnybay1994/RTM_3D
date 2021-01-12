@@ -68,14 +68,14 @@ exit 0
         elif server_name == 'freeosc':
             hostfile = "slurm" + str(isrc).zfill(4) + ".hosts"
             mpicmd = "$MPI_HOME/bin/mpiexec -n $NSLOTS -iface ib0 -machinefile " + hostfile + " "
-            post_tag = ''
+            post_tag = '' if 'i' in steps else '# '
         if forward_method == 'fdtd':
             pstd_tag = ''
             exit_txt = 'exit_code=$?;echo $exit_code;'
-            execmd = 'echo "($(date))Generate data..."\n' + mpicmd + '-wdir $WORKPATH $EXEPATH/FDTD_MPI.exe '+ str(isrc) +' > $WORKPATH/Output/' + str(isrc) + '.out\n' + exit_txt
-            execmd_std = 'echo "($(date))Calculate forward wavafield..."\n' + mpicmd + '-wdir $WORKPATHSTD $EXEPATH/FDTD_MPI.exe '+ str(isrc) +' > $WORKPATHSTD/Output/' + str(isrc) + '.out\n' + exit_txt
-            execmd_rtm = 'echo "($(date))Calculate backward wavafield..."\n' + mpicmd + '-wdir $WORKPATHRTM $EXEPATH/FDTD_MPI.exe '+ str(isrc) +' > $WORKPATHRTM/Output/' + str(isrc) + '.out\n' + exit_txt
-            execmd_rtm0 = 'echo "($(date))Calculate backward wavafield..."\n' + mpicmd + '-wdir $WORKPATHRTM0 $EXEPATH/FDTD_MPI.exe '+ str(isrc) +' > $WORKPATHRTM0/Output/' + str(isrc) + '.out\n' + exit_txt
+            execmd = ('' if 'g' in steps else '# ') + 'echo "($(date))Generate data...";' + mpicmd + '-wdir $WORKPATH $EXEPATH/FDTD_MPI.exe '+ str(isrc) +' > $WORKPATH/Output/' + str(isrc) + '.out;' + exit_txt
+            execmd_std = ('' if 'f' in steps else '# ') + 'echo "($(date))Calculate forward wavafield...";' + mpicmd + '-wdir $WORKPATHSTD $EXEPATH/FDTD_MPI.exe '+ str(isrc) +' > $WORKPATHSTD/Output/' + str(isrc) + '.out;' + exit_txt
+            execmd_rtm = ('' if 'b' in steps else '# ') + 'echo "($(date))Calculate backward wavafield...";' + mpicmd + '-wdir $WORKPATHRTM $EXEPATH/FDTD_MPI.exe '+ str(isrc) +' > $WORKPATHRTM/Output/' + str(isrc) + '.out;' + exit_txt
+            execmd_rtm0 = ('' if 'b' in steps else '# ') + 'echo "($(date))Calculate backward wavafield...";' + mpicmd + '-wdir $WORKPATHRTM0 $EXEPATH/FDTD_MPI.exe '+ str(isrc) +' > $WORKPATHRTM0/Output/' + str(isrc) + '.out;' + exit_txt
         elif forward_method == 'pstd':
             pstd_tag = ' --pstd'
             execmd = '''cd $WORKPATH;echo $PWD
@@ -191,18 +191,18 @@ python $EXEPATH/clean.py -f '''+ str(isrc) +'''
             text = '''
 ''' + execmd +'''
 ''' + execmd_std + '''
-echo "($(date))Prepare for RTM..."
-python $EXEPATH/pre_RTM_sub.py ''' + pstd_tag + ' ' + str(isrc) + '''
+''' + ('' if 'b' in steps else '# ') + '''echo "($(date))Prepare for RTM..."
+''' + ('' if 'b' in steps else '# ') + '''python $EXEPATH/pre_RTM_sub.py ''' + pstd_tag + ' ' + str(isrc) + '''
 ''' + execmd_rtm +'''
 
 echo "($(date))Submitting next task..."
 ''' + text_sub_next + '''
 
-echo "($(date))Applying image condition..."
+''' + post_tag + '''echo "($(date))Applying image condition..."
 ''' + post_tag + '''python $EXEPATH/corr_RTM_wavefield_sub.py '''+ str(isrc) +''' &
 ''' + post_tag + '''python $EXEPATH/corr_RTM_slice_sub.py '''+ str(isrc) +''' &
-wait
-echo "($(date))Cleaning..."
+''' + post_tag + '''wait
+''' + post_tag + '''echo "($(date))Cleaning..."
 ''' + post_tag + '''python $EXEPATH/clean.py '''+ str(isrc) +'''
 '''
 
@@ -297,11 +297,13 @@ if __name__ == '__main__':
     parser.add_argument('-c','--job_cap',type=int,default=-1,help='How may shot gathers (sources) should the server handle at the same time. Default: 1 for local, 8 for x3850 and 32 for freeosc.')
     parser.add_argument('-y',action='store_const',const='y',dest='noprompt',default=False,help="Input 'y' in all input prompts with no disturbing.")
     parser.add_argument('-n',action='store_const',const='n',dest='noprompt',default=False,help="Input 'n' in all input prompts with no disturbing.")
+    parser.add_argument('--steps',type=str,default='gfbi',help="Select which steps are involved. 'g' for generate data; 'f' for source(forward) wavefield; 'b' for receiver(backward) wavefield; 'i' for imaging.")
     args = parser.parse_args()
     
     forward_method = args.forward_method
     server = args.server
     noprompt = args.noprompt
+    steps = args.steps
     if server == 'local':
         pnum = 6
         job_cap = 1
@@ -329,4 +331,6 @@ if __name__ == '__main__':
     else:
         cleanfiles(logdir,noprompt)
     print('forward_method:%s'%forward_method)
+    if job_cap > args.src_num:
+        job_cap = args.src_num
     subg(args.dirname,args.src_num,job_cap,pnum)

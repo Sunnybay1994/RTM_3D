@@ -481,6 +481,7 @@ if __name__ == '__main__':
     parser.add_argument('-c','--job_cap',type=int,default=-1,help='How may shot gathers (sources) should the server handle at the same time. Default: 1 for local, 8 for x3850 and 32 for freeosc.')
     parser.add_argument('-y',action='store_const',const='y',dest='noprompt',default=False,help="Input 'y' in all input prompts with no disturbing.")
     parser.add_argument('-n',action='store_const',const='n',dest='noprompt',default=False,help="Input 'n' in all input prompts with no disturbing.")
+    parser.add_argument('--steps',type=str,default='gfbi',help="Select which steps are involved. 'g' for generate data; 'f' for source(forward) wavefield; 'b' for receiver(backward) wavefield; 'i' for imaging.")
     args = parser.parse_args()
 
     model = args.model
@@ -698,6 +699,6 @@ if __name__ == '__main__':
         forward_method = '--pstd'
     elif forward_method == 'fdtd':
         forward_method = '--fdtd'
-    subtxt = 'python batchgen.py -d %s -s %d -p %d -m %s -c %d --server %s %s %s'%(dirname,nsrc,pnum,mode,job_cap,server,forward_method,'-'+noprompt if noprompt else '')
+    subtxt = 'python batchgen.py -d %s -s %d -p %d -m %s -c %d --server %s --steps %s %s %s'%(dirname,nsrc,pnum,mode,job_cap,server,args.steps,forward_method,'-'+noprompt if noprompt else '')
     logger.info(subtxt)
     os.system(subtxt)

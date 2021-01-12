@@ -1,5 +1,5 @@
 %% modelname
-modelname = '2vs3';
+modelname = 'TvsC';
 fn = 'model';
 fn_save = [fn '.mat'];
 fig_save = [fn '.png'];
@@ -77,8 +77,8 @@ for ix = 1:nx
 end
 
 %% src and rec para
-dx_src = 0.2;
-dx_rec = 0.04;
+dx_src = 1.2;
+dx_rec = 1.2;
 dy_src = 1.2;
 dy_rec = 1.2;
 
