@@ -77,20 +77,36 @@ win_size = info.ScreenSize;% 获取显示屏的像素尺寸
 fh = figure();
 set(fh, 'outerposition', win_size);	% 设置图形窗口位置和外尺寸为屏幕大小
 %%
+y1_min = 0;
+y1_max = 10;
+y4_min = 0;
+y4_max = 12;
+z1_min = 0;
+z1_max = 6;
+z4_min = 0;
+z4_max = 5;
+h1 = (y1_max - y1_min)/2;
+h2 = (y4_max - y4_min)/2;
+h3 = (z1_max - z1_min)*2;
+h4 = (z4_max - z4_min)*2;
+ha = h1+h2+h3+h4;
+
 z_slice1 = 0.8;
 iz_zslice1 = find(abs(zz_1-z_slice1)<(dzz/2));
-draw_wavefield_zslice(outdir_1,wi1,iz_zslice1,xx_1,yy_1,zz_1,[32,1,[1,5]],fh);
-z_slice4 = 0.9;
-iz_zslice4 = find(abs(zz_1-z_slice1)<(dzz/2));
-draw_wavefield_zslice(outdir_4,wi4,iz_zslice4,xx_4,yy_4,zz_4,[32,1,[6,10]],fh);
+draw_wavefield_zslice(outdir_1,wi1,iz_zslice1,xx_1,yy_1,zz_1,[y1_min,y1_max],[ha,1,[1,h1]],fh);
+set(gca,'XTick',[])
+z_slice4 = 0.8;
+iz_zslice4 = find(abs(zz_1-z_slice4)<(dzz/2));
+draw_wavefield_zslice(outdir_4,wi4,iz_zslice4,xx_4,yy_4,zz_4,[y4_min,y4_max],[ha,1,[h1+1,h1+h2]],fh);
+set(gca,'XTick',[])
 
 y_slice = 4;
 iy1_yslice = find(abs(yy_1-y_slice)<(dyy/2));
 iy4_yslice = find(abs(yy_4-(y_slice+1))<(dyy/2)); % survey lines of 400MHz is 1m south of those of 100MHz
-draw_wavefield_yslice(outdir_1,wi1,iy1_yslice,xx_1,yy_1,zz_1,z_slice1,[32,1,[11,22]],fh);
-draw_wavefield_yslice(outdir_4,wi4,iy4_yslice,xx_4,yy_4,zz_4,false,[32,1,[23,32]],fh);
-
-xlabel('x(m)','fontsize',24);
+draw_wavefield_yslice(outdir_1,wi1,iy1_yslice,xx_1,yy_1,zz_1,z_slice1,[z1_min,z1_max],[ha,1,[h1+h2+1,h1+h2+h3]],fh);
+set(gca,'XTick',[])
+draw_wavefield_yslice(outdir_4,wi4,iy4_yslice,xx_4,yy_4,zz_4,z_slice4,[z4_min,z4_max],[ha,1,[h1+h2+h3+1,h1+h2+h3+h4]],fh);
+xlabel('x(m)','fontsize',20);
 %%
 export_fig(fh,fullfile(outdir_4,['y=' num2str(y_slice) 'm, z=' num2str(z_slice1) 'm.png']))
 
@@ -107,7 +123,7 @@ if true
     zlim([0,4]);xlim([10,50]);ylim([1,9]);
     set(gca,'fontsize',20);
     xlabel('x(m)');ylabel('y(m)');zlabel('depth(m)');
-    set(gca,'zdir','reverse','FontSize',24)
+    set(gca,'zdir','reverse','fontsize',20)
     export_fig(fh,fullfile(outdir_1,['3D.png']))
 end
 
@@ -234,7 +250,7 @@ function [wavefield_interp,xx,yy,zz] = interp_wavefield(wavefield,x,y,z,z0,dxx,d
     wavefield_interp = interp3(Y,Z,X,wavefield,YY,ZZ,XX);
 end
 
-function fh = draw_wavefield_zslice(outdir,wavefield,izseq,xx,yy,zz,subp_para,figh)
+function fh = draw_wavefield_zslice(outdir,wavefield,izseq,xx,yy,zz,yrange,subp_para,figh)
     if ~isempty(subp_para)
         fh = figh;
         subplot(subp_para(1),subp_para(2),subp_para(3:end))
@@ -247,12 +263,15 @@ function fh = draw_wavefield_zslice(outdir,wavefield,izseq,xx,yy,zz,subp_para,fi
     
     for iz = izseq
         imagesc(xx,yy,squeeze(wavefield(iz,:,:)))
+        ylim(yrange)
         if isempty(subp_para)
-            xlabel('x(m)','fontsize',24);
+            xlabel('x(m)','fontsize',20);
+        else
+%             set(gca,'xtick',[])
         end
-        ylabel('y(m)','fontsize',24)
     %     title(['3D RTM Result at z=' num2str(z_slice) 'm'],'fontsize',36)
-        set(gca,'ydir','normal','FontSize',20)
+        set(gca,'ydir','normal','FontSize',16)
+        ylabel('y(m)','fontsize',20)
         daspect([1 1 1])
         if isempty(subp_para)
             export_fig(fh,fullfile(outdir,['zslice at z=' num2str(zz(iz)) 'm.png']))
@@ -266,7 +285,7 @@ function fh = draw_wavefield_zslice(outdir,wavefield,izseq,xx,yy,zz,subp_para,fi
     % % zx2=atan((31-26)/(9.4-1))*360/2/pi;% 400MHz
 end
 
-function fh = draw_wavefield_yslice(outdir,wavefield,iyseq,xx,yy,zz,aux_line,subp_para,figh)
+function fh = draw_wavefield_yslice(outdir,wavefield,iyseq,xx,yy,zz,aux_line,zrange,subp_para,figh)
     if ~isempty(subp_para)
         fh = figh;
         subplot(subp_para(1),subp_para(2),subp_para(3:end))
@@ -285,23 +304,24 @@ function fh = draw_wavefield_yslice(outdir,wavefield,iyseq,xx,yy,zz,aux_line,sub
         op_length = zz(end)/8;
         [wyslice2,envsm,ma] = agc(wyslice,zz,op_length,op_length/10,0);
         imagesc(xx,zz,wyslice2);
+        ylim(zrange)
 %         colorbar;
-        set(gca,'fontsize',20);
+        set(gca,'fontsize',16);
         if isempty(subp_para)
             daspect([4 1 1]);
-            xlabel('x(m)','fontsize',24);
+            xlabel('x(m)','fontsize',20);
         else
             daspect([4 1 1]);
 %             set(gca,'XTick',[])
-%             set(gca,'LooseInset',get(gca,'TightInset'))
+            set(gca,'LooseInset',get(gca,'TightInset'))
         end
-        ylabel('Depth(m)','fontsize',24)
+        ylabel('Depth(m)','fontsize',20)
 %         title(['3D RTM Result at line' num2str(iline) '(y=' num2str(yy(i)) 'm)'],'fontsize',30)
         
         % for yslice
         if aux_line
             hold on
-            plot(xx,aux_line*ones(size(xx)),'--r','LineWidth',2);
+            plot(xx,aux_line*ones(size(xx)),'--w','LineWidth',1.5);
             hold off
         end
         if isempty(subp_para)
@@ -376,7 +396,7 @@ end
 % plot3(x1(logi_y),y1(logi_y),z1(logi_y),'r.');
 % % axis equal
 % % xlabel('x(m)');ylabel('y(m)');zlabel('depth(m)');
-% % set(gca,'zdir','reverse','FontSize',24)
+% % set(gca,'zdir','reverse','fontsize',20)
 % % hold on
 % surf(xm,ym,zm,'FaceAlpha',0.3);shading interp;
 % zx0 = atan(-b/a)*360/2/pi
