@@ -30,8 +30,9 @@ def cp(f1,f2):
         # logger.debug('cp %s %s'%(f,f2))
         shutil.copy(f,f2)
 
-def src_rec(dnx_src,dny_src=False,dnx_rec=False,dny_rec=False,nzp_src=False,nzp_rec=False,nx_src=False,ny_src=False,nx_rec=False,ny_rec=False,nshift=0,marginx=0,marginy=False,marginx_rec=False,marginy_rec=False):
+def src_rec(dnx_src,dny_src=False,dnx_rec=False,dny_rec=False,nzp_src=False,nzp_rec=False,nx_src=False,ny_src=False,nx_rec=False,ny_rec=False,nshift=0,marginx=0,marginy=False,marginx_rec=False,marginy_rec=False,half_span=0):
     logger.info('adding source and receiver...')
+    logger.info('dnxs=%d,dnys=%d,dnxr=%d,mx=%d,my=%d,mxr=%d,myr=%d,half_span=%d'%(dnx_src,dny_src,dnx_rec,marginx,marginy,marginx_rec,marginy_rec,half_span))
     if not dny_src:
         dny_src = dnx_src
     if not nzp_src: # z position of src 
@@ -475,7 +476,7 @@ if __name__ == '__main__':
     parser.add_argument('--fdtd',action='store_const',const='fdtd',dest='forward_method',default='fdtd',help='Use finite difference time domain as the forward method.')
     parser.add_argument('--pstd',action='store_const',const='pstd',dest='forward_method',default='fdtd',help='Use pseudo spectral time domain as the forward method.')
     parser.add_argument('--no_gen_model',action='store_const',const=True,default=False,help="Just modifiy parameters without generating model as generating model needs a lot of time.")
-    parser.add_argument('--half_span',type=int,default=0,help='Span the point source to a (1+2*half_span)x(1+2*half_span) source while forwarding. It helps to reduce the sideslobe in FDTD forwarding.')
+    parser.add_argument('--half_span',type=int,default=-1,help='Span the point source to a (1+2*half_span)x(1+2*half_span) source while forwarding. It helps to reduce the sideslobe in FDTD forwarding.')
     parser.add_argument('--server',choices=['local','freeosc','x3850'],default='local',help="Where to run the code.")
     parser.add_argument('-p','--np',type=int,default=-1,help='Number of processers/threads used in parallel FDTD/PSTD. Default: 6/12 for local, 8/16 for x3850 and freeosc.')
     parser.add_argument('-c','--job_cap',type=int,default=-1,help='How may shot gathers (sources) should the server handle at the same time. Default: 1 for local, 8 for x3850 and 32 for freeosc.')
@@ -489,7 +490,6 @@ if __name__ == '__main__':
     forward_method = args.forward_method
     server = args.server
     gen_model = not args.no_gen_model
-    half_span = args.half_span
     noprompt = args.noprompt
     if server == 'local':
         pnum = 6
@@ -526,6 +526,16 @@ if __name__ == '__main__':
         freq = args.freq * 1e6
     else:
         freq = float(dic_model['freq_src'])
+    
+    if args.half_span < 0:
+        try:
+            half_span = int(dic_model['src_span'])
+        except Exception as e:
+            logger.warning('%s, half_span set_to 0.'%e)
+            half_span = 0
+    else:
+        half_span = args.half_span
+
 
     mu0 = 1.2566370614e-6
     ep0 = 8.8541878176e-12
@@ -665,12 +675,11 @@ if __name__ == '__main__':
     dny_src = round(dy_src/dy)
     dnx_rec = round(dx_rec/dx)
     dny_rec = round(dy_rec/dx)
-    mx = npmlx
-    my = npmly
-    mxr = npmlx
-    myr = npmly
-    logger.info('dnxs=%d,dnys=%d,dnxr=%d,mx=%d,my=%d,mxr=%d,myr=%d'%(dnx_src,dny_src,dnx_rec,mx,my,mxr,myr))
-    [nsrc,nrec] = src_rec(dnx_src,dny_src,dnx_rec,dny_rec,marginx=mx, marginy=my, marginx_rec=mxr,marginy_rec=myr)
+    mx = float(dic_model['src_margin_nx'])
+    my = float(dic_model['src_margin_ny'])
+    mxr = float(dic_model['rec_margin_nx'])
+    myr = float(dic_model['rec_margin_ny'])
+    [nsrc,nrec] = src_rec(dnx_src,dny_src,dnx_rec,dny_rec,marginx=mx, marginy=my, marginx_rec=mxr,marginy_rec=myr,half_span=half_span)
     ### generate src & rec end ###
 
     ### generate model ###

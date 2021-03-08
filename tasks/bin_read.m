@@ -98,19 +98,67 @@ for i = 1:nrec
 end
 
 %% time:
-np = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16];
+np_max = 24;
+np = 1:np_max;
+n_txt = 6;
 
-fid = fopen('time_fdtd.txt');
-c1 = '%*s %*s %*s %f\n';
-c2 = '%*s %*s %*s %f\n';
-c3 = '%*s %*s %f\n';
-formatSpec = [c1,c2,c3]; 
-A = textscan(fid, formatSpec);
-fclose(fid);
-t_fdtd = A{3};
-t_cal_fdtd = A{2};
-t_io_fdtd = A{1};
+t_fdtd = 0;
+t_cal_fdtd = 0;
+t_io_fdtd = 0;
 
+for i=1:n_txt
+    fid = fopen(sprintf('time_fdtd%d.txt',i));
+    c1 = '%*s %*s %*s %f\n';
+    c2 = '%*s %*s %*s %f\n';
+    c3 = '%*s %*s %f\n';
+    formatSpec = [c1,c2,c3]; 
+    A = textscan(fid, formatSpec,np_max);
+    fclose(fid);
+    t_fdtd = t_fdtd + A{3};
+    t_cal_fdtd = t_cal_fdtd + A{2};
+    t_io_fdtd = t_io_fdtd + A{1};
+end
+t_fdtd = t_fdtd / n_txt;
+t_cal_fdtd = t_cal_fdtd / n_txt;
+t_io_fdtd = t_io_fdtd / n_txt;
+
+v_fdtd = t_fdtd(1)./t_fdtd;
+v_cal_fdtd = t_cal_fdtd(1)./t_cal_fdtd;
+v_io_fdtd = t_io_fdtd(1)./t_io_fdtd;
+
+figure(21)
+clf
+set(gcf,'Unit','centimeters')
+set(gcf,'Position',[0,0,29.7,21])
+set(gca,'fontsize',30,'fontname','Times')
+    
+p = plot(np,t_fdtd,'-');
+% p = plot(np,t_fdtd,'-',np,t_cal_fdtd,'--',np,t_io_fdtd,'-.');
+% cr = p(2).Color;
+% p(2).Color = p(1).Color; 
+% p(3).Color = p(1).Color; 
+% title('Time usage VS cores/threads','Fontsize',36);
+xlabel('num of cores','Fontsize',20);ylabel('time(s)','Fontsize',20)
+hold on
+yyaxis right
+pr = plot(np,v_fdtd);
+% pr = plot(np,v_fdtd,'-',np,v_cal_fdtd,'--',np,v_io_fdtd,'-.');
+% pr(1).Color = cr; 
+% pr(2).Color = cr; 
+% pr(3).Color = cr; 
+ylabel('calculation speed','Fontsize',20)
+% xlim([0,20])
+% ylim(xlim/2)
+hold off
+% legend('Total time','Calculation time','I/O time','Total speed','Calculation speed','I/O speed','Location','north')
+set(gca,'fontsize',20,'fontname','Times')%,'ycolor',cr)
+yyaxis left
+set(gca,'ycolor',p(1).Color)
+
+%%
+export_fig("time vs cores of FDTD.png")
+
+%%
 fid = fopen('time_pstd.txt');
 c1 = 'Total time: %fs, Total calculate time: %fs, Total I/O time: %fs\n';
 formatSpec = [c1]; 
