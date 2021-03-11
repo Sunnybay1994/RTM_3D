@@ -52,7 +52,7 @@ echo
 echo "Computing is started at $(date)."
 
 cd $WORKPATH
-python $EXEPATH/pre_RTM_sub.py -m ''' + pstd_tag + ''' 0
+python $EXEPATH/pre_RTM_sub.py -m z''' + pstd_tag + '''
 echo "Current Directory = $WORKPATHRTM"
 ''' + execmd_rtm +'''
 
@@ -62,6 +62,10 @@ exit 0
 ''')
 
     for isrc in list_src:
+        if isrc >= nsrc:
+            next_task_tag="# "
+        else:
+            next_task_tag=""
         if server_name == 'local':
             post_tag = ""
             mpicmd = "mpiexec -np $NSLOTS "
@@ -179,11 +183,11 @@ echo "Computing is started at $(date)."
             text = '''
 ''' + execmd +'''
 ''' + execmd_std + '''
-echo "($(date))Prepare for RTM..."
-python $EXEPATH/pre_RTM_sub.py ''' + pstd_tag + ' ' + str(isrc) + ''' -m 0
-''' + execmd_rtm0 +'''
+# echo "($(date))Prepare for RTM..."
+# python $EXEPATH/pre_RTM_sub.py ''' + pstd_tag + ' ' + str(isrc) + ''' -m z
+# ''' + execmd_rtm0 +'''
 
-''' + text_sub_next + '''
+''' + next_task_tag + text_sub_next + '''
 
 python $EXEPATH/clean.py -f '''+ str(isrc) +'''
 '''
@@ -196,7 +200,7 @@ python $EXEPATH/clean.py -f '''+ str(isrc) +'''
 ''' + execmd_rtm +'''
 
 echo "($(date))Submitting next task..."
-''' + text_sub_next + '''
+''' + next_task_tag + text_sub_next + '''
 
 ''' + post_tag + '''echo "($(date))Applying image condition..."
 ''' + post_tag + '''python $EXEPATH/corr_RTM_wavefield_sub.py '''+ str(isrc) +''' &

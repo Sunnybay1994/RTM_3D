@@ -1,5 +1,5 @@
 %% load files and parameters
-workdir = '3vs2_800MHz_0.2m_0.04m_fdtd_6';
+workdir = '2vs3_fault_800MHz_0.2m_0.04m_fdtd_2';
 resultdir = fullfile(workdir,'Result');
 f_wavefield_corr = dir(fullfile(resultdir,'result_wavefield_corr*.dat'));
 
@@ -89,7 +89,8 @@ for i =1:length(slices_iz)
 end
 
 %% Draw wavefields
-reload_wvf = false;
+reload_wvf = true;
+
 amp_para.fac1 = 0;
 amp_para.fac2 = 0;
 try
@@ -97,9 +98,13 @@ try
     amp_para.srcy = m.srcy;
     amp_para.srcz = m.srcz;
 catch
-    amp_gain_factor = false;
+    amp_para.fac1 = 0;
+    amp_para.fac2 = 0;
+    amp_para.srcx = [0];
+    amp_para.srcy = [0];
+    amp_para.srcz = [0];
 end
-[wavefield,wavefield_sum] = wavefield_summation(f_wavefield_corr,fig_result_dir,wx,wy,wz,amp_gain_factor,wslicex,wslicey,wslicez,reload_wvf);
+[wavefield,wavefield_sum] = wavefield_summation(f_wavefield_corr,fig_result_dir,wx,wy,wz,amp_para,wslicex,wslicey,wslicez,reload_wvf);
 
 % %% for test wvf reading
 % for i=round(length(f_wavefield_corr)/2)
@@ -153,10 +158,10 @@ function [wavefield,wavefield_sum] = wavefield_summation(f_wavefield_corr,fig_re
     nz = length(z);
     outdir = f_wavefield_corr(1).folder;
     %%
-    f_wvf = fullfile(outdir,'result_wavefield_sum.mat');
-    f_wvf_sum = fullfile(outdir,'result_wavefield.mat');
-    if ~exist(f_wvf,'file') || reload
-        if ~exist(f_wvf_sum,'file') || reload
+    f_wvf = fullfile(outdir,'result_wavefield.mat');
+    f_wvf_sum = fullfile(outdir,'result_wavefield_sum.mat');
+    if ~exist(f_wvf_sum,'file') || reload
+        if ~exist(f_wvf,'file') || reload
             wavefield = {[]};
             parfor i = 1:length(f_wavefield_corr)
                 disp(['Loading ' num2str(i) 'th file:' f_wavefield_corr(i).name])
@@ -174,30 +179,30 @@ function [wavefield,wavefield_sum] = wavefield_summation(f_wavefield_corr,fig_re
         disp('Summing wavefields...')
         for i = 1:length(f_wavefield_corr)
             wavefield_i = wavefield{i};
-            if amp_para
+            if ~(amp_para.fac1==0 && amp_para.fac2==0)
                 [wavefield_amp,factor1,factor2] = amp_gain_distance(wavefield_i,[amp_para.srcx(i),amp_para.srcy(i),amp_para.srcz],x,y,z,amp_para.fac1,pi,amp_para.fac2);% mul1&2 are 2 and 5
             end
             if i == 1
                 wavefield_sum = wavefield_i;
-                if amp_para
+                if ~(amp_para.fac1==0 && amp_para.fac2==0)
                     wavefield_amp_sum = wavefield_amp;
                     factor1_sum = factor1;
                     factor2_sum = factor2;
                 end
             else
                 wavefield_sum = wavefield_sum + wavefield_i;
-                if amp_para
+                if ~(amp_para.fac1==0 && amp_para.fac2==0)
                     wavefield_amp_sum = wavefield_amp_sum + wavefield_amp;
                     factor1_sum = factor1_sum + factor1;
                     factor2_sum = factor2_sum + factor2;
                 end
             end
         end
-        if ~amp_para
+        if amp_para.fac1==0 && amp_para.fac2==0
             wavefield_amp_sum = wavefield_sum;
         end
 %         wavefield_amp_sum1 = wavefield_amp_sum./factor2_sum;
-        if amp_para
+        if ~(amp_para.fac1==0 && amp_para.fac2==0)
             save(f_wvf_sum,'wavefield_sum','wavefield_amp_sum','factor1_sum','factor2_sum','-v7.3')
         else
             save(f_wvf_sum,'wavefield_sum','wavefield_amp_sum','-v7.3')

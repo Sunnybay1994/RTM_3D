@@ -4,7 +4,7 @@ import matplotlib
 import scipy.io as sio
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-import os,sys,logging,getopt,struct
+import os,sys,logging,argparse,struct
 from par_RTM import *
 from writesource import *
 from normal_moveout import *
@@ -109,12 +109,12 @@ def prepare_RTM(isum,iloc,isum_std,iloc_std,gather_rtm,isrc):
     if int(nt) != nt_std:
         logger.warning("nt not equal! %d-%d"%(nt,nt_std) )
 
-    if mode == 1:
+    if 'm' in mode:
         fn = os.path.join(rtmdir,'Input','src.in'+'_'+str(isrc).zfill(4))
         srcinfos = [item.tolist()+[component] for item in iloc]
         extend_and_write_sources(fn,srcinfos,gather_rtm)
 
-    if mode == 0:
+    if 'z' in mode:
         
         tt = []
         for ig in range(len(gather_rtm)):
@@ -159,7 +159,7 @@ def bin_gathers(locs,dats,offsets=False,decay_fac=0.5,source_span=5):
 
 
 def pre_RTM(list_src):
-    if mode == 0:
+    if 'z' in mode:
         global dt,dx,dy,dz,v,z,max_offset,srclocs
         locs = []
         dats = []
@@ -194,7 +194,7 @@ def pre_RTM(list_src):
         isum_std,iloc_std = merge_gather(os.path.join(workdir,'STD'),i)
         gather_rtm = remove_STD(isum,isum_std,i)
         
-        if mode == 0:
+        if 'z' in mode:
             nt,component,nmo_results = prepare_RTM(isum,iloc,isum_std,iloc_std,gather_rtm,i)
             nmo_locs,nmo_gathers,nmo_offsets = zip(*nmo_results)
             locs += nmo_locs
@@ -211,57 +211,35 @@ def pre_RTM(list_src):
                 #     fsrc.write(locs)
                 #     np.savetxt(fsrc,dats)
                 logger.info('All Done.')
-        else:
+        if 'm' in mode:
             prepare_RTM(isum,iloc,isum_std,iloc_std,gather_rtm,i)
 
         logger.info('Done: src%d\n'%i)
 
 
 if __name__ == "__main__":
-    try:
-        opts, args = getopt.getopt(sys.argv[1:], "m:o:d:", ["mode=","outdir=","workdir=","no_nmo","pstd"])
-    except getopt.GetoptError as err:
-        # print help information and exit:
-        logger.error(err)  # will print something like "option -a not recognized"
-        # usage()
-        sys.exit(2)
+    parser = argparse.ArgumentParser(description='Prepare data before RTM',conflict_handler='resolve')
+    parser.add_argument('isrc',type=int,default=-1,help="The source No. to be processed in multi-offset mode; Number of sources in zero-offset mode.")
+    parser.add_argument('-m','--mode',choices=['m','z'],default='m',help="Mode: 'm' for multi-offset, 'z' for zero-offset")
+    parser.add_argument('--fdtd',action='store_const',const='fdtd',dest='forward_method',default='fdtd',help='Use finite difference time domain as the forward method.')
+    parser.add_argument('--pstd',action='store_const',const='pstd',dest='forward_method',default='fdtd',help='Use pseudo spectral time domain as the forward method.')
+    parser.add_argument('--workdir',type=str,default='',help="The parent directory of 'OUTPUT' and 'STD'.")
+    # parser.add_argument('--half_span',type=int,default=-1,help='Span the point source to a (1+2*half_span)x(1+2*half_span) source while forwarding. It helps to reduce the sideslobe in FDTD forwarding.')
+    parser.add_argument('--nmo',action='store_const',const=False,dest='no_nmo',default=True,help="Use nmo to traansfer some CMP to zero_offset traces.")
+    args = parser.parse_args()
 
-    mode = 1
-    workdir = ''
-    rtmdir_name = 'RTM'
-    no_nmo = False
-    forward_method = 'fdtd'
-    for o, a in opts:
-        if o in ('-m','--mode'):
-            if a == '0':
-                mode = 0
-                nsrc = len([f for f in os.listdir('Input') if os.path.isfile(os.path.join('Input',f)) and 'src.in_' in f])
-                rtmdir_name = 'RTM0'
-                logger.info('Zero-offset mode. We have %d sources to process.'%nsrc)
-            elif a == '1':
-                mode = 1
-                logger.info('normal mode. src%d'%isrc)
-            else:
-                logger.error('mode parameter must be 0,1')
-        elif o in ('-d','--workdir'):
-            workdir = a
-        elif o in ('-o','--outdir'):
-            rtmdir_name = a
-            logger.info('Output dir = "%s"'%rtmdir_name)
-        elif o in ("--no_nmo",):
-            no_nmo = True
-        elif o in ("--pstd",):
-            forward_method = 'pstd'
-            logger.info('PSTD mode.')
-        else:
-            assert False, "unhandled option"
-
-    rtmdir = os.path.join(workdir,rtmdir_name)
     read_par
-    if mode == 0:
+    if 'z' in mode:
+        rtmdir_name = 'RTM0'
+        rtmdir = os.path.join(workdir,rtmdir_name)
+        nsrc = len([f for f in os.listdir('Input') if os.path.isfile(os.path.join('Input',f)) and 'src.in_' in f])
+        logger.info('Zero-offset mode. We have %d sources to process.'%nsrc)
         pre_RTM(range(nsrc))
         # pre_RTM([60])
-    elif mode == 1:
-        isrc = int(args[0])
-        pre_RTM([isrc])
+    if 'm' in mode:
+        rtmdir_name = 'RTM'
+        rtmdir = os.path.join(workdir,rtmdir_name)
+        logger.info('Multi-offset mode. src%d'%isrc)
+        if isrc>=0:
+            pre_RTM([isrc])
 
