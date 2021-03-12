@@ -4,7 +4,7 @@ import numpy as np
 from model_em import cleanfiles
 
 class rtm_workflow:
-    def __init__(self,taskname='default',nsrc=1,job_cap=1,proc_num=4,method='fdtd',steps='gfbizc',mpipath='mpiexec',subcmd='nohup sh {script_name} {logcmd} 2>&1 &',script_name='script{s_isrc}.sh'):
+    def __init__(self,taskname='default',nsrc=1,job_cap=1,proc_num=4,method='fdtd',steps='gfbizc',mpipath='mpiexec',subcmd='nohup bash {script_name} {logcmd} 2>&1 &',script_name='script{s_isrc}.sh'):
         self._taskname = taskname
         self._nsrc = nsrc
         self._job_cap = job_cap
@@ -66,7 +66,7 @@ class rtm_workflow:
 
     @property
     def txt_head(self):
-        txt = '''#!/bin/sh
+        txt = '''#!/bin/bash
 {additional_head_txt}
 ######### parameters
 ISRC={isrc}
@@ -99,9 +99,9 @@ echo  "Computing is started at $(date)."
         return self.txt_head.format(isrc=isrc,additional_head_txt=txt)
 
     def gen_mpicmd_txt(self,wdir):
-        return "{mpipath} -np $NP -wdir {wdir} > $EXEPATH/FDTD_MPI.exe $ISRC > {wdir}/Output/$ISRC($NP).out;\n".format(mpipath=self._mpipath,wdir=wdir)
+        return '{mpipath} -np $NP -wdir {wdir} $EXEPATH/FDTD_MPI.exe $ISRC > "{wdir}/Output/$ISRC($NP).out"\n'.format(mpipath=self._mpipath,wdir=wdir)
     def gen_forward_txt(self,step):
-        head_txt = 'if [[ $STEPS =~%s ]];then\n'%step
+        head_txt = 'if [[ $STEPS =~ %s ]];then\n'%step
         exit_txt = '    exit_code=$?;echo exit_code=$exit_code\nfi\n'
         if step == 'g':
             head_txt += '    echo "($(date))Generate data..."\n'
@@ -130,7 +130,7 @@ echo  "Computing is started at $(date)."
         if self._method == 'fdtd':
             main_txt = '    ' + self.gen_mpicmd_txt(path)
         elif self._method == 'pstd':
-            main_txt = "    cd %s;\n./PSTD $NP $ISRC;\ncd $WORKPATH;\n"%path
+            main_txt = "    cd %s;./PSTD.exe $NP $ISRC;cd $WORKPATH;\n"%path
         return head_txt + main_txt + exit_txt
     def gen_txt_main(self):
         return ''.join([self.gen_forward_txt(step) for step in 'gfbz'])
@@ -138,28 +138,28 @@ echo  "Computing is started at $(date)."
     def gen_txt_tail(self,txt=''):
         if not txt:
             txt = '''
-if [[ $STEPS =~r ]];then
-    if [[ $STEPS =~c ]];then
+if [[ $STEPS =~ r ]];then
+    if [[ $STEPS =~ c ]];then
         cleanflag=""
     else
         cleanflag="--no_clean"
     fi
-    if [[ $STEPS =~i ]];then
+    if [[ $STEPS =~ i ]];then
         python $EXEPATH/post_put.py -t $DIRNAME $cleanflag
-    elif [[ $STEPS =~z ]];then
+    elif [[ $STEPS =~ z ]];then
         python $EXEPATH/post_put.py -z -t $DIRNAME $cleanflag
     fi
 else
     zoflag=""
-    if [[ $STEPS =~i ]];then
+    if [[ $STEPS =~ i ]];then
         echo "($(date))Applying image condition..."
         python $EXEPATH/corr_RTM_wavefield_sub.py $ISRC &
         python $EXEPATH/corr_RTM_slice_sub.py $ISRC &
         wait
-    elif [[ $STEPS =~z ]];then
+    elif [[ $STEPS =~ z ]];then
         zoflag="-f"
     fi
-    if [[ $STEPS =~c ]];then
+    if [[ $STEPS =~ c ]];then
         echo "($(date))Cleaning..."
         python $EXEPATH/clean.py $zoflag $ISRC
     fi
@@ -172,7 +172,7 @@ exit $exit_code
 
     @property
     def sub_next_txt(self):
-        return "echo submitting {script_name_next};\ncd $LOGPATH;{subcmd};cd $WORKPATH"
+        return "echo submitting {script_name_next};\ncd $LOGPATH;{subcmd}\ncd $WORKPATH"
     def gen_txt_next(self,isrc):
         isrc_next = isrc + self._job_cap
         if isrc_next < self._nsrc:
@@ -193,7 +193,7 @@ exit $exit_code
         script_name=self.get_script_name('_'+isrc)
         logcmd = '> {isrc}.out'.format(isrc=isrc)
         subcmd = self._subcmd.format(script_name=script_name,logcmd=logcmd)
-        content = '#!/bin/sh\nfor((i=0;i<{job_cap};i++)); {var}; {subcmd}; done'.format(job_cap=self._job_cap,var=var,subcmd=subcmd)
+        content = '#!/bin/bash\nfor((i=0;i<{job_cap};i++)); {var}; `{subcmd}`; done'.format(job_cap=self._job_cap,var=var,subcmd=subcmd)
         with open(os.path.join(self.logpath,self.name_script_sub),'w+') as fo:
             fo.write(content)
 

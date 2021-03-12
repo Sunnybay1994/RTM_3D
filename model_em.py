@@ -30,7 +30,7 @@ def cp(f1,f2):
         # logger.debug('cp %s %s'%(f,f2))
         shutil.copy(f,f2)
 
-def src_rec(dnx_src,dny_src=False,dnx_rec=False,dny_rec=False,nzp_src=False,nzp_rec=False,nx_src=False,ny_src=False,nx_rec=False,ny_rec=False,nshift=0,marginx=0,marginy=False,marginx_rec=False,marginy_rec=False,half_span=0):
+def src_rec(dnx_src,dny_src=False,dnx_rec=False,dny_rec=False,nzp_src=False,nzp_rec=False,nx_src=False,ny_src=False,nx_rec=False,ny_rec=False,nshift=0,marginx=0,marginy=False,marginx_rec=False,marginy_rec=False,half_span=2):
     logger.info('adding source and receiver...')
     logger.info('dnxs=%d,dnys=%d,dnxr=%d,mx=%d,my=%d,mxr=%d,myr=%d,half_span=%d'%(dnx_src,dny_src,dnx_rec,marginx,marginy,marginx_rec,marginy_rec,half_span))
     if not dny_src:
@@ -717,6 +717,6 @@ if __name__ == '__main__':
         forward_method = '--pstd'
     elif forward_method == 'fdtd':
         forward_method = '--fdtd'
-    subtxt = 'python batchgen.py -d %s -s %d -p %d -m %s -c %d --server %s --steps %s %s %s'%(dirname,nsrc,pnum,mode,job_cap,server,steps,forward_method,'-'+noprompt if noprompt else '')
+    subtxt = 'python batchgen.py -d "%s" -s %d -p %d -m %s -c %d --server %s --steps %s %s %s'%(dirname,nsrc,pnum,mode,job_cap,server,steps,forward_method,'-'+noprompt if noprompt else '')
     logger.info(subtxt)
     os.system(subtxt)

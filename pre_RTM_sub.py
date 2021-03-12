@@ -250,7 +250,7 @@ if __name__ == "__main__":
         rtmdir = os.path.join(workdir,rtmdir_name)
         nsrc = len([f for f in os.listdir('Input') if os.path.isfile(os.path.join('Input',f)) and 'src.in_' in f])
         rec_fname = os.path.join(rtmdir,'src_done.txt')
-        with open(rec_fname,w+) as fo:
+        with open(rec_fname,'w+') as fo:
             flag = 'force'
             lines = fo.readlines()
             nl = len(lines) + 1
@@ -263,5 +263,5 @@ if __name__ == "__main__":
                 os.remove(rec_fname)
             else:
                 exit_code = 0
-        return exit_code
+        exit(exit_code)
 
