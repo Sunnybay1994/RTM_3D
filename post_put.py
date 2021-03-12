@@ -36,7 +36,7 @@ task = m.get_task_queue()
 result = m.get_result_queue()
 if __name__ == '__main__':
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "t:z", ["taskname=",'--zero-offset'])
+        opts, args = getopt.getopt(sys.argv[1:], "t:z", ["taskname=",'--zero-offset','--no_clean'])
     except getopt.GetoptError as err:
         # print help information and exit:
         logger.error(err)  # will print something like "option -a not recognized"
@@ -44,14 +44,21 @@ if __name__ == '__main__':
         sys.exit(2)
 
     is_zRTM = False
+    clean = True
     for o, a in opts:
         if o in ('-t','--task'):
             taskname = a
         elif o in ('-z','--zero-offset'):
             logger.info('Zero-offset Mode.')
             is_zRTM = True
+        elif o in ('--no_clean'):
+            logger.info('No cleaning.')
+            clean = False
         else:
             assert False, "unhandled option"
+    if is_zRTM and not clean:
+        logger.info('Nothing to be done if do not clean in zero-offset mode.')
+        return 0
 
     if len(args) == 1:
         isrcs = [int(args[0])]
@@ -63,6 +70,6 @@ if __name__ == '__main__':
         isrcs = [int(i) for i in args]
 
     for isrc in isrcs:
-        task.put((taskname,isrc,is_zRTM))
+        task.put((taskname,isrc,is_zRTM,clean))
         task_str = '%s-src%d'%(taskname,isrc)
         logger.info('Put task: %s. (Tasks in queue: %d)'%(task_str,task.qsize()))

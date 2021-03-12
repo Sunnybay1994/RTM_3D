@@ -47,10 +47,10 @@ if __name__ == '__main__':
 ############## jobs here ##############
     while 1:
         try:
-            (taskname,isrc,is_zRTM) = task.get(timeout=1800)
+            (taskname,isrc,is_zRTM,clean) = task.get(timeout=1800)
             # end master
             if taskname.lower().strip() == 'end_master':
-                result.put((taskname,isrc,is_zRTM,-1))
+                result.put((taskname,isrc,is_zRTM,clean,-1))
                 continue
         except ConnectionError as e:
             logger.error('ConnectionError, worker will exit.(Error info: %s)'%e)
@@ -60,18 +60,21 @@ if __name__ == '__main__':
         else: 
             task_str = '%s-src%d'%(taskname,isrc)
             logger.info('Processing %s (Tasks waiting: %d)'%(task_str,task.qsize()))
-            result.put((taskname,isrc,is_zRTM,-1)) # -1 represents jobs are processing.
+            result.put((taskname,isrc,is_zRTM,clean,-1)) # -1 represents jobs are processing.
 
             workpath = os.path.join(cwd,'tasks',taskname)
             start_time = time.time()
             if is_zRTM:
                 p_status = os.system('cd %s;python %s -f %d'%(workpath,py3,isrc))
             else:
-                p_status = os.system('cd %s;python %s %d;python %s %d;python %s %d'%(workpath,py1,isrc,py2,isrc,py3,isrc))
+                if not clean:
+                    p_status = os.system('cd %s;python %s %d;python %s %d'%(workpath,py1,isrc,py2,isrc))
+                else:
+                    p_status = os.system('cd %s;python %s %d;python %s %d;python %s %d'%(workpath,py1,isrc,py2,isrc,py3,isrc))
             end_time = time.time()
             logger.info('Job %s done, status code: %d, time cost: %.2fs.\n'%(task_str, p_status, end_time - start_time))
 
-            result.put((taskname,isrc,is_zRTM,p_status)) # p_status==0 means succeed.
+            result.put((taskname,isrc,is_zRTM,clean,p_status)) # p_status==0 means succeed.
 
             
 #######################################

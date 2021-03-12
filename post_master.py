@@ -45,16 +45,16 @@ if __name__ == '__main__':
     result = manager.get_result_queue()
 
 ############# master here #############
-    jobs_processing = {} # processing list(dict): {[taskname,isrc,is_zRTM]:[p_status,start_time]}
+    jobs_processing = {} # processing list(dict): {[taskname,isrc,is_zRTM,clean]:[p_status,start_time]}
     while 1:
         try:
-            (taskname,isrc,is_zRTM,p_status) = result.get(timeout=1800)
+            (taskname,isrc,is_zRTM,clean,p_status) = result.get(timeout=1800)
             # print(taskname)
             # end master 
             if taskname.lower().strip() == 'end_master':
                 logger.info("'end_master' instruction detected, closing manager.")
                 if jobs_processing and not task.empty():
-                    task.put((taskname,isrc,is_zRTM))
+                    task.put((taskname,isrc,is_zRTM,clean))
                     logger.warning("Queue NOT empty or still processing, waiting to close.")
                     continue
                 else:
@@ -72,7 +72,7 @@ if __name__ == '__main__':
             if p_status == -1:
                 # assign task
                 logger.info('Task assigned: %s'%task_str)
-                jobs_processing[(taskname,isrc,is_zRTM)] = (p_status,time_now)
+                jobs_processing[(taskname,isrc,is_zRTM,clean)] = (p_status,time_now)
             else:
                 # task done: del item from processing list
                 if p_status == 0:
@@ -81,10 +81,10 @@ if __name__ == '__main__':
                 else:
                     # fail: put task back to task queue
                     logger.warning('Task not success: %s (return code: %d)'%(task_str,p_status))
-                    task.put((taskname,isrc,is_zRTM))
+                    task.put((taskname,isrc,is_zRTM,clean))
                     logger.info('Put task back: %s'%task_str)
                 try:
-                    del(jobs_processing[(taskname,isrc,is_zRTM)])
+                    del(jobs_processing[(taskname,isrc,is_zRTM,clean)])
                 except Exception as e:
                     logger.warning('Error deleting task in processing list: %s'%e)
         finally:

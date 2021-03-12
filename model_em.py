@@ -472,9 +472,10 @@ if __name__ == '__main__':
     parser.add_argument('--dx_rec',type=float,default=-1.0,help='Appoint the x space interval (m) of the receiver to replace the one in the model file.')
     parser.add_argument('--dy_rec',type=float,default=-1.0,help='Appoint the y space interval (m) of the receiver to replace the one in the model file.')
     parser.add_argument('-m','--mode',choices=['m','z','mz'],default='m',help="Mode: 'm' for multi-offset, 'z' for zero-offset, 'mz' for both multi- and zero-offset.")
-    # parser.add_argument('--forward_method',choices=['fdtd','pstd'],default='fdtd',help="Forward method used in RTM.")
-    parser.add_argument('--fdtd',action='store_const',const='fdtd',dest='forward_method',default='fdtd',help='Use finite difference time domain as the forward method.')
-    parser.add_argument('--pstd',action='store_const',const='pstd',dest='forward_method',default='fdtd',help='Use pseudo spectral time domain as the forward method.')
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('--forward_method',choices=['fdtd','pstd'],default='fdtd',help="Forward method used in RTM.")
+    group.add_argument('--fdtd',action='store_const',const='fdtd',dest='forward_method',help='Use finite difference time domain as the forward method.')
+    group.add_argument('--pstd',action='store_const',const='pstd',dest='forward_method',help='Use pseudo spectral time domain as the forward method.')
     parser.add_argument('--no_gen_model',action='store_const',const=True,default=False,help="Just modifiy parameters without generating model as generating model needs a lot of time.")
     parser.add_argument('--half_span',type=int,default=-1,help='Span the point source to a (1+2*half_span)x(1+2*half_span) source while forwarding. It helps to reduce the sideslobe in FDTD forwarding.')
     parser.add_argument('--server',choices=['local','freeosc','x3850'],default='local',help="Where to run the code.")
@@ -482,7 +483,7 @@ if __name__ == '__main__':
     parser.add_argument('-c','--job_cap',type=int,default=-1,help='How may shot gathers (sources) should the server handle at the same time. Default: 1 for local, 8 for x3850 and 32 for freeosc.')
     parser.add_argument('-y',action='store_const',const='y',dest='noprompt',default=False,help="Input 'y' in all input prompts with no disturbing.")
     parser.add_argument('-n',action='store_const',const='n',dest='noprompt',default=False,help="Input 'n' in all input prompts with no disturbing.")
-    parser.add_argument('--steps',type=str,default='gfbi',help="Select which steps are involved. 'g' for generate data; 'f' for source(forward) wavefield; 'b' for receiver(backward) wavefield; 'i' for imaging.")
+    parser.add_argument('--steps',type=str,default='',help="Manually Select which steps are involved. 'g' for generate data; 'f' for source(forward) wavefield; 'b' for receiver(backward) wavefield; 'i' for cross-corrlation image condition; 'z' for cal zero-offset backward wvf(image condition); 'c' for clean middle result, add 'r' option if you want to run the 'i' and 'c' process on other servers for they do not involve parallel calculation(set up 'post_master/worker.py' first). Default: Use 'gfbic' for a whole multi-offset workflow, 'gfzc' for a whole zero-offset workflow, 'gfbizc' for both.")
     args = parser.parse_args()
 
     model = args.model
@@ -507,7 +508,15 @@ if __name__ == '__main__':
     if args.job_cap > 0:
         job_cap = args.job_cap
     logger.info('pnum=%d, job_capacity=%d'%(pnum,job_cap))
-
+    if args.steps:
+        steps = args.steps
+    else:
+        if mode == 'z':
+            steps = 'gfzc'
+        elif mode == 'm':
+            steps = 'gfbic'
+        elif mode == 'mz':
+            steps = 'gfbizc'
 
     ### load model ###
     try:
@@ -708,6 +717,6 @@ if __name__ == '__main__':
         forward_method = '--pstd'
     elif forward_method == 'fdtd':
         forward_method = '--fdtd'
-    subtxt = 'python batchgen.py -d %s -s %d -p %d -m %s -c %d --server %s --steps %s %s %s'%(dirname,nsrc,pnum,mode,job_cap,server,args.steps,forward_method,'-'+noprompt if noprompt else '')
+    subtxt = 'python batchgen.py -d %s -s %d -p %d -m %s -c %d --server %s --steps %s %s %s'%(dirname,nsrc,pnum,mode,job_cap,server,steps,forward_method,'-'+noprompt if noprompt else '')
     logger.info(subtxt)
     os.system(subtxt)

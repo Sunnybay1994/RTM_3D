@@ -221,25 +221,47 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Prepare data before RTM',conflict_handler='resolve')
     parser.add_argument('isrc',type=int,default=-1,help="The source No. to be processed in multi-offset mode; Number of sources in zero-offset mode.")
     parser.add_argument('-m','--mode',choices=['m','z'],default='m',help="Mode: 'm' for multi-offset, 'z' for zero-offset")
-    parser.add_argument('--fdtd',action='store_const',const='fdtd',dest='forward_method',default='fdtd',help='Use finite difference time domain as the forward method.')
-    parser.add_argument('--pstd',action='store_const',const='pstd',dest='forward_method',default='fdtd',help='Use pseudo spectral time domain as the forward method.')
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('--forward_method',choices=['fdtd','pstd'],default='fdtd',help="Forward method used in RTM.")
+    group.add_argument('--fdtd',action='store_const',const='fdtd',dest='forward_method',help='Use finite difference time domain as the forward method.')
+    group.add_argument('--pstd',action='store_const',const='pstd',dest='forward_method',help='Use pseudo spectral time domain as the forward method.')
     parser.add_argument('--workdir',type=str,default='',help="The parent directory of 'OUTPUT' and 'STD'.")
     # parser.add_argument('--half_span',type=int,default=-1,help='Span the point source to a (1+2*half_span)x(1+2*half_span) source while forwarding. It helps to reduce the sideslobe in FDTD forwarding.')
     parser.add_argument('--nmo',action='store_const',const=False,dest='no_nmo',default=True,help="Use nmo to traansfer some CMP to zero_offset traces.")
+    
     args = parser.parse_args()
+    isrc = args.isrc
+    mode = args.mode
+    forward_method = args.forward_method
+    workdir = args.workdir
+    no_nmo = args.no_nmo
 
     read_par
-    if 'z' in mode:
-        rtmdir_name = 'RTM0'
-        rtmdir = os.path.join(workdir,rtmdir_name)
-        nsrc = len([f for f in os.listdir('Input') if os.path.isfile(os.path.join('Input',f)) and 'src.in_' in f])
-        logger.info('Zero-offset mode. We have %d sources to process.'%nsrc)
-        pre_RTM(range(nsrc))
-        # pre_RTM([60])
+
     if 'm' in mode:
         rtmdir_name = 'RTM'
         rtmdir = os.path.join(workdir,rtmdir_name)
         logger.info('Multi-offset mode. src%d'%isrc)
         if isrc>=0:
             pre_RTM([isrc])
+
+    if 'z' in mode:
+        rtmdir_name = 'RTM0'
+        rtmdir = os.path.join(workdir,rtmdir_name)
+        nsrc = len([f for f in os.listdir('Input') if os.path.isfile(os.path.join('Input',f)) and 'src.in_' in f])
+        rec_fname = os.path.join(rtmdir,'src_done.txt')
+        with open(rec_fname,w+) as fo:
+            flag = 'force'
+            lines = fo.readlines()
+            nl = len(lines) + 1
+            logger.info('zero offset mode: %d(%d/%d)\n'%(isrc,nl,nsrc))
+            fo.write('%d(%d/%d)\n'%(isrc,nl,nsrc))
+            if nl == nsrc-1 or lines[0].strip() == flag:
+                exit_code = 1
+                logger.info('Zero-offset mode. We have %d sources to process.'%nsrc)
+                pre_RTM(range(nsrc))
+                os.remove(rec_fname)
+            else:
+                exit_code = 0
+        return exit_code
 
