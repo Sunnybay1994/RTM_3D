@@ -1,121 +1,97 @@
 #!/usr/bin/env python
 import sys,os,logging,getopt
-from corr_RTM_slice_sub import get_fn_from_dir
-from par_RTM import *
+import image_condition.get_filename_list as rtmfn
+sys.path.append('..')
+from common import *
 
+def cleanfiles(filelist):
+    for fn in filelist:
+        print(fn)
+        try:
+            os.remove(fn)
+        except Exception as e:
+            logger.error(e)
 
-#logger
-logger = logging.getLogger('clean')
-logger.setLevel(logging.DEBUG) #CRITICAL>ERROR>WARNING>INFO>DEBUG》NOTSET
-fh = logging.FileHandler('log/clean.log')
-fh.setLevel(logging.DEBUG)
-ch = logging.StreamHandler()
-ch.setLevel(logging.INFO)
-formatter = logging.Formatter('%(asctime)s(%(process)d-%(processName)s): (%(levelname)s) %(message)s')
-fh.setFormatter(formatter)
-ch.setFormatter(formatter)
-logger.addHandler(fh)
-logger.addHandler(ch)
-
-def clean_slice(isrc, workdir, dir1 = os.path.join('STD','Output'), dir2 = os.path.join('RTM','Output'), dir3 = 'Output'):
-    dir1 = os.path.join(workdir,dir1)
-    dir2 = os.path.join(workdir,dir2)
-    dir3 = os.path.join(workdir,dir3)
-    logger.info("Begin cleaning slice of src%d"%isrc) 
-    
-    list1 = get_fn_from_dir(os.path.join(dir1, 'sl*_Ey_'+str(isrc).zfill(4)+'*.bin'))
-    list2 = get_fn_from_dir(os.path.join(dir2, 'sl*_Ey_'+str(isrc).zfill(4)+'*.bin'))
-    list3 = get_fn_from_dir(os.path.join(dir3, 'sl*_Ey_'+str(isrc).zfill(4)+'*.bin'))
-
-    for flist in [list1,list2,list3]:
-        for fname in flist:
-            fname = fname.strip('\n')
-            # logger.debug('rm '+ fname)
-            try:
-                os.remove(fname)
-            except Exception as e:
-                logger.error(e)
-
-def clean_wavefield(isrc, workdir, dir1 = os.path.join('STD','Output'), dir2 = os.path.join('RTM','Output'), dir3 = 'Output'):
-    dir1 = os.path.join(workdir,dir1)
-    dir2 = os.path.join(workdir,dir2)
-    dir3 = os.path.join(workdir,dir3)
-    logger.info("Begin cleaning wavefield of src%d"%isrc) 
-    
-    list1 = get_fn_from_dir(os.path.join(dir1, 'wvf_Ey_'+str(isrc).zfill(4)+'*.bin'))
-    list2 = get_fn_from_dir(os.path.join(dir2, 'wvf_Ey_'+str(isrc).zfill(4)+'*.bin'))
-    list3 = get_fn_from_dir(os.path.join(dir3, 'wvf_Ey_'+str(isrc).zfill(4)+'*.bin'))
-
-    for flist in [list1,list2,list3]:
-        for fname in flist:
-            fname = fname.strip('\n')
-            # logger.debug('rm '+ fname)
-            try:
-                os.remove(fname)
-            except Exception as e:
-                logger.error(e)
-
-
-def check_file(isrc,result_dir='Result'):
+def check_file(isrc,workdir,logger,result_dir='Result'):
     logger.info("Checking files of src%d"%isrc)
     dum_s = True
     dum_w = True
-    for i in range(slice_nx):
-        dum_s = os.path.isfile(os.path.join(result_dir, 'result_xcorr_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.dat')) and dum_s
-        dum_s = os.path.isfile(os.path.join(result_dir, 'result_xcorr_normal_forward_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.dat')) and dum_s
-        dum_s = os.path.isfile(os.path.join(result_dir, 'result_xcorr_normal_backward_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.dat')) and dum_s
-    for i in range(slice_ny):
-        dum_s = os.path.isfile(os.path.join(result_dir, 'result_ycorr_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.dat')) and dum_s
-        dum_s = os.path.isfile(os.path.join(result_dir, 'result_ycorr_normal_forward_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.dat')) and dum_s
-        dum_s = os.path.isfile(os.path.join(result_dir, 'result_ycorr_normal_backward_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.dat')) and dum_s
-    for i in range(slice_nz):
-        dum_s = os.path.isfile(os.path.join(result_dir, 'result_zcorr_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.dat')) and dum_s
-        dum_s = os.path.isfile(os.path.join(result_dir, 'result_zcorr_normal_forward_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.dat')) and dum_s
-        dum_s = os.path.isfile(os.path.join(result_dir, 'result_zcorr_normal_backward_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.dat')) and dum_s
-    dum_w = os.path.isfile(os.path.join(result_dir, 'result_wavefield_corr_' + str(isrc).zfill(4) + '.dat')) and dum_w
-    dum_w = os.path.isfile(os.path.join(result_dir, 'result_wavefield_forward_' + str(isrc).zfill(4) + '.dat')) and dum_w
-    dum_w = os.path.isfile(os.path.join(result_dir, 'result_wavefield_backward_' + str(isrc).zfill(4) + '.dat')) and dum_w
+    result_dir = os.path.join(workdir,result_dir)
+    for xyz in ['x','y','z']:
+        if xyz == 'x':
+            nslice = slice_nx
+        elif xyz == 'y':
+            nslice = slice_ny
+        elif xyz == 'z':
+            nslice = slice_nz
+        if dum_s:
+            for i in range(nslice):
+                dum_s = os.path.isfile(os.path.join(result_dir, rtmfn.result_slice_fn.format(xyz=xyz,isrc=isrc,islice=i))) and dum_s
+                dum_s = os.path.isfile(os.path.join(result_dir, rtmfn.result_slice_nf_fn.format(xyz=xyz,isrc=isrc,islice=i))) and dum_s
+                dum_s = os.path.isfile(os.path.join(result_dir,  rtmfn.result_slice_nb_fn.format(xyz=xyz,isrc=isrc,islice=i))) and dum_s
+                if not dum_s:
+                    break
+        if dum_w:
+            dum_w = os.path.isfile(os.path.join(result_dir, rtmfn.result_wavefield_fn.format(isrc=isrc))) and dum_w
+            dum_w = os.path.isfile(os.path.join(result_dir, rtmfn.result_wavefield_f_fn.format(isrc=isrc))) and dum_w
+            dum_w = os.path.isfile(os.path.join(result_dir, rtmfn.result_wavefield_f_fn.format(isrc=isrc))) and dum_w
     return dum_s,dum_w
 
+def clean(isrc,workdir,nocheck,slicelist,wvlist):
+    # logger
+    logger=addlogger('clean',path=os.path.join(workdir,'log'))
 
+    logger.info("Begin cleaning files of src%d"%isrc)
+    if not nocheck:
+        check_s,check_w = check_file(isrc,workdir,logger=logger)
+        if check_s == True:
+            logger.info('cleaning slices: src%d'%isrc)
+            cleanfiles(slicelist)
+        else:
+            logger.warning("src%d: No slices deleted, as results are not complete!"%isrc)
+        if check_w == True:
+            logger.info('cleaning wavefields: src%d'%isrc)
+            cleanfiles(wvlist)
+        else:
+            logger.warning("src%d: No wavefield deleted, as results are not complete!"%isrc)
+    else:
+        logger.info('cleaning all: src%d'%isrc)
+        cleanfiles(slicelist+wvlist)
+    logger.info('clean src%d done.'%isrc)
 
 
 if __name__ == "__main__":
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "fd:", ["force","workdir="])
+        opts, args = getopt.getopt(sys.argv[1:], "md:", ["mode=","workdir="])
     except getopt.GetoptError as err:
         # print help information and exit:
-        logger.error(err)  # will print something like "option -a not recognized"
+        raise err  # will print something like "option -a not recognized"
         # usage()
         sys.exit(2)
-
-    isrc = int(args[0])
-    logger.info("Begin cleaning files of src%d"%isrc)
-
-    check = True
+    # parse arg
+    nocheck = False
     workdir = ''
     for o, a in opts:
-        if o in ('-f','--force'):
-            logger.info('Zero-offset mode: clean without check.')
-            check = False
+        if o in ('-m','--mode'):
+            if a == 'z':
+                logger.info('Zero-offset mode: clean without check.')
+                nocheck = True
         elif o in ('-d','--workdir'):
             workdir = a
         else:
             assert False, "unhandled option"
+    isrc = int(args[0])
+    # get files
+    path0,listx0,listy0,listz0,listw0 = rtmfn.get_isrc_filenames_data(isrc,workdir)
+    path1,path2,listx1,listx2,listy1,listy2,listz1,listz2,listw1,listw2 = rtmfn.get_isrc_filenames_rtm(isrc,workdir)
+    # main
+    list0 = [os.path.join(path0,fn) for fn in listx0+listy0+listz0]
+    listw0 = [os.path.join(path0,fn) for fn in listw0]
+    list1 = [os.path.join(path1,fn) for fn in listx1+listy1+listz1]
+    listw1 = [os.path.join(path1,fn) for fn in listw1]
+    list2 = [os.path.join(path2,fn) for fn in listx2+listy2+listz2]
+    listw2 = [os.path.join(path2,fn) for fn in listw2]
+    clean(isrc,workdir,nocheck,list0+list1+list2,listw0+listw1+listw2)
 
 
-    if check:
-        check_s,check_w = check_file(isrc)
-        if check_s == True:
-            clean_slice(isrc,workdir)
-        else:
-            logger.warning("src%d: No slices deleted, as results are not complete!"%isrc)
-        if check_w == True:
-            clean_wavefield(isrc,workdir)
-        else:
-            logger.warning("src%d: No wavefield deleted, as results are not complete!"%isrc)
-    else:
-        clean_slice(isrc,workdir)
-        clean_wavefield(isrc,workdir)
-
-    logger.info('src%d done.'%isrc)
+    

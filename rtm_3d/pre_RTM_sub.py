@@ -5,22 +5,7 @@ import scipy.io as sio
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import os,sys,logging,argparse,struct
-from par_RTM import *
-from writesource import *
-from normal_moveout import *
-
-#logger
-logger = logging.getLogger('pre_RTM_sub')
-logger.setLevel(logging.DEBUG) #CRITICAL>ERROR>WARNING>INFO>DEBUG》NOTSET
-fh = logging.FileHandler('log/pre_RTM_sub.log')
-fh.setLevel(logging.DEBUG)
-ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s(%(process)d-%(processName)s): (%(levelname)s) %(message)s')
-fh.setFormatter(formatter)
-ch.setFormatter(formatter)
-logger.addHandler(fh)
-logger.addHandler(ch)
+from common import *
 
 def merge_gather(wdir, isrc):
     # global isum
@@ -166,7 +151,6 @@ def pre_RTM(list_src):
         offsets = []
         logger.info('loading para')
         dic_model = sio.loadmat(os.path.join('model.mat'))
-        dict_sr = sio.loadmat(os.path.join('model_sr.mat'))
         epr = np.array(dic_model['ep'])
         dt = float(dic_model['dt'])
         dx = float(dic_model['dx'])
@@ -178,9 +162,9 @@ def pre_RTM(list_src):
         nz = int(dic_model['nz'])
         v = 299792458/np.sqrt(epr)
         z = (np.array(range(nz)) - nz_air) * dz
-        srcxs = [int(round(x/dx)) for x in dict_sr['srcx'][0].tolist()]
-        srcys = [int(round(y/dy)) for y in dict_sr['srcy'][0].tolist()]
-        srcz = int(round(float(dict_sr['srcz'])/dz + nz_air))
+        srcxs = [int(round(x/dx)) for x in dic_model['srcx'][0].tolist()]
+        srcys = [int(round(y/dy)) for y in dic_model['srcy'][0].tolist()]
+        srcz = int(round(float(dic_model['srcz'])/dz + nz_air))
         srclocs = [locxy+(srcz,) for locxy in zip(srcxs,srcys)]
 
         dsrc_grid = np.linalg.norm(np.array(srclocs[1])-np.array(srclocs[0]))
@@ -236,7 +220,11 @@ if __name__ == "__main__":
     workdir = args.workdir
     no_nmo = args.no_nmo
 
-    read_par
+    # logger
+    global logger
+    logger=addlogger(sys.argv[0],path=os.path.join(workdir,'log'))
+
+    read_par()
 
     if 'm' in mode:
         rtmdir_name = 'RTM'
@@ -250,7 +238,7 @@ if __name__ == "__main__":
         rtmdir = os.path.join(workdir,rtmdir_name)
         nsrc = len([f for f in os.listdir('Input') if os.path.isfile(os.path.join('Input',f)) and 'src.in_' in f])
         rec_fname = os.path.join(rtmdir,'src_done.txt')
-        with open(rec_fname,'w+') as fo:
+        with open(rec_fname,'a+') as fo:
             flag = 'force'
             lines = fo.readlines()
             nl = len(lines) + 1
@@ -260,7 +248,7 @@ if __name__ == "__main__":
                 exit_code = 1
                 logger.info('Zero-offset mode. We have %d sources to process.'%nsrc)
                 pre_RTM(range(nsrc))
-                os.remove(rec_fname)
+                os.rename(rec_fname,rec_name+'_finished.txt')
             else:
                 exit_code = 0
         exit(exit_code)

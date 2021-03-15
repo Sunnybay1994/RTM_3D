@@ -3,62 +3,13 @@ import numpy as np
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-import sys,os,re,logging,getopt,struct
-from par_RTM import *
+import sys,os,re,logging,getopt
+import image_condition.get_filename_list as rtmfn
+sys.path.append('..')
+from common import *
 
-#logger
-logger = logging.getLogger('corr_slice')
-logger.setLevel(logging.DEBUG) #CRITICAL>ERROR>WARNING>INFO>DEBUG》NOTSET
-fh = logging.FileHandler('log/corr_RTM_slice_sub.log')
-fh.setLevel(logging.DEBUG)
-ch = logging.StreamHandler()
-ch.setLevel(logging.INFO)
-formatter = logging.Formatter('%(asctime)s(%(process)d-%(processName)s): (%(levelname)s) %(message)s')
-fh.setFormatter(formatter)
-ch.setFormatter(formatter)
-logger.addHandler(fh)
-logger.addHandler(ch)
-
-def get_fn_from_dir(fn, order=1):
-    logger.info('loading files with name "' + os.path.basename(fn) + '" from "' + os.path.dirname(fn) + '"')
-    if 'win' in sys.platform:
-        list1 = os.popen('dir/b/on ' + fn).readlines()
-        dirname = os.path.dirname(fn)
-        list1 = list(map(lambda x: os.path.join(dirname, x), list1))
-    elif 'linux' in sys.platform:
-        list1 = os.popen('ls ' + fn).readlines()
-    else:
-        logger.error('unknown platform: %s'%sys.platform)
-        return 0
-    if order == -1:
-        list1.reverse()
-
-    return list(map(lambda x: x.strip('\n'), list1))
-
-def read_bin_data(fn, dims, type='f'):
-    with open(fn,'rb') as fo:
-        data_raw = struct.unpack(type*dims[0]*dims[1]*dims[2],fo.read())
-    dims.reverse()
-    data = np.reshape(data_raw,dims)
-    data = data.transpose(2,1,0)
-    # print(np.shape(data))
-    return data
-
-
-def corr_slice(isrc, workdir, dir1 = 'Output', dir2 = os.path.join('RTM','Output'), dir3 = 'Result'):
+def corr_slice(isrc, workdir, path1,path2,xlist1,xlist2,ylist1,ylist2,zlist1,zlist2, outdir,logger):
     logger.info('corr_slice src%d'%isrc)
-
-    dir1 = os.path.join(workdir,dir1)
-    dir2 = os.path.join(workdir,dir2)
-    dir3 = os.path.join(workdir,dir3)
-    
-    xlist1 = get_fn_from_dir(os.path.join(dir1, 'slx_Ey_'+str(isrc).zfill(4)+'*.bin'))
-    ylist1 = get_fn_from_dir(os.path.join(dir1, 'sly_Ey_'+str(isrc).zfill(4)+'*.bin'))
-    zlist1 = get_fn_from_dir(os.path.join(dir1, 'slz_Ey_'+str(isrc).zfill(4)+'*.bin'))
-
-    xlist2 = get_fn_from_dir(os.path.join(dir2, 'slx_Ey_'+str(isrc).zfill(4)+'*.bin'), -1)
-    ylist2 = get_fn_from_dir(os.path.join(dir2, 'sly_Ey_'+str(isrc).zfill(4)+'*.bin'), -1)
-    zlist2 = get_fn_from_dir(os.path.join(dir2, 'slz_Ey_'+str(isrc).zfill(4)+'*.bin'), -1)
 
     if len(xlist1) != len(xlist2) or len(ylist1) != len(ylist2) or len(zlist1) != len(zlist2):
         logger.error("src%d: The number of slice are different!(std:%d %d %d, rtm:%d %d %d)"%(isrc,len(xlist1),len(ylist1),len(zlist1),len(xlist2),len(ylist2),len(zlist2))) 
@@ -70,15 +21,16 @@ def corr_slice(isrc, workdir, dir1 = 'Output', dir2 = os.path.join('RTM','Output
     xdata2 = []
     ydata2 = []
     zdata2 = []
-    dum = 0
     for i in range(len(xlist1)):
-        xname1 = xlist1[i]
-        yname1 = ylist1[i]
-        zname1 = zlist1[i]
-        xname2 = xlist2[i]
-        yname2 = ylist2[i]
-        zname2 = zlist2[i]
+        xname1 = os.path.join(path1,xlist1[i])
+        yname1 = os.path.join(path1,ylist1[i])
+        zname1 = os.path.join(path1,zlist1[i])
+        xname2 = os.path.join(path2,xlist2[i])
+        yname2 = os.path.join(path2,ylist2[i])
+        zname2 = os.path.join(path2,zlist2[i])
         logger.debug('corr_slice:%s,%s'%(os.path.basename(xname1),os.path.basename(xname2)))
+        logger.debug('corr_slice:%s,%s'%(os.path.basename(yname1),os.path.basename(yname2)))
+        logger.debug('corr_slice:%s,%s'%(os.path.basename(zname1),os.path.basename(zname2)))
         xdata1 = read_bin_data(xname1,[slice_nx,ny,nz])
         ydata1 = read_bin_data(yname1,[nx,slice_ny,nz])
         zdata1 = read_bin_data(zname1,[nx,ny,slice_nz])
@@ -89,11 +41,9 @@ def corr_slice(isrc, workdir, dir1 = 'Output', dir2 = os.path.join('RTM','Output
             xcorr_data = xdata1 * xdata2
             ycorr_data = ydata1 * ydata2
             zcorr_data = zdata1 * zdata2
-
             xnormal_forward = xdata1 * xdata1
             ynormal_forward = ydata1 * ydata1
             znormal_forward = zdata1 * zdata1
-
             xnormal_backward = xdata2 * xdata2
             ynormal_backward = ydata2 * ydata2
             znormal_backward = zdata2 * zdata2    
@@ -101,11 +51,9 @@ def corr_slice(isrc, workdir, dir1 = 'Output', dir2 = os.path.join('RTM','Output
             xcorr_data += xdata1 * xdata2
             ycorr_data += ydata1 * ydata2
             zcorr_data += zdata1 * zdata2
-
             xnormal_forward += xdata1 * xdata1
             ynormal_forward += ydata1 * ydata1
             znormal_forward += zdata1 * zdata1
-
             xnormal_backward += xdata2 * xdata2
             ynormal_backward += ydata2 * ydata2
             znormal_backward += zdata2 * zdata2
@@ -134,106 +82,75 @@ def corr_slice(isrc, workdir, dir1 = 'Output', dir2 = os.path.join('RTM','Output
     except Warning as wa:
         logger.warning(wa+'(zb:%d/%d)'%(zcorr_data,znormal_backward))
 
-    for i in range(slice_nx):
-        xslice = xcorr_data[i,:,:]
-        xslice_normal_forward = xcorr_normal_forward[i,:,:]
-        xslice_normal_backward = xcorr_normal_backward[i,:,:]
-        np.savetxt(os.path.join(dir3, 'result_xcorr_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.dat'), xslice)
-        np.savetxt(os.path.join(dir3, 'result_xcorr_normal_forward_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.dat'), xslice_normal_forward)
-        np.savetxt(os.path.join(dir3, 'result_xcorr_normal_backward_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.dat'), xslice_normal_backward)
-        
-        plt.clf()
-        plt.imshow(xslice.T, interpolation='none')
-        plt.colorbar()
-        plt.savefig(os.path.join(dir3, 'xResult_RTM_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.png'))
-        plt.clf()
-        plt.imshow(xslice_normal_forward.T, interpolation='none')
-        plt.colorbar()
-        plt.savefig(os.path.join(dir3, 'xResult_RTM_normal_forward_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.png'))
-        plt.clf()
-        plt.imshow(xslice_normal_backward.T, interpolation='none')
-        plt.colorbar()
-        plt.savefig(os.path.join(dir3, 'xResult_RTM_normal_backward_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.png'))
-
-    for i in range(slice_ny):
-        yslice = ycorr_data[:,i,:]
-        yslice_normal_forward = ycorr_normal_forward[:,i,:]
-        yslice_normal_backward = ycorr_normal_backward[:,i,:]
-        np.savetxt(os.path.join(dir3, 'result_ycorr_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.dat'), yslice)
-        np.savetxt(os.path.join(dir3, 'result_ycorr_normal_forward_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.dat'), yslice_normal_forward)
-        np.savetxt(os.path.join(dir3, 'result_ycorr_normal_backward_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.dat'), yslice_normal_backward)
-        
-        plt.clf()
-        plt.imshow(yslice.T, interpolation='none')
-        plt.colorbar()
-        plt.savefig(os.path.join(dir3, 'yResult_RTM_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.png'))
-        plt.clf()
-        plt.imshow(yslice_normal_forward.T, interpolation='none')
-        plt.colorbar()
-        plt.savefig(os.path.join(dir3, 'yResult_RTM_normal_forward_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.png'))
-        plt.clf()
-        plt.imshow(yslice_normal_backward.T, interpolation='none')
-        plt.colorbar()
-        plt.savefig(os.path.join(dir3, 'yResult_RTM_normal_backward_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.png'))        
-
-    for i in range(slice_nz):
-        zslice = zcorr_data[:,:,i]
-        zslice_normal_forward = zcorr_normal_forward[:,:,i]
-        zslice_normal_backward = zcorr_normal_backward[:,:,i]
-        np.savetxt(os.path.join(dir3, 'result_zcorr_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.dat'), zslice)
-        np.savetxt(os.path.join(dir3, 'result_zcorr_normal_forward_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.dat'), zslice_normal_forward)
-        np.savetxt(os.path.join(dir3, 'result_zcorr_normal_backward_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.dat'), zslice_normal_backward)
-        
-        plt.clf()
-        plt.imshow(zslice.T, interpolation='none')
-        plt.colorbar()
-        plt.savefig(os.path.join(dir3, 'zResult_RTM_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.png'))
-        plt.clf()
-        plt.imshow(zslice_normal_forward.T, interpolation='none')
-        plt.colorbar()
-        plt.savefig(os.path.join(dir3, 'zResult_RTM_normal_forward_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.png'))
-        plt.clf()
-        plt.imshow(zslice_normal_backward.T, interpolation='none')
-        plt.colorbar()
-        plt.savefig(os.path.join(dir3, 'zResult_RTM_normal_backward_' + str(isrc).zfill(4) + '_' + str(i).zfill(2) + '.png'))
-
+    def savefiles(xyz):
+        if xyz == 'x':
+            nslice = slice_nx
+        elif xyz == 'y':
+            nslice = slice_ny
+        elif xyz == 'z':
+            nslice = slice_nz
+        for i in range(nslice):
+            logger.info('Saving slice%s%d of src%d'%(xyz,i,isrc))
+            if xyz == 'x':
+                slice_data = xcorr_data[i,:,:]
+                slice_normal_forward = xcorr_normal_forward[i,:,:]
+                slice_normal_backward = xcorr_normal_backward[i,:,:]
+            elif xyz == 'y':
+                slice_data = ycorr_data[:,i,:]
+                slice_normal_forward = ycorr_normal_forward[:,i,:]
+                slice_normal_backward = ycorr_normal_backward[:,i,:]
+            elif xyz == 'z':
+                slice_data = zcorr_data[:,:,i]
+                slice_normal_forward = zcorr_normal_forward[:,:,i]
+                slice_normal_backward = zcorr_normal_backward[:,:,i]
+            np.savetxt(os.path.join(outdir, rtmfn.result_slice_fn.format(xyz=xyz,isrc=isrc,islice=i)), slice_data)
+            np.savetxt(os.path.join(outdir, rtmfn.result_slice_nf_fn.format(xyz=xyz,isrc=isrc,islice=i)), slice_normal_forward)
+            np.savetxt(os.path.join(outdir, rtmfn.result_slice_nb_fn.format(xyz=xyz,isrc=isrc,islice=i)), slice_normal_backward)
+            logger.info('Figureing slice%s%d of src%d'%(xyz,i,isrc))
+            plt.clf()
+            plt.imshow(slice_data.T, interpolation='none')
+            plt.colorbar()
+            plt.savefig(os.path.join(outdir, rtmfn.result_slice_fn.format(xyz=xyz,isrc=isrc,islice=i) + '.png'))
+            plt.clf()
+            plt.imshow(slice_normal_forward.T, interpolation='none')
+            plt.colorbar()
+            plt.savefig(os.path.join(outdir, rtmfn.result_slice_nf_fn.format(xyz=xyz,isrc=isrc,islice=i) + '.png'))
+            plt.clf()
+            plt.imshow(slice_normal_backward.T, interpolation='none')
+            plt.colorbar()
+            plt.savefig(os.path.join(outdir,  rtmfn.result_slice_nb_fn.format(xyz=xyz,isrc=isrc,islice=i) + '.png'))
+    for xyz in ['x','y','z']:
+        savefiles(xyz)
+    logger.info('corr_slice src%d done.'%isrc)
     return 1
 
-
-    # if(raw_input('Clear Slices?(Y)') == 'Y'):
-    #     os.system('rm -f '+dir1+'/*Slice*dat')
-    #     os.system('rm -f '+dir2+'/*Slice*dat')
+def corr_RTM_slice_sub(isrc, workdir, path1,path2,xlist1,xlist2,ylist1,ylist2,zlist1,zlist2, outdir='Result'):
+    # logger
+    logger=addlogger('corr_RTM_slice_sub',path=os.path.join(workdir,'log'))
+    # mkdir
+    outdir = os.path.join(workdir,outdir)
+    if not os.path.exists(outdir):
+        os.mkdir(outdir)
+    # main
+    corr_slice(isrc, workdir, path1,path2,xlist1,xlist2,ylist1,ylist2,zlist1,zlist2, outdir,logger)
 
 if __name__ == "__main__":
-    # nsrc = int(raw_input("How many sources? "))
-    # list_src = arange(200,210)
-    # #list_src = 56
-    # read_par()
-    # ipool = Pool(12)
-    # ipool.map(corr_slice, list_src)
-    # #corr_slice(list_src)
-    # ipool.close()
-    # ipool.join()
-
     try:
         opts, args = getopt.getopt(sys.argv[1:], "d:", ["workdir="])
     except getopt.GetoptError as err:
         # print help information and exit:
-        logger.error(err)  # will print something like "option -a not recognized"
+        raise err  # will print something like "option -a not recognized"
         # usage()
         sys.exit(2)
-
+    # parse arg
     workdir = os.getcwd()
     for o, a in opts:
         if o in ('-d','--workdir'):
             workdir = a
         else:
             assert False, "unhandled option"
-
     isrc = int(args[0])
-
-    idir = os.path.join(workdir,'Result')
-    if not os.path.exists(idir):
-        os.mkdir(idir)
-
-    corr_slice(isrc,workdir)
+    # get files
+    path1,path2,listsx1,listsx2,listy1,listy2,listz1,listz2,listw1,listw2 = rtmfn.get_isrc_filenames_rtm(isrc,workdir)
+    # main
+    corr_RTM_slice_sub(isrc,workdir,path1,path2,listsx1,listsx2,listy1,listy2,listz1,listz2)

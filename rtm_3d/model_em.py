@@ -7,35 +7,20 @@ import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use('Agg')
 import os,sys,shutil,logging,argparse,datetime
-import glob
-from writesource import *
 
-#logger
-today = datetime.date.today()
-logger = logging.getLogger('model_em')
-logger.setLevel(logging.INFO) #CRITICAL>ERROR>WARNING>INFO>DEBUG》NOTSET
-fh = logging.FileHandler(os.path.join('log','model_em-' + today.strftime('%Y%m%d') + '.log'))
-fh.setLevel(logging.INFO)
-ch = logging.StreamHandler()
-ch.setLevel(logging.INFO)
-formatter = logging.Formatter('(%(process)5d)%(asctime)s-%(levelname)s: %(message)s')
-fh.setFormatter(formatter)
-ch.setFormatter(formatter)
-logger.addHandler(fh)
-logger.addHandler(ch)
+from common import *
+import batchgen
 
-
-def cp(f1,f2):
-    for f in glob.glob(r'%s'%f1):
-        # logger.debug('cp %s %s'%(f,f2))
-        shutil.copy(f,f2)
+# constant
+mu0 = 1.2566370614e-6
+ep0 = 8.8541878176e-12
 
 def src_rec(dnx_src,dny_src=False,dnx_rec=False,dny_rec=False,nzp_src=False,nzp_rec=False,nx_src=False,ny_src=False,nx_rec=False,ny_rec=False,nshift=0,marginx=0,marginy=False,marginx_rec=False,marginy_rec=False,half_span=2):
     logger.info('adding source and receiver...')
     logger.info('dnxs=%d,dnys=%d,dnxr=%d,mx=%d,my=%d,mxr=%d,myr=%d,half_span=%d'%(dnx_src,dny_src,dnx_rec,marginx,marginy,marginx_rec,marginy_rec,half_span))
     if not dny_src:
         dny_src = dnx_src
-    if not nzp_src: # z position of src 
+    if not nzp_src: # z position of src
         nzp_src = nz_air - 1
     if not dnx_rec:
         dnx_rec = dnx_src
@@ -68,7 +53,7 @@ def src_rec(dnx_src,dny_src=False,dnx_rec=False,dny_rec=False,nzp_src=False,nzp_
             ny_ant = int((ny - 2*marginy) // dny_ant)
             if ny_ant % 2 == 0:
                 ny_ant -= 1
-        
+
         for i in range(-(nx_ant-1)//2,(nx_ant+1)//2):
             dumx = nx0 + i*dnx_ant
             for j in range(-(ny_ant-1)//2,(ny_ant+1)//2):
@@ -78,11 +63,11 @@ def src_rec(dnx_src,dny_src=False,dnx_rec=False,dny_rec=False,nzp_src=False,nzp_
 
     src = ant_pos(dnx_src,dny_src,nzp_src,nx_src,ny_src,nshift,marginx,marginy)
     nsrc = len(src)
-    logger.info("nsrc: %d"%nsrc) 
+    logger.info("nsrc: %d"%nsrc)
 
     rec = ant_pos(dnx_rec,dny_rec,nzp_rec,nx_rec,ny_rec,nshift,marginx_rec,marginy_rec)
     nrec = len(rec)
-    logger.info("nrec: %d"%nrec) 
+    logger.info("nrec: %d"%nrec)
 
     for i in range(nsrc):
         fn_src = os.path.join(indir,'src.in_' + str(i).zfill(4))
@@ -104,7 +89,7 @@ def src_rec(dnx_src,dny_src=False,dnx_rec=False,dny_rec=False,nzp_src=False,nzp_
         with open(os.path.join(rtm_indir,'rec.in'),'w+') as fo:
             fo.write('1\n')
             fo.write('%d,%d,%d,Ey\n'%(nx0,ny0,nz_air-2))
-            
+
     return nsrc,nrec
 
 
@@ -148,11 +133,11 @@ def eps_sig_mu(meps=1,meps_bg=False,msig=1e-5,msig_bg=False,mmiu=1,mmiu_bg=False
 
             if dumx < 0:
                 continue
-                # logger.info('begin: %d'%dumx) 
+                # logger.info('begin: %d'%dumx)
                 # dumx = 0
             elif dumx >= nx:
                 continue
-                # logger.info('end: %d'%dumx) 
+                # logger.info('end: %d'%dumx)
                 # dumx = rangex[pnum] - 1
 
             # Modified by mbw at 20180607
@@ -207,7 +192,7 @@ def eps_sig_mu(meps=1,meps_bg=False,msig=1e-5,msig_bg=False,mmiu=1,mmiu_bg=False
                 else:
                     miu_STD[:,:] = mmiu_bg
                 np.savetxt(fmiu_STD, miu_STD, fmt='%.3g')
-            
+
         feps.close()
         fsig.close()
         fmiu.close()
@@ -218,7 +203,7 @@ def eps_sig_mu(meps=1,meps_bg=False,msig=1e-5,msig_bg=False,mmiu=1,mmiu_bg=False
         if not isinstance(mmiu_bg,bool):
             fmiu_STD.close()
 
-    
+    logger.info('copying files.')
     if isinstance(meps_bg,bool):
         cp(os.path.join(indir, 'eps.in*'), std_indir)
     if isinstance(msig_bg,bool):
@@ -234,7 +219,7 @@ def eps_sig_mu(meps=1,meps_bg=False,msig=1e-5,msig_bg=False,mmiu=1,mmiu_bg=False
         cp(os.path.join(std_indir, 'eps.in*'), rtm_indir)
         cp(os.path.join(std_indir, 'sig.in*'), rtm_indir)
         cp(os.path.join(std_indir, 'mu.in*'), rtm_indir)
-
+    logger.info('Mode generated.')
     return 0
 
 
@@ -244,7 +229,7 @@ def finddt(epmin, mumin, dx, dy, dz):
     mumin = mumin * mu0
     dtmax = 6.0 / 7.0 * \
         np.sqrt(epmin * mumin / (1.0 / dx ** 2 + 1.0 / dy ** 2 + 1.0 / dz ** 2))
-    logger.info("max dt = %fns"%(dtmax/1e-9)) 
+    logger.info("max dt = %fns"%(dtmax/1e-9))
     return dtmax
 
 
@@ -253,7 +238,7 @@ def finddx(epmax, mumax, fmax):
     mumax = mumax * mu0
     wlmin = 1 / (fmax * np.sqrt(epmax * mumax))
     dxmax = wlmin
-    logger.info("max dx = %fm"%dxmax) 
+    logger.info("max dx = %fm"%dxmax)
     return dxmax
 
 
@@ -305,7 +290,7 @@ def check_dx(srcpulse):
     W = abs(sp)
     fmax2 = max(freqs[W > max(W) / 10.0])
     logger.info("Src's main frequency: %fMHz" % (freqs[np.argmax(W)]/1e6))
-    logger.info("!!check dx again (src_fmax(within 90%% of max amplitude)=%fMHz):"%(fmax2/1e6)) 
+    logger.info("!!check dx again (src_fmax(within 90%% of max amplitude)=%fMHz):"%(fmax2/1e6))
     dx_max = finddx(epmax, mumax, fmax2)
     try:
         plt.figure()
@@ -398,8 +383,8 @@ def islice(sxl,syl,szl):
     slicex = [[int(nx),'Ey'] for nx in sxl]
     slicey = [[int(ny),'Ey'] for ny in syl]
     slicez = [[int(nz),'Ey'] for nz in szl]
-    
-    logger.info("slicex(%d):%s, slicey(%d):%s, slicez(%d):%s"%(nslicex,slicex,nslicey,slicey,nslicey,slicez)) 
+
+    logger.info("slicex(%d):%s, slicey(%d):%s, slicez(%d):%s"%(nslicex,slicex,nslicey,slicey,nslicey,slicez))
 
     fn_slice = os.path.join(indir, 'slice.in')
     with open(fn_slice, 'w') as fslice:
@@ -410,7 +395,7 @@ def islice(sxl,syl,szl):
             fslice.write("%d,%s\n" % (slicey[i][0], slicey[i][1]))
         for i in range(len(slicez)):
             fslice.write("%d,%s\n" % (slicez[i][0], slicez[i][1]))
-    
+
     cp(fn_slice, std_indir)
     if 'z' in mode:
         cp(fn_slice, rtm0_indir)
@@ -419,71 +404,9 @@ def islice(sxl,syl,szl):
 
     return sxl[0],syl[0],szl[0]
 
-
-def cleanfiles(paths,noprompt=False):
-
-    def cleanChoice(path,noprompt):
-        if noprompt == 'y':
-            return 1
-        elif noprompt == 'n':
-            return 0
-
-        if not paths:
-            choice = input('Clear %s? Y/(N)'%path).lower()
-            if choice in ['yes','y']:
-                return 1
-            else:
-                return 0
-        choice = input('Clear %s? A/Y/(N)'%path).lower()
-        if choice in ['all', 'a']:
-            confirm = input("Clear all files in '%s'? Y/(N)" % "' & '".join(paths+[path])).lower()
-            if confirm in ['yes','y']:
-                return 2
-            else:
-                return cleanChoice(path,noprompt)
-        elif choice in ['yes','y']:
-            return 1
-        else:
-            return 0
-
-    if not isinstance(paths,list):
-        paths = [paths]
-    choice = 0
-    while len(paths) > 0:
-        path = paths.pop()
-        if not choice == 2:
-            choice = cleanChoice(path,noprompt)
-        if not choice == 0:
-            logger.info('cleaning %s...'%path)
-            for f in os.listdir(path):
-                fn = os.path.join(path,f)
-                if os.path.isfile(fn):
-                    os.remove(fn)
-
-
-
 ##############################################################################
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Generate model for RTM',conflict_handler='resolve')
-    parser.add_argument('--model',default=os.path.join('Model','model.mat'),help='An .mat file stores all the parameters for simulated data for RTM.')
-    parser.add_argument('-f','--freq',type=float,default=-1.0,help='Appoint the main frequency (MHz) of the source to replace the one in the model file.')
-    parser.add_argument('--dx_src',type=float,default=-1.0,help='Appoint the x space interval (m) of the source to replace the one in the model file.')
-    parser.add_argument('--dy_src',type=float,default=-1.0,help='Appoint the y space interval (m) of the source to replace the one in the model file.')
-    parser.add_argument('--dx_rec',type=float,default=-1.0,help='Appoint the x space interval (m) of the receiver to replace the one in the model file.')
-    parser.add_argument('--dy_rec',type=float,default=-1.0,help='Appoint the y space interval (m) of the receiver to replace the one in the model file.')
-    parser.add_argument('-m','--mode',choices=['m','z','mz'],default='m',help="Mode: 'm' for multi-offset, 'z' for zero-offset, 'mz' for both multi- and zero-offset.")
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument('--forward_method',choices=['fdtd','pstd'],default='fdtd',help="Forward method used in RTM.")
-    group.add_argument('--fdtd',action='store_const',const='fdtd',dest='forward_method',help='Use finite difference time domain as the forward method.')
-    group.add_argument('--pstd',action='store_const',const='pstd',dest='forward_method',help='Use pseudo spectral time domain as the forward method.')
-    parser.add_argument('--no_gen_model',action='store_const',const=True,default=False,help="Just modifiy parameters without generating model as generating model needs a lot of time.")
-    parser.add_argument('--half_span',type=int,default=-1,help='Span the point source to a (1+2*half_span)x(1+2*half_span) source while forwarding. It helps to reduce the sideslobe in FDTD forwarding.')
-    parser.add_argument('--server',choices=['local','freeosc','x3850'],default='local',help="Where to run the code.")
-    parser.add_argument('-p','--np',type=int,default=-1,help='Number of processers/threads used in parallel FDTD/PSTD. Default: 6/12 for local, 8/16 for x3850 and freeosc.')
-    parser.add_argument('-c','--job_cap',type=int,default=-1,help='How may shot gathers (sources) should the server handle at the same time. Default: 1 for local, 8 for x3850 and 32 for freeosc.')
-    parser.add_argument('-y',action='store_const',const='y',dest='noprompt',default=False,help="Input 'y' in all input prompts with no disturbing.")
-    parser.add_argument('-n',action='store_const',const='n',dest='noprompt',default=False,help="Input 'n' in all input prompts with no disturbing.")
-    parser.add_argument('--steps',type=str,default='',help="Manually Select which steps are involved. 'g' for generate data; 'f' for source(forward) wavefield; 'b' for receiver(backward) wavefield; 'i' for cross-corrlation image condition; 'z' for cal zero-offset backward wvf(image condition); 'c' for clean middle result, add 'r' option if you want to run the 'i' and 'c' process on other servers for they do not involve parallel calculation(set up 'post_master/worker.py' first). Default: Use 'gfbic' for a whole multi-offset workflow, 'gfzc' for a whole zero-offset workflow, 'gfbizc' for both.")
+    parser = parser_ini()
     args = parser.parse_args()
 
     model = args.model
@@ -492,37 +415,12 @@ if __name__ == '__main__':
     server = args.server
     gen_model = not args.no_gen_model
     noprompt = args.noprompt
-    if server == 'local':
-        pnum = 6
-        job_cap = 1
-    else:
-        pnum = 8
-        if server == 'x3850':
-            job_cap = 8
-        elif server == 'freeosc':
-            job_cap = 32
-    if forward_method == 'pstd':
-        pnum *= 2
-    if args.np > 0:
-        pnum = args.np
-    if args.job_cap > 0:
-        job_cap = args.job_cap
-    logger.info('pnum=%d, job_capacity=%d'%(pnum,job_cap))
-    if args.steps:
-        steps = args.steps
-    else:
-        if mode == 'z':
-            steps = 'gfzc'
-        elif mode == 'm':
-            steps = 'gfbic'
-        elif mode == 'mz':
-            steps = 'gfbizc'
+    pnum = args.np
 
     ### load model ###
     try:
         dic_model = sio.loadmat(model)
     except Exception as e:
-        logger.error(e)
         raise e
     else:
         modelname = str(dic_model['modelname'][0])
@@ -535,19 +433,15 @@ if __name__ == '__main__':
         freq = args.freq * 1e6
     else:
         freq = float(dic_model['freq_src'])
-    
+
     if args.half_span < 0:
         try:
             half_span = int(dic_model['src_span'])
         except Exception as e:
-            logger.warning('%s, half_span set_to 0.'%e)
+            print('%s, half_span set_to 0.'%e)
             half_span = 0
     else:
         half_span = args.half_span
-
-
-    mu0 = 1.2566370614e-6
-    ep0 = 8.8541878176e-12
 
     epmin = 1.0
     mumin = 1.0
@@ -586,9 +480,13 @@ if __name__ == '__main__':
         dir_suffix += '_0o'
 
     dirname = '%s_%dMHz_%gm_%gm%s'%(modelname,freq/1e6,dx_src,dx_rec if dx_rec!=dx_src else dy_src, dir_suffix)
-    workdir = os.path.join('tasks',dirname)
-    logger.info('workdir="%s"'%(workdir))
+    workdir = os.path.join(taskpath,dirname)
     ### init workdir end ###
+
+    # logger
+    global logger
+    logger=addlogger(sys.argv[0],dirname)
+    logger.info('workdir="%s"'%(workdir))
 
     ### directories ###
     indir = os.path.join(workdir,'Input')
@@ -624,15 +522,16 @@ if __name__ == '__main__':
     cleanfiles(cleanlist,noprompt)
 
     if forward_method == 'fdtd':
-        forward_fn = "FDTD_MPI.exe"
+        forward_fn = "FDTD_MPI.exe" # useless
     elif forward_method == 'pstd':
         forward_fn = "PSTD.exe"
-        shutil.copy(forward_fn,workdir)
-        shutil.copy(forward_fn,std_dir)
+        forward_fn_path = os.path.join(binpath,forward_fn)
+        shutil.copy(forward_fn_path,workdir)
+        shutil.copy(forward_fn_path,std_dir)
         if 'm' in mode:
-            shutil.copy(forward_fn,rtm_dir)
+            shutil.copy(forward_fn_path,rtm_dir)
         if 'z' in mode:
-            shutil.copy(forward_fn,rtm0_dir)
+            shutil.copy(forward_fn_path,rtm0_dir)
     ### directories end ###
 
 
@@ -663,10 +562,10 @@ if __name__ == '__main__':
     dt_max = finddt(epmin, mumin, dx, dy, dz)
     dt = float(dic_model['dt'])
     nt = round(float(dic_model['T'])/dt)
-    # nt better be k*outstep_t_wavefield+1(k is integer), so that forward wavefield and 
+    # nt better be k*outstep_t_wavefield+1(k is integer), so that forward wavefield and
     # backward wavefield will coincide perfectly when doing cross-correlation.
     nt += outstep_t_wavefield + 1 - nt%outstep_t_wavefield
-    logger.info("dt: %fns"%(dt/1e-9)) 
+    logger.info("dt: %fns"%(dt/1e-9))
     assert dt < dt_max, 'dt too big!!! (%f>%f)'%(dt,dt_max)
     ### gird paraeter end ###
 
@@ -674,7 +573,7 @@ if __name__ == '__main__':
     srcpulse = blackharrispulse(fmax, dt)
     # srcpulse = ricker(fmax,4*1/fmax,dt)
     nt_src = len(srcpulse)
-    logger.info("nt=%d, nt_src=%d"%(nt, nt_src)) 
+    logger.info("nt=%d, nt_src=%d"%(nt, nt_src))
     dx_max = check_dx(srcpulse)
     assert np.max([dx,dy,dz]) < dx_max, 'dx,dy,dz too big!!!'
     ### source end ###
@@ -698,7 +597,7 @@ if __name__ == '__main__':
         elif forward_method == 'pstd':
             NUM_OF_PROCESS = 1
         order = 2 # num of interchange layers of each process
-        logger.info("NUM_OF_PROCESS: %d"%NUM_OF_PROCESS) 
+        logger.info("NUM_OF_PROCESS: %d"%NUM_OF_PROCESS)
         rangex, nxSize = X_partition(nx, NUM_OF_PROCESS)
         eps_sig_mu(dic_model['ep'],dic_model['ep_bg'],pstd=forward_method=='pstd')
     ### generate model end ###
@@ -707,16 +606,23 @@ if __name__ == '__main__':
     par()
 
     # backup this file
-    cp('model_em.py', workdir)
-    # cp(os.path.join('Model',model[:-4]+'_sr'+model[-4:]), workdir) # backup model_sr
-    cp(model, workdir) # backup model
-    cp(os.path.join('Model','make_model.m'), workdir) # backup make_model
+    cp(os.path.join(srcpath,'model_em.py'), workdir)
 
-    
+    # backup model
+    try:
+        mkmodelfn = str(dic_model['filename'][0])
+    except Exception as e:
+        logger.warning(e)
+        mkmodelfn = 'make_model'
+    cp(model, os.path.join(workdir,'model.mat'))
+    cp(os.path.join(modelpath,'%s.m'%mkmodelfn), workdir) # backup make_model
+
+
     if forward_method == 'pstd':
         forward_method = '--pstd'
     elif forward_method == 'fdtd':
         forward_method = '--fdtd'
-    subtxt = 'python batchgen.py -d "%s" -s %d -p %d -m %s -c %d --server %s --steps %s %s %s'%(dirname,nsrc,pnum,mode,job_cap,server,steps,forward_method,'-'+noprompt if noprompt else '')
-    logger.info(subtxt)
-    os.system(subtxt)
+
+    args.dirname = dirname
+    args.src_num = nsrc
+    batchgen.batchgen(args)
