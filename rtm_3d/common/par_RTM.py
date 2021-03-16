@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import os,functools
+import os,sys,functools
 def writeit(out=False):
     def dec(func):
         @functools.wraps(func)
@@ -74,14 +74,14 @@ def read_par(workdir='.'):
         myprint('slice_nx,slice_ny,slice_nz,slice_x,slice_y,slice_z: ',slice_nx,slice_ny,slice_nz,slice_x,slice_y,slice_z)
         myprint('***** End of Parameters Reading *****')
 
-print('current path: '+os.getcwd())
+# if __name__ == "__main__":
 try:
+    print('%s Call par_RTM.py current path: %s'%(sys.argv[0],os.getcwd()))
     read_par()
 except Exception as e:
     # raise
-    print(e)
+    print('%s: %s'%(sys.argv[0],e))
 else:
     pass
 finally:
     pass
-#if __name__ == "__main__":

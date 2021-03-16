@@ -6,7 +6,6 @@ from common import *
 
 def cleanfiles(filelist):
     for fn in filelist:
-        print(fn)
         try:
             os.remove(fn)
         except Exception as e:
@@ -37,12 +36,31 @@ def check_file(isrc,workdir,logger,result_dir='Result'):
             dum_w = os.path.isfile(os.path.join(result_dir, rtmfn.result_wavefield_f_fn.format(isrc=isrc))) and dum_w
     return dum_s,dum_w
 
-def clean(isrc,workdir,nocheck,slicelist,wvlist):
+def clean(isrc,workdir,mode):
     # logger
     logger=addlogger('clean',path=os.path.join(workdir,'log'))
 
+    # get files
+    logger.info("Getting files of src%d"%isrc)
+    path0,listx0,listy0,listz0,listw0 = rtmfn.get_isrc_filenames_data(isrc,workdir)
+    list0 = [os.path.join(path0,fn) for fn in listx0+listy0+listz0]
+    listw0 = [os.path.join(path0,fn) for fn in listw0]
+    path1,listx1,listy1,listz1,listw1 = rtmfn.get_isrc_filenames(isrc,os.path.join(workdir,'STD'))
+    list1 = [os.path.join(path1,fn) for fn in listx1+listy1+listz1]
+    listw1 = [os.path.join(path1,fn) for fn in listw1]
+    slicelist = list0+list1
+    wvlist = listw0+listw1
+    if 'm' in mode:
+        path2,listx2,listy2,listz2,listw2 = rtmfn.get_isrc_filenames(isrc,os.path.join(workdir,'RTM'))
+        slicelist += [os.path.join(path2,fn) for fn in listx2+listy2+listz2]
+        wvlist += [os.path.join(path2,fn) for fn in listw2]
+    if 'z' in mode:
+        path3,listx3,listy3,listz3,listw3 = rtmfn.get_isrc_filenames(isrc,os.path.join(workdir,'RTM0'))
+        slicelist += [os.path.join(path3,fn) for fn in listx3+listy3+listz3]
+        wvlist += [os.path.join(path3,fn) for fn in listw3]
+
     logger.info("Begin cleaning files of src%d"%isrc)
-    if not nocheck:
+    if not mode == 'z':
         check_s,check_w = check_file(isrc,workdir,logger=logger)
         if check_s == True:
             logger.info('cleaning slices: src%d'%isrc)
@@ -55,10 +73,9 @@ def clean(isrc,workdir,nocheck,slicelist,wvlist):
         else:
             logger.warning("src%d: No wavefield deleted, as results are not complete!"%isrc)
     else:
-        logger.info('cleaning all: src%d'%isrc)
+        logger.info('Zero-offset mode, Cleaning all without check: src%d'%isrc)
         cleanfiles(slicelist+wvlist)
     logger.info('clean src%d done.'%isrc)
-
 
 if __name__ == "__main__":
     try:
@@ -69,29 +86,19 @@ if __name__ == "__main__":
         # usage()
         sys.exit(2)
     # parse arg
-    nocheck = False
     workdir = ''
+    mode = 'm'
     for o, a in opts:
         if o in ('-m','--mode'):
-            if a == 'z':
-                logger.info('Zero-offset mode: clean without check.')
-                nocheck = True
+            mode = a
         elif o in ('-d','--workdir'):
             workdir = a
         else:
             assert False, "unhandled option"
     isrc = int(args[0])
-    # get files
-    path0,listx0,listy0,listz0,listw0 = rtmfn.get_isrc_filenames_data(isrc,workdir)
-    path1,path2,listx1,listx2,listy1,listy2,listz1,listz2,listw1,listw2 = rtmfn.get_isrc_filenames_rtm(isrc,workdir)
+
     # main
-    list0 = [os.path.join(path0,fn) for fn in listx0+listy0+listz0]
-    listw0 = [os.path.join(path0,fn) for fn in listw0]
-    list1 = [os.path.join(path1,fn) for fn in listx1+listy1+listz1]
-    listw1 = [os.path.join(path1,fn) for fn in listw1]
-    list2 = [os.path.join(path2,fn) for fn in listx2+listy2+listz2]
-    listw2 = [os.path.join(path2,fn) for fn in listw2]
-    clean(isrc,workdir,nocheck,list0+list1+list2,listw0+listw1+listw2)
+    clean(isrc,workdir,mode)
 
 
     

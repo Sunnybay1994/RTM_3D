@@ -109,11 +109,12 @@ echo  "=====Computing started at $(date)====="
     def gen_txt_head(self,isrc,txt=''):
         return self.txt_head.format(isrc=isrc,additional_head_txt=txt.format(isrc=isrc))
 
-    def gen_mpicmd_txt(self,wdir,execmd):
-        return '{mpipath} -wdir {wdir} {execmd} $ISRC > "{wdir}/Output/$ISRC($NP).out"\n'.format(mpipath=self._mpipath,wdir=wdir,execmd=execmd)
+    def gen_mpicmd_txt(self,wdir,execmd,isrctag='$ISRC'):
+        return '{mpipath} -wdir {wdir} {execmd} {isrctag} > "{wdir}/Output/{isrctag}($NP).out"\n'.format(mpipath=self._mpipath,wdir=wdir,execmd=execmd,isrctag=isrctag)
     def gen_forward_txt(self,step):
         head_txt = 'if [[ $STEPS =~ %s ]];then\n'%step
         exit_txt = '    exit_code=$?;echo exit_code=$exit_code\nfi\n'
+        isrctag = '$ISRC'
         if step == 'g':
             head_txt += '    echo "($(date))Generate data..."\n'
             path = '$WORKPATH'
@@ -129,19 +130,20 @@ echo  "=====Computing started at $(date)====="
         elif step == 'z':
             head_txt += '''    echo "($(date))Prepare for zero-offset RTM..."
     python $SRCPATH/pre_RTM_sub.py -m z $METHOD_TAG $ISRC
-    status=%?;echo status=$status
-    if [ $status -eq 1 ];then
+    status=$?;echo status=$status
+    if [ $status -eq 100 ];then
     echo "($(date))Calculating backward wavafield..."
 '''
             exit_txt += 'fi\n'
             path = '$WORKPATHRTM0'
+            isrctag = '0'
         else:
             raise ValueError('rtm_workflow.gen_forward_cmd_txt(step=%s):forward step must be in "gfbz"'%step)
 
         if self._method == 'fdtd':
-            main_txt = '    ' + self.gen_mpicmd_txt(path,'-np $NP $BINPATH/FDTD_MPI.exe')
+            main_txt = '    ' + self.gen_mpicmd_txt(path,'-np $NP $BINPATH/FDTD_MPI.exe',isrctag)
         elif self._method == 'pstd':
-            main_txt = '    ' + self.gen_mpicmd_txt(path,'$BINPATH/PSTD.exe $NP')
+            main_txt = '    ' + self.gen_mpicmd_txt(path,'$BINPATH/PSTD.exe $NP',isrctag)
         return head_txt + main_txt + exit_txt
     def gen_txt_main(self):
         return ''.join([self.gen_forward_txt(step) for step in 'gfbz'])
