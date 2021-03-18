@@ -76,7 +76,7 @@ def read_par(workdir='.'):
 
 # if __name__ == "__main__":
 try:
-    print('%s Call par_RTM.py current path: %s'%(sys.argv[0],os.getcwd()))
+    print('%s Call "par_RTM.py" current path: %s'%(sys.argv[0],os.getcwd()))
     read_par()
 except Exception as e:
     # raise

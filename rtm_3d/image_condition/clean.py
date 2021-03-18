@@ -8,6 +8,7 @@ def cleanfiles(filelist):
     for fn in filelist:
         try:
             os.remove(fn)
+            logger.debug('Removed: %s'%fn)
         except Exception as e:
             logger.error(e)
 
@@ -54,10 +55,10 @@ def clean(isrc,workdir,mode):
         path2,listx2,listy2,listz2,listw2 = rtmfn.get_isrc_filenames(isrc,os.path.join(workdir,'RTM'))
         slicelist += [os.path.join(path2,fn) for fn in listx2+listy2+listz2]
         wvlist += [os.path.join(path2,fn) for fn in listw2]
-    if 'z' in mode:
-        path3,listx3,listy3,listz3,listw3 = rtmfn.get_isrc_filenames(isrc,os.path.join(workdir,'RTM0'))
-        slicelist += [os.path.join(path3,fn) for fn in listx3+listy3+listz3]
-        wvlist += [os.path.join(path3,fn) for fn in listw3]
+    # if 'z' in mode:
+    #     path3,listx3,listy3,listz3,listw3 = rtmfn.get_isrc_filenames(isrc,os.path.join(workdir,'RTM0'))
+    #     slicelist += [os.path.join(path3,fn) for fn in listx3+listy3+listz3]
+    #     wvlist += [os.path.join(path3,fn) for fn in listw3]
 
     logger.info("Begin cleaning files of src%d"%isrc)
     if not mode == 'z':

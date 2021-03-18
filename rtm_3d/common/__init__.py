@@ -1,18 +1,23 @@
-import os,re,argparse,glob,shutil,datetime,logging,struct
+import sys,os,re,argparse,glob,shutil,datetime,logging,struct
 from .writesource import *
 from .normal_moveout import *
 from .par_RTM import *
 
-rootdir = os.path.abspath('..')
+file_path = os.path.split(os.path.realpath(__file__))[0]
+rootdir = os.path.abspath(os.path.join(file_path,'..','..'))
+
 srcpath = os.path.join(rootdir,'rtm_3d')
 modelpath = os.path.join(srcpath,'make_model')
 binpath = os.path.join(rootdir,'bin')
 taskpath = os.path.join(rootdir,'tasks')
 logpath = os.path.join(rootdir,'log')
 
+print('%s Call "common", current path: %s'%(sys.argv[0], os.getcwd()))
+
 def addlogger(name,taskname='',path='log',streamlevel=logging.INFO,loglevel=logging.INFO):
     if not os.path.isdir(path):
-        print('Making log dir: %s'%os.path.abspath(log))
+        print('Making log dir: %s'%os.path.abspath(path))
+        os.mkdir(path)
     today = datetime.date.today()
     fn = os.path.join(path,'{name}_{taskname}_{date}.log'.format(name=name,taskname=taskname,date=today.strftime('%Y%m%d')))
     logger = logging.getLogger(name)
