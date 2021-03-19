@@ -10,14 +10,14 @@ tasks/*/
 *.psd
 *.fig
 FDTD_MPI*
-src_rec/*.in_0000
+old/*/*.in_0000
+old/test/*
 *NMO*.dat
 *.out
 .vscode/
 *.exe
 *.txt
 *.bin
-test/*
 
 ## C++
 # Prerequisites
