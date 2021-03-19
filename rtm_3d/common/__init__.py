@@ -1,21 +1,23 @@
-import os,re,argparse,glob,shutil,datetime,logging,struct
+import sys,os,re,argparse,glob,shutil,datetime,logging,struct
 from .writesource import *
 from .normal_moveout import *
 from .par_RTM import *
 
-rootdir = os.path.abspath('..')
+file_path = os.path.split(os.path.realpath(__file__))[0]
+rootdir = os.path.abspath(os.path.join(file_path,'..','..'))
+
 srcpath = os.path.join(rootdir,'rtm_3d')
 modelpath = os.path.join(srcpath,'make_model')
 binpath = os.path.join(rootdir,'bin')
 taskpath = os.path.join(rootdir,'tasks')
 logpath = os.path.join(rootdir,'log')
 
-def cp(f1,f2):
-    for f in glob.glob(r'%s'%f1):
-        # logger.debug('cp %s %s'%(f,f2))
-        shutil.copy(f,f2)
+print('%s Call "common", current path: %s'%(sys.argv[0], os.getcwd()))
 
-def addlogger(name,taskname='',path=logpath,streamlevel=logging.INFO,loglevel=logging.INFO):
+def addlogger(name,taskname='',path='log',streamlevel=logging.INFO,loglevel=logging.INFO):
+    if not os.path.isdir(path):
+        print('Making log dir: %s'%os.path.abspath(path))
+        os.mkdir(path)
     today = datetime.date.today()
     fn = os.path.join(path,'{name}_{taskname}_{date}.log'.format(name=name,taskname=taskname,date=today.strftime('%Y%m%d')))
     logger = logging.getLogger(name)
@@ -29,8 +31,15 @@ def addlogger(name,taskname='',path=logpath,streamlevel=logging.INFO,loglevel=lo
     ch.setFormatter(formatter)
     logger.addHandler(fh)
     logger.addHandler(ch)
-    logger.info('log path:%s'%fn)
+    print('%s: log file path: %s'%(sys.argv[0],fn))
     return logger
+
+logger = addlogger('common',path=logpath)
+
+def cp(f1,f2):
+    for f in glob.glob(r'%s'%f1):
+        # logger.debug('cp %s %s'%(f,f2))
+        shutil.copy(f,f2)
 
 def scandir_re_match(path='.',ftype='file',*patterns):
     # type in ['file','dir','all']
@@ -45,8 +54,13 @@ def scandir_re_match(path='.',ftype='file',*patterns):
     return (results[pattern] for pattern in patterns)
 
 def filename_re_match(path='.',ftype='file',*patterns):
-    p_entrys = scandir_re_match(path,ftype,*patterns)
-    return [[entry.name for entry in entrys] for entrys in p_entrys]
+    try:
+        p_entrys = scandir_re_match(path,ftype,*patterns)
+    except Exception as e:
+        print('%s call "filename_re_match" error: %s'%(sys.argv[0],e))
+        return [[] for p in patterns]
+    else:
+        return [[entry.name for entry in entrys] for entrys in p_entrys]
 
 def read_bin_data(fn, dims, type='f'):
     with open(fn,'rb') as fo:
@@ -121,7 +135,7 @@ def parser_ini(mode=0):
         group2.add_argument('-t','--taskname',required=True,default='default',dest='dirname',help="work directory (basename) of the task.")
         group2.add_argument('-s','--src_num',type=int,required=True,default=1,help="The total number of shot gathers (sources).")
     group2.add_argument('--server',choices=['local','freeosc','x3850'],default='local',help="Where to run the code.")
-    group2.add_argument('--steps',type=str,choices='gfbizc',nargs='+',help="Manually Select which steps are involved. 'g' for generate data; 'f' for source(forward) wavefield; 'b' for receiver(backward) wavefield; 'i' for cross-corrlation image condition; 'z' for cal zero-offset backward wvf(image condition); 'c' for clean middle result. Default: Use 'g f b i c' for a whole multi-offset workflow, 'g f z c' for a whole zero-offset workflow, 'g f b i z c' for both.")
+    group2.add_argument('--steps',type=str,help="Manually Select which steps are involved. 'g' for generate data; 'f' for source(forward) wavefield; 'b' for receiver(backward) wavefield; 'i' for cross-corrlation image condition; 'z' for cal zero-offset backward wvf(image condition); 'c' for clean middle result. Default: Use 'gfbic' for a whole multi-offset workflow, 'gfzc' for a whole zero-offset workflow, 'gfbizc' for both.")
     group_jobcap = group2.add_mutually_exclusive_group()
     group_jobcap.add_argument('--max_job',type=int,default=2,help='Max number of jobs should the server handle at the same time.')
     group_jobcap.add_argument('--max_cpu',type=int,help='Max number of the cpu used by the server. max_job=floor(max_cpu/np).')

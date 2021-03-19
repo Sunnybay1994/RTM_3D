@@ -16,24 +16,12 @@ if __name__ == "__main__":
 
     workdir = args.workdir
     for isrc in args.srcs:
-        # get files
-        path0,listx0,listy0,listz0,listw0 = get_isrc_filenames_data(isrc,workdir)
-        path1,path2,listx1,listx2,listy1,listy2,listz1,listz2,listw1,listw2 = get_isrc_filenames_rtm(isrc,workdir)
-        if args.mode == 'z':
-            nocheck = True
-        else:
-            nocheck = False
-            if not args.nocorr:
-                # corr slice
-                corr_RTM_slice_sub(isrc,workdir,path1,path2,listx1,listx2,listy1,listy2,listz1,listz2)
-                # corr wavefield
-                corr_RTM_wavefield_sub(isrc,workdir,path1,path2,listw1,listw2)
+        if ('m' in args.mode) and (not args.nocorr):
+            path1,path2,listx1,listx2,listy1,listy2,listz1,listz2,listw1,listw2 = get_isrc_filenames_rtm(isrc,workdir)
+            # corr slice
+            corr_RTM_slice_sub(isrc,workdir,path1,path2,listx1,listx2,listy1,listy2,listz1,listz2)
+            # corr wavefield
+            corr_RTM_wavefield_sub(isrc,workdir,path1,path2,listw1,listw2)
         # clean
         if not args.noclean:
-            list0 = [os.path.join(path0,fn) for fn in listx0+listy0+listz0]
-            listw0 = [os.path.join(path0,fn) for fn in listw0]
-            list1 = [os.path.join(path1,fn) for fn in listx1+listy1+listz1]
-            listw1 = [os.path.join(path1,fn) for fn in listw1]
-            list2 = [os.path.join(path2,fn) for fn in listx2+listy2+listz2]
-            listw2 = [os.path.join(path2,fn) for fn in listw2]
-            clean(isrc,workdir,nocheck,list0+list1+list2,listw0+listw1+listw2)
+            clean(isrc,workdir,args.mode)

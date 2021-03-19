@@ -174,11 +174,12 @@ def pre_RTM(list_src):
         logger.debug('max_offset:%d'%max_offset)
 
     for i in list_src:#range(nsrc)
+        logger.info('Prepare RTM for src%d.'%isrc)
         isum,iloc = merge_gather(workdir,i)
         isum_std,iloc_std = merge_gather(os.path.join(workdir,'STD'),i)
         gather_rtm = remove_STD(isum,isum_std,i)
         
-        if 'z' in mode:
+        if 'z' in mode and len(list_src)==nsrc:
             nt,component,nmo_results = prepare_RTM(isum,iloc,isum_std,iloc_std,gather_rtm,i)
             nmo_locs,nmo_gathers,nmo_offsets = zip(*nmo_results)
             locs += nmo_locs
@@ -198,7 +199,7 @@ def pre_RTM(list_src):
         if 'm' in mode:
             prepare_RTM(isum,iloc,isum_std,iloc_std,gather_rtm,i)
 
-        logger.info('Done: src%d\n'%i)
+        logger.info('Done: src%d'%i)
 
 
 if __name__ == "__main__":
@@ -221,10 +222,7 @@ if __name__ == "__main__":
     no_nmo = args.no_nmo
 
     # logger
-    global logger
-    logger=addlogger(sys.argv[0],path=os.path.join(workdir,'log'))
-
-    read_par()
+    logger=addlogger(os.path.basename(sys.argv[0]))
 
     if 'm' in mode:
         rtmdir_name = 'RTM'
@@ -237,19 +235,23 @@ if __name__ == "__main__":
         rtmdir_name = 'RTM0'
         rtmdir = os.path.join(workdir,rtmdir_name)
         nsrc = len([f for f in os.listdir('Input') if os.path.isfile(os.path.join('Input',f)) and 'src.in_' in f])
-        rec_fname = os.path.join(rtmdir,'src_done.txt')
-        with open(rec_fname,'a+') as fo:
-            flag = 'force'
-            lines = fo.readlines()
-            nl = len(lines) + 1
-            logger.info('zero offset mode: %d(%d/%d)\n'%(isrc,nl,nsrc))
-            fo.write('%d(%d/%d)\n'%(isrc,nl,nsrc))
-            if nl == nsrc-1 or lines[0].strip() == flag:
-                exit_code = 1
-                logger.info('Zero-offset mode. We have %d sources to process.'%nsrc)
-                pre_RTM(range(nsrc))
-                os.rename(rec_fname,rec_name+'_finished.txt')
-            else:
-                exit_code = 0
-        exit(exit_code)
+        logger.info('Zero-offset mode. src%d/%d'%(isrc,nsrc))
+        if isrc == 0 and os.path.isfile('force_run'):
+            logger.info('(Force run)Zero-offset mode. We have %d sources to process.'%nsrc)
+            pre_RTM(range(nsrc))
+            exit(100)
+        else:
+            pre_RTM([isrc])
+            logger.info('Zero-offset src%d/%d done.'%(isrc,nsrc))
+            ifn = os.path.join(rtmdir,'src{isrc}_done')
+            with open(ifn.format(isrc=isrc),'w') as fo:
+                pass
+            logger.info('Checking if all done.')
+            for i in range(nsrc):
+                if not os.path.isfile(ifn.format(isrc=i)):
+                    logger.info('src%d not done: progress %d/%d'%(isrc,i+1,nsrc))
+                    exit()
+            print('All src done, prepareing rtm.')
+            pre_RTM(range(nsrc))
+            exit(100)
 

@@ -485,7 +485,7 @@ if __name__ == '__main__':
 
     # logger
     global logger
-    logger=addlogger(sys.argv[0],dirname)
+    logger=addlogger(os.path.basename(sys.argv[0]),dirname,path=logpath)
     logger.info('workdir="%s"'%(workdir))
 
     ### directories ###
@@ -612,7 +612,7 @@ if __name__ == '__main__':
     try:
         mkmodelfn = str(dic_model['filename'][0])
     except Exception as e:
-        logger.warning(e)
+        logger.warning(e,'mkmodelfn set to default: make_model')
         mkmodelfn = 'make_model'
     cp(model, os.path.join(workdir,'model.mat'))
     cp(os.path.join(modelpath,'%s.m'%mkmodelfn), workdir) # backup make_model
