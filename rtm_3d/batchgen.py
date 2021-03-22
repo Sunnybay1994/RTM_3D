@@ -255,6 +255,8 @@ def batchgen(args):
         job_cap = args.max_cpu//args.src_num
     else:
         job_cap = args.max_job
+    if job_cap > args.src_num:
+        job_cap = args.src_num
     print('Job capacity:%d\nforward method: %s\nsteps: %s\n'%(job_cap,args.forward_method,steps))
 
     if args.server == 'freeosc':

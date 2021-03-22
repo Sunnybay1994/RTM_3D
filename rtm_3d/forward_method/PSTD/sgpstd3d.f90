@@ -73,7 +73,7 @@ program SGPSTD3D
     real(4)     :: travelTime
     
     real(4) :: fm, pulseWidth
-	integer ::  nt_src, nsrc, nrec
+	integer ::  nt_src, nsrc, nsrc_true, nsrc_span, nrec
 	integer ::  nslicex, nslicey, nslicez
     integer,allocatable,dimension(:)      :: islicex, islicey, islicez
 	integer ::  xstep, tstep
@@ -273,7 +273,8 @@ program SGPSTD3D
 	
 	! load source
 	open(4,file = 'Input/src.in_'//isrc_s,status = 'old',action = 'read')   
-    read(4,*), nsrc, nt_src
+    read(4,*), nsrc_true, nsrc_span, nt_src
+    nsrc = nsrc_true * nsrc_span
 	allocate(sourcex_idx(nsrc), sourcey_idx(nsrc), sourcez_idx(nsrc),compnt(nsrc))
 	allocate(srcpulse(nsrc,nt_src))
 	do i = 1,nsrc
@@ -295,10 +296,11 @@ program SGPSTD3D
 		endif
 	enddo
 	do i = 1,nsrc
-		read(4,*), srcpulse(i,:)
-	    !do j = 1,nt_src
-	    !    srcpulse(i,j) = 2.*pi*fm*(j*dt-1./fm)*exp(-(pi*fm*(j*dt-1./fm))**2)
-	    !enddo
+        if (mod(i,nsrc_span) == 1) then
+		    read(4,*), srcpulse(i,:)
+        else
+            srcpulse(i,:) = srcpulse(i-1,:)
+        endif
 	enddo
     close(4)
 	

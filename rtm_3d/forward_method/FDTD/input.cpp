@@ -130,62 +130,69 @@ void readSource()
         printf("Open src.in error!");
         exit(1);
     }
+    
+    int nsrc_true, nsrc_span; // nsrc = nsrc_true * nsrc_span
+    double *isrc_pulse;
 
-    fscanf(fp,"%d,%d",&nsrc,&nt_of_src);
-    printf("nsrc,nt_src: %d,%d\n",nsrc,nt_of_src);
+    fscanf(fp,"%d,%d,%d",&nsrc_true,&nsrc_span,&nt_of_src);
+    nsrc = nsrc_true * nsrc_span;
+    printf("nsrc,nt_src: %d(%d*%d),%d\n",nsrc,nsrc_true,nsrc_span,nt_of_src);
     src = new Point[nsrc];
     src_pulse = new double[nsrc*nt_of_src];
+    isrc_pulse = new double[nt_of_src];
 
-    for (i=0; i<nsrc; ++i){
-        fscanf(fp,"%d,%d,%d,%s",&(src[i].x),&(src[i].y),&(src[i].z),dummy_str);
-        if (strcmp(dummy_str,"Ex")==0) {
-            if(src_type == 2) {src[i].component = Ex; src_type = 3;}
-            else {src[i].component = Ex; src_type = 1;}
-        }
-        if (strcmp(dummy_str,"Ey")==0) {
-            if(src_type == 2) {src[i].component = Ey; src_type = 3;}
-            else {src[i].component = Ey; src_type = 1;}
-        }
-        if (strcmp(dummy_str,"Ez")==0) {
-            if(src_type == 2) {src[i].component = Ez; src_type = 3;}
-            else {src[i].component = Ez; src_type = 1;}
-        }
-        if (strcmp(dummy_str,"Hx")==0) {
-            if(src_type == 1) {src[i].component = Hx; src_type = 3;}
-            else{src[i].component = Hx; src_type = 2;}
-        }
-        if (strcmp(dummy_str,"Hy")==0) {
-            if(src_type == 1) {src[i].component = Hy; src_type = 3;}
-            else{src[i].component = Hy; src_type = 2;}
-        }
-        if (strcmp(dummy_str,"Hz")==0) {
-            if(src_type == 1) {src[i].component = Hz; src_type = 3;}
-            else{src[i].component = Hz; src_type = 2;}
+    for (int isrc=0; isrc<nsrc_true; ++isrc){
+        for (int isrcspan=0; isrcspan<nsrc_span; ++isrcspan){
+            i = isrc*nsrc_span + isrcspan;
+            fscanf(fp,"%d,%d,%d,%s",&(src[i].x),&(src[i].y),&(src[i].z),dummy_str);
+            if (strcmp(dummy_str,"Ex")==0) {
+                if(src_type == 2) {src[i].component = Ex; src_type = 3;}
+                else {src[i].component = Ex; src_type = 1;}
+            }
+            if (strcmp(dummy_str,"Ey")==0) {
+                if(src_type == 2) {src[i].component = Ey; src_type = 3;}
+                else {src[i].component = Ey; src_type = 1;}
+            }
+            if (strcmp(dummy_str,"Ez")==0) {
+                if(src_type == 2) {src[i].component = Ez; src_type = 3;}
+                else {src[i].component = Ez; src_type = 1;}
+            }
+            if (strcmp(dummy_str,"Hx")==0) {
+                if(src_type == 1) {src[i].component = Hx; src_type = 3;}
+                else{src[i].component = Hx; src_type = 2;}
+            }
+            if (strcmp(dummy_str,"Hy")==0) {
+                if(src_type == 1) {src[i].component = Hy; src_type = 3;}
+                else{src[i].component = Hy; src_type = 2;}
+            }
+            if (strcmp(dummy_str,"Hz")==0) {
+                if(src_type == 1) {src[i].component = Hz; src_type = 3;}
+                else{src[i].component = Hz; src_type = 2;}
+            }
         }
     }
 
     int ii = 0;
 
-    for (i=0; i<nsrc; ++i){      // get the sources to be processed by this process
-        if (src[i].x>=rangex[myRank] && src[i].x<rangex[myRank+1]){
-
-            mysrc.push_back(i);
-
-            for ( j=0; j<nt_of_src; ++j){
-                fscanf(fp,"%lf",&(src_pulse(ii,j)));
-
+    for (int isrc=0; isrc<nsrc_true; ++isrc){      // get the sources to be processed by this process
+        for ( j=0; j<nt_of_src; ++j){fscanf(fp,"%lf",&(isrc_pulse[j]));}
+        for (int isrcspan=0; isrcspan<nsrc_span; ++isrcspan){
+            i = isrc*nsrc_span + isrcspan;
+            if (src[i].x>=rangex[myRank] && src[i].x<rangex[myRank+1]){
+                mysrc.push_back(i);
+                for ( j=0; j<nt_of_src; ++j){
+                    src_pulse(ii,j) = isrc_pulse[j];
+                }
+                ii += 1;
             }
-            ii += 1;
-        }
-        else{
-            for ( j=0; j<nt_of_src; ++j){
-                fscanf(fp,"%lf",&dummy);
+            else{
+                for ( j=0; j<nt_of_src; ++j){
+                    fscanf(fp,"%lf",&dummy);
+                }
             }
         }
     }
-
     fclose(fp);
-
     if(myRank == 0) cout << "call read source end" << endl;
 }
 

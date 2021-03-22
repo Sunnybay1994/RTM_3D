@@ -1,4 +1,4 @@
-destpath=bin
+destpath=bin/
 
 fdtdcc=mpicxx
 fdtdcflags=-O3 -march=native

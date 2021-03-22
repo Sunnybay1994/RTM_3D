@@ -95,12 +95,7 @@ def src_rec(dnx_src,dny_src=False,dnx_rec=False,dny_rec=False,nzp_src=False,nzp_
 
 def eps_sig_mu(meps=1,meps_bg=False,msig=1e-5,msig_bg=False,mmiu=1,mmiu_bg=False,pstd=False):
     logger.info('Generating model...')
-    if pstd:
-        pnum = 1
-    else:
-        pnum = NUM_OF_PROCESS
-
-    for ii in range(pnum):
+    for ii in range(nsplit_area):
 
         if pstd:
             suffix = ''
@@ -128,23 +123,10 @@ def eps_sig_mu(meps=1,meps_bg=False,msig=1e-5,msig_bg=False,mmiu=1,mmiu_bg=False
             dumx_range = np.arange(rangex[ii] - order, rangex[ii + 1] + order)
 
         for dumx in dumx_range:
-
-            # for dumx in x_axis:
-
-            if dumx < 0:
+            if dumx < 0 or dumx >= nx:
+                logger.info('dumx(%d) out of area([0,%d]), continue.'%(dumx,nx))
                 continue
-                # logger.info('begin: %d'%dumx)
-                # dumx = 0
-            elif dumx >= nx:
-                continue
-                # logger.info('end: %d'%dumx)
-                # dumx = rangex[pnum] - 1
-
-            # Modified by mbw at 20180607
-            #print('dumx: ',dumx)
             dumx = int(float(dumx))
-            #print(dumx)
-            # End Modify
 
             # initialize model
             eps = np.ones((ny, nz))
@@ -349,21 +331,21 @@ def par():
         cp(os.path.join(indir, 'par.in'), rtm_indir)
 
 
-def X_partition(nx, NUM_OF_PROCESS):
+def X_partition(nx, nsplit_area):
     # global
-    rangex = np.zeros(NUM_OF_PROCESS + 1)
-    nxSize = np.zeros(NUM_OF_PROCESS)
+    rangex = np.zeros(nsplit_area + 1)
+    nxSize = np.zeros(nsplit_area)
     rangex[0] = 0
 
-    for i in range(1, NUM_OF_PROCESS):
-        if i <= (nx % NUM_OF_PROCESS):
-            rangex[i] = rangex[i - 1] + (nx // NUM_OF_PROCESS + 1) # change '//' to '/'
+    for i in range(1, nsplit_area):
+        if i <= (nx % nsplit_area):
+            rangex[i] = rangex[i - 1] + (nx // nsplit_area + 1) # change '//' to '/'
         else:
-            rangex[i] = rangex[i - 1] + (nx // NUM_OF_PROCESS) # change '//' to '/'
+            rangex[i] = rangex[i - 1] + (nx // nsplit_area) # change '//' to '/'
         nxSize[i - 1] = rangex[i] - rangex[i - 1] + 2 * order
-    rangex[NUM_OF_PROCESS] = nx
-    nxSize[NUM_OF_PROCESS - 1] = rangex[NUM_OF_PROCESS] - \
-        rangex[NUM_OF_PROCESS - 1] + 2 * order
+    rangex[nsplit_area] = nx
+    nxSize[nsplit_area - 1] = rangex[nsplit_area] - \
+        rangex[nsplit_area - 1] + 2 * order
     return rangex, nxSize
 
 
@@ -433,7 +415,6 @@ if __name__ == '__main__':
         freq = args.freq * 1e6
     else:
         freq = float(dic_model['freq_src'])
-
     if args.half_span < 0:
         try:
             half_span = int(dic_model['src_span'])
@@ -442,7 +423,6 @@ if __name__ == '__main__':
             half_span = 0
     else:
         half_span = args.half_span
-
     epmin = 1.0
     mumin = 1.0
     epmax = 15.0
@@ -479,7 +459,7 @@ if __name__ == '__main__':
     if mode=='z':
         dir_suffix += '_0o'
 
-    dirname = '%s_%dMHz_%gm_%gm%s'%(modelname,freq/1e6,dx_src,dx_rec if dx_rec!=dx_src else dy_src, dir_suffix)
+    dirname = '%s_%dMHz_%gx%g_%d_%gx%g%s'%(modelname,freq/1e6,dx_src,dy_src,half_span,dx_rec,dy_rec, dir_suffix)
     workdir = os.path.join(taskpath,dirname)
     ### init workdir end ###
 
@@ -592,13 +572,14 @@ if __name__ == '__main__':
 
     ### generate model ###
     if gen_model:
+        logger.info("NUM_OF_PROCESS: %d"%pnum)
         if forward_method == 'fdtd':
-            NUM_OF_PROCESS = pnum
+            nsplit_area = pnum
         elif forward_method == 'pstd':
-            NUM_OF_PROCESS = 1
+            nsplit_area = 1
         order = 2 # num of interchange layers of each process
-        logger.info("NUM_OF_PROCESS: %d"%NUM_OF_PROCESS)
-        rangex, nxSize = X_partition(nx, NUM_OF_PROCESS)
+        logger.info("nsplit_area: %d"%nsplit_area)
+        rangex, nxSize = X_partition(nx, nsplit_area)
         eps_sig_mu(dic_model['ep'],dic_model['ep_bg'],pstd=forward_method=='pstd')
     ### generate model end ###
 

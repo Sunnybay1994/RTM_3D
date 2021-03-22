@@ -10,21 +10,23 @@ def extend_source(srcinfo,srcpulse,xhalfspan=2,yhalfspan=2):
         for j in range(-yhalfspan ,yhalfspan+1):
             yield (x+i,y+j,z)+others,srcpulse
 
-def write_source(fn,srcinfos,srcpulses):
+def write_source(fn,srcinfos,srcpulses,nsrc_ori,nspan):
     nsrc = len(srcinfos)
-    assert len(srcinfos) == len(srcpulses), 'write_source:number of srcinfos(%d) and srcpulses(%d) not equal.'%(len(srcinfos),len(srcpulses))
+    assert nsrc == nsrc_ori * nspan, 'Total num of src not correct %d!=%dx%d'%(nsrc, nsrc_ori, nspan)
+    assert nsrc_ori == len(srcpulses), 'write_source:number of srcinfos(%d) and srcpulses(%d) not equal.'%(len(srcinfos),len(srcpulses))
     temp_bool = True
     nt_src = len(srcpulses[0])
     assert (temp_bool and nt_src==len(srcpulse) for srcpulse in srcpulses), 'length of each srcpulses not equal.'
     with open(fn,'w') as fo:
-        fo.write("%d,%d\n" % (nsrc,nt_src))
+        fo.write("%d,%d,%d\n" % (nsrc_ori,nspan,nt_src))
         list(map(lambda srcpos:fo.write("%d,%d,%d,%s\n" %
                        (srcpos[0], srcpos[1], srcpos[2], srcpos[3])),srcinfos))
         np.savetxt(fo,srcpulses,'%g')
 
 def extend_and_write_one_source(fn,srcinfo,srcpulse,xhalfspan=2,yhalfspan=2):
     srcinfos,srcpulses = zip(*extend_source(srcinfo,srcpulse,xhalfspan,yhalfspan))
-    write_source(fn,srcinfos,srcpulses)
+    nspan = len(srcinfos)
+    write_source(fn,srcinfos,[srcpulse],1,nspan)
 
 def extend_and_write_sources(fn,srcinfos,srcpulses,xhalfspan=2,yhalfspan=2):
     assert len(srcinfos) == len(srcpulses), 'extend_and_write_sources:number of srcinfos(%d) and srcpulses(%d) not equal.'%(len(srcinfos),len(srcpulses))
@@ -34,4 +36,6 @@ def extend_and_write_sources(fn,srcinfos,srcpulses,xhalfspan=2,yhalfspan=2):
         ext_srcinfos,ext_srcpulses = zip(*extend_source(srcinfos[i],srcpulses[i],xhalfspan,yhalfspan))
         new_srcinfos += ext_srcinfos
         new_srcpulses += ext_srcpulses
-    write_source(fn,new_srcinfos,new_srcpulses)
+    nsrc = len(srcinfos)
+    nspan = len(ext_srcinfos)
+    write_source(fn,new_srcinfos,srcpulses,nsrc,nspan)
