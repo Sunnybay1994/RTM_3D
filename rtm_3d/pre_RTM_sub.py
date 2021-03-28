@@ -81,10 +81,6 @@ def remove_STD(gather,gather_std,isrc):
 
 def prepare_RTM(isum,iloc,isum_std,iloc_std,gather_rtm,isrc):
     logger.info("preparing RTM: src%d"%isrc) 
-    with open("./Input/rec.in","r") as fp:
-        nrec0 = int(fp.readline().split(',')[0])
-        component = fp.readline().strip().split(',')[3]
-        # print(fp.readline().split())
     nrec = len(iloc)
     nrec_std = len(iloc_std)
     if nrec != nrec_std or nrec0!=nrec:
@@ -144,6 +140,11 @@ def bin_gathers(locs,dats,offsets=False,decay_fac=0.5,source_span=5):
 
 
 def pre_RTM(list_src):
+    global nrec0,component
+    with open("./Input/rec.in","r") as fp:
+        nrec0 = int(fp.readline().split(',')[0])
+        component = fp.readline().strip().split(',')[3]
+        # print(fp.readline().split())
     if 'z' in mode:
         global dt,dx,dy,dz,v,z,max_offset,srclocs
         locs = []
@@ -235,16 +236,17 @@ if __name__ == "__main__":
     if 'z' in mode:
         rtmdir_name = 'RTM0'
         rtmdir = os.path.join(workdir,rtmdir_name)
+        statusdir = os.path.join(rtmdir,'status')
         nsrc = len([f for f in os.listdir('Input') if os.path.isfile(os.path.join('Input',f)) and 'src.in_' in f])
         logger.info('Zero-offset mode. src%d/%d'%(isrc,nsrc))
-        if isrc == 0 and os.path.isfile('force_run'):
+        if isrc == 0 and os.path.isfile(os.path.join(statusdir,'force_run')):
             logger.info('(Force run)Zero-offset mode. We have %d sources to process.'%nsrc)
             pre_RTM(range(nsrc))
             exit(100)
         else:
             pre_RTM([isrc])
             logger.info('Zero-offset src%d/%d done.'%(isrc,nsrc))
-            ifn = os.path.join(rtmdir,'src{isrc}_done')
+            ifn = os.path.join(statusdir,'src{isrc}_done')
             with open(ifn.format(isrc=isrc),'w') as fo:
                 pass
             logger.info('Checking if all done.')
@@ -254,5 +256,6 @@ if __name__ == "__main__":
                     exit()
             print('All src done, prepareing rtm.')
             pre_RTM(range(nsrc))
+            cleanfiles(statusdir,'y')
             exit(100)
 

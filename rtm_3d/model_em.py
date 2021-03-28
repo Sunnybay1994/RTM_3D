@@ -17,7 +17,6 @@ ep0 = 8.8541878176e-12
 
 def src_rec(dnx_src,dny_src=False,dnx_rec=False,dny_rec=False,nzp_src=False,nzp_rec=False,nx_src=False,ny_src=False,nx_rec=False,ny_rec=False,nshift=0,marginx=0,marginy=False,marginx_rec=False,marginy_rec=False,half_span=2):
     logger.info('adding source and receiver...')
-    logger.info('dnxs=%d,dnys=%d,dnxr=%d,mx=%d,my=%d,mxr=%d,myr=%d,half_span=%d'%(dnx_src,dny_src,dnx_rec,marginx,marginy,marginx_rec,marginy_rec,half_span))
     if not dny_src:
         dny_src = dnx_src
     if not nzp_src: # z position of src
@@ -37,6 +36,7 @@ def src_rec(dnx_src,dny_src=False,dnx_rec=False,dny_rec=False,nzp_src=False,nzp_
         marginx_rec = marginx
     if not marginy_rec:
         marginy_rec = marginx_rec
+    logger.info('dnxs=%d,dnys=%d,dnxr=%d,dnyr=%d,mx=%d,my=%d,mxr=%d,myr=%d,half_span=%d'%(dnx_src,dny_src,dnx_rec,dny_rec,marginx,marginy,marginx_rec,marginy_rec,half_span))
 
     global src, rec
     def ant_pos(dnx_ant,dny_ant,nz_pos,nx_ant,ny_ant,nshift,marginx,marginy):
@@ -480,6 +480,7 @@ if __name__ == '__main__':
     rtm0_dir = os.path.join(workdir,'RTM0')
     rtm0_indir = os.path.join(rtm0_dir,'Input')
     rtm0_outdir = os.path.join(rtm0_dir,'Output')
+    rtm0_statusdir = os.path.join(rtm0_dir,'status')
     dirlist1 = [workdir,std_dir]
     dirlist2 = [indir,std_indir]
     dirlist3 = [outdir,std_outdir]
@@ -491,6 +492,10 @@ if __name__ == '__main__':
         dirlist1 += [rtm0_dir]
         dirlist2 += [rtm0_indir]
         dirlist3 += [rtm0_outdir]
+        if not os.path.exists(rtm0_statusdir):
+            os.mkdir(rtm0_statusdir)
+        else:
+            cleanfiles(rtm0_statusdir,'y')
 
     cleanlist = []
     for dirlist in [dirlist1,dirlist2,dirlist3]:
@@ -562,12 +567,16 @@ if __name__ == '__main__':
     dnx_src = round(dx_src/dx)
     dny_src = round(dy_src/dy)
     dnx_rec = round(dx_rec/dx)
-    dny_rec = round(dy_rec/dx)
+    dny_rec = round(dy_rec/dy)
     mx = float(dic_model['src_margin_nx'])
     my = float(dic_model['src_margin_ny'])
     mxr = float(dic_model['rec_margin_nx'])
     myr = float(dic_model['rec_margin_ny'])
     [nsrc,nrec] = src_rec(dnx_src,dny_src,dnx_rec,dny_rec,marginx=mx, marginy=my, marginx_rec=mxr,marginy_rec=myr,half_span=half_span)
+    msrcx = dic_model['srcx'][0]
+    mrecx = dic_model['recx'][0]
+    assert len(msrcx) == nsrc, "nsrc not correct: %d-%d "%(len(msrcx), nsrc)
+    assert len(mrecx) == nrec, "nrec not correct: %d-%d "%(len(mrecx), nrec)
     ### generate src & rec end ###
 
     ### generate model ###

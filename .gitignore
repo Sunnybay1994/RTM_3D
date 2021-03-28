@@ -10,6 +10,7 @@ tasks/*/
 *.psd
 *.fig
 rtm_3d/make_model/make_model.m
+rtm_3d/make_model/*_make_model.m
 old/*/*.in_0000
 old/test/*
 *NMO*.dat
