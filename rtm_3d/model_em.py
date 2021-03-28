@@ -505,13 +505,13 @@ if __name__ == '__main__':
         forward_fn = "FDTD_MPI.exe" # useless
     elif forward_method == 'pstd':
         forward_fn = "PSTD.exe"
-        forward_fn_path = os.path.join(binpath,forward_fn)
-        shutil.copy(forward_fn_path,workdir)
-        shutil.copy(forward_fn_path,std_dir)
-        if 'm' in mode:
-            shutil.copy(forward_fn_path,rtm_dir)
-        if 'z' in mode:
-            shutil.copy(forward_fn_path,rtm0_dir)
+        # forward_fn_path = os.path.join(binpath,forward_fn)
+        # shutil.copy(forward_fn_path,workdir)
+        # shutil.copy(forward_fn_path,std_dir)
+        # if 'm' in mode:
+        #     shutil.copy(forward_fn_path,rtm_dir)
+        # if 'z' in mode:
+        #     shutil.copy(forward_fn_path,rtm0_dir)
     ### directories end ###
 
 

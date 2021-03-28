@@ -252,7 +252,7 @@ def batchgen(args):
         elif mode == 'mz':
             steps = 'gfbizc'
     if args.max_cpu:
-        job_cap = args.max_cpu//args.src_num
+        job_cap = args.max_cpu//args.np
     else:
         job_cap = args.max_job
     if job_cap > args.src_num:

@@ -38,7 +38,7 @@ logger = addlogger('common',path=logpath)
 
 def cp(f1,f2):
     for f in glob.glob(r'%s'%f1):
-        logger.info('cp %s %s'%(f,f2))
+        logger.debug('cp %s %s'%(f,f2))
         shutil.copy(f,f2)
 
 def scandir_re_match(path='.',ftype='file',*patterns):

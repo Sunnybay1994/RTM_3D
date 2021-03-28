@@ -173,22 +173,28 @@ void readSource()
     }
 
     int ii = 0;
+    int i = -1;
+    int xmin = rangex[myRank];
+    int xmax = rangex[myRank+1];
 
-    for (int isrc=0; isrc<nsrc_true; ++isrc){      // get the sources to be processed by this process
+    for (int isrc=0; isrc<nsrc_true; ++isrc){   // get the sources to be processed by this process
         for ( j=0; j<nt_of_src; ++j){fscanf(fp,"%lf",&(isrc_pulse[j]));}
+        printf("(%d)src%dpulse=%lf,%lf,...,%lf,%lf\n",myRank,isrc,isrc_pulse[0],isrc_pulse[1],isrc_pulse[nt_of_src-2],isrc_pulse[nt_of_src-1]); // debug
         for (int isrcspan=0; isrcspan<nsrc_span; ++isrcspan){
-            i = isrc*nsrc_span + isrcspan;
-            if (src[i].x>=rangex[myRank] && src[i].x<rangex[myRank+1]){
+            i++; // i = isrc*nsrc_span + isrcspan;
+            if (src[i].x>=xmin && src[i].x<xmax){
+            printf("(%d)isrc=%d/%d,x=%d,y=%d\n",myRank,i,nsrc,src[i].x,src[i].y); // debug
                 mysrc.push_back(i);
                 for ( j=0; j<nt_of_src; ++j){
                     src_pulse(ii,j) = isrc_pulse[j];
                 }
-                ii += 1;
-            }
-            else{
-                for ( j=0; j<nt_of_src; ++j){
-                    fscanf(fp,"%lf",&dummy);
-                }
+                /* an alternative way below using pointer*/
+                // double *p1 = &src_pulse(ii,0);
+                // double *p2 = isrc_pulse;
+                // for ( j=0; j<nt_of_src; ++j){
+                //     *(p1++) = *(p2++);
+                // }
+                ii++;
             }
         }
     }

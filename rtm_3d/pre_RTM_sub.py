@@ -191,7 +191,8 @@ def pre_RTM(list_src):
                 locinfos = [(loc[0],loc[1],loc[2],component) for loc in locs_binned]
                 logger.info('Writing zero-offset source data...')
                 fn = os.path.join(rtmdir,'Input','src.in_0000')
-                extend_and_write_sources(fn, locinfos, dats_binned)
+                status_info = extend_and_write_sources(fn, locinfos, dats_binned, autospan=True)
+                logger.info(status_info)
                 #     fsrc.write("%d %d\n" % (len(list_src), nt))
                 #     fsrc.write(locs)
                 #     np.savetxt(fsrc,dats)

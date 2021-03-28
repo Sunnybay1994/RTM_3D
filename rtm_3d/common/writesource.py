@@ -28,7 +28,17 @@ def extend_and_write_one_source(fn,srcinfo,srcpulse,xhalfspan=2,yhalfspan=2):
     nspan = len(srcinfos)
     write_source(fn,srcinfos,[srcpulse],1,nspan)
 
-def extend_and_write_sources(fn,srcinfos,srcpulses,xhalfspan=2,yhalfspan=2):
+def extend_and_write_sources(fn,srcinfos,srcpulses,xhalfspan=2,yhalfspan=2,autospan=False):
+    status_info = 'extend_and_write_sources: number of original sources=%d\n'%len(srcinfos)
+    if autospan:
+        status_info += 'Autospan: '
+        xs,ys,*_ = zip(*srcinfos)
+        xs = list({}.fromkeys(xs).keys()) # remove repeat elements
+        xs.sort() # sort
+        xhalfspan = (xs[1] - xs[0])//2 # get difference
+        ys = list({}.fromkeys(ys).keys())
+        ys.sort()
+        yhalfspan = (ys[1] - ys[0])//2
     assert len(srcinfos) == len(srcpulses), 'extend_and_write_sources:number of srcinfos(%d) and srcpulses(%d) not equal.'%(len(srcinfos),len(srcpulses))
     new_srcinfos = []
     new_srcpulses = []
@@ -38,4 +48,7 @@ def extend_and_write_sources(fn,srcinfos,srcpulses,xhalfspan=2,yhalfspan=2):
         new_srcpulses += ext_srcpulses
     nsrc = len(srcinfos)
     nspan = len(ext_srcinfos)
+    status_info += 'xhalfspan=%d, yhalfspan=%d\n'%(xhalfspan,yhalfspan)
+    status_info += 'total_span/source: %d, total sources after span: %d\n'%(nspan,len(new_srcinfos))
     write_source(fn,new_srcinfos,srcpulses,nsrc,nspan)
+    return status_info

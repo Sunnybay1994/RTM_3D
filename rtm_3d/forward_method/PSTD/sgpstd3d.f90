@@ -296,7 +296,7 @@ program SGPSTD3D
 		endif
 	enddo
 	do i = 1,nsrc
-        if (mod(i,nsrc_span) == 1) then
+        if (nsrc_span == 1 .or. mod(i,nsrc_span) == 1) then
 		    read(4,*), srcpulse(i,:)
         else
             srcpulse(i,:) = srcpulse(i-1,:)

@@ -10,7 +10,7 @@ pstdcc=ifort
 pstdcflags=-qopenmp -mkl
 pstdsrc=rtm_3d/forward_method/PSTD
 pstd : $(pstdsrc)/mkl_dfti.f90 $(pstdsrc)/sgpstd3d.f90
-	$(pstdcc) $(pstdcflags) -o $(destpath)/PSTD.exe $(pstdsrc)/mkl_dfti.f90 $(pstdsrc)/sgpstd3d.f90
+	$(pstdcc) $(pstdcflags) -o $(destpath)PSTD.exe $(pstdsrc)/mkl_dfti.f90 $(pstdsrc)/sgpstd3d.f90
 
 clean :
 	rm mkl_dft_type.mod mkl_dfti.mod
