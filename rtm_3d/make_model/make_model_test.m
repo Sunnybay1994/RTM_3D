@@ -1,7 +1,9 @@
 %% modelname
 filename = mfilename;
 modelname = 'test';
-fn = 'test';
+% modelname = 'test_0o';
+% modelname = 'test_2d';
+fn = modelname;
 fn_save = [fn '.mat'];
 fig_save = [fn '.png'];
 
@@ -102,24 +104,37 @@ for ix = 1:nx
 end
 
 %% src and rec para
-dx_src = 0.2*2;
-dx_rec = 0.04;
-dy_src = dx_src;
-dy_rec = dx_rec;
+if strcmp(modelname,'test')
+    dx_src = 0.2*2;
+    dx_rec = 0.04;
+    dy_src = dx_src;
+    dy_rec = dx_rec;
+elseif strcmp(modelname,'test_2d')
+    dx_src = 0.2*2;
+    dx_rec = 0.04;
+    dy_src = Y/2;
+    dy_rec = Y/2;
+elseif strcmp(modelname,'test_0o')
+    dx_src = 0.2;
+    dx_rec = dx_src;
+    dy_src = 1;
+    dy_rec = dy_src;
+end
+
 src_margin_nx = npmlx;
-src_margin_ny = npmlx;
+src_margin_ny = npmly;
 rec_margin_nx = npmlx;
-rec_margin_ny = npmlx;
+rec_margin_ny = npmly;
 src_span = 2;
 
 % place src and rec
 dnx_src = dx_src / dx;
 dnx_rec = dx_rec / dx;
-nx_src = round((nx-2*src_margin_nx)/dnx_src);
+nx_src = floor((nx-2*src_margin_nx)/dnx_src);
 if mod(nx_src,2) == 0
     nx_src = nx_src-1;
 end
-nx_rec = round((nx-2*rec_margin_nx)/dnx_rec);
+nx_rec = floor((nx-2*rec_margin_nx)/dnx_rec);
 if mod(nx_rec,2) == 0
     nx_rec = nx_rec-1;
 end
@@ -128,11 +143,11 @@ recx = ((-floor(nx_rec/2):floor(nx_rec/2)) * dx_rec) + nx/2*dx;
 
 dny_src = dy_src / dy;
 dny_rec = dy_rec / dy;
-ny_src = round((ny-2*src_margin_ny)/dny_src);
+ny_src = floor((ny-2*src_margin_ny)/dny_src);
 if mod(ny_src,2) == 0
     ny_src = ny_src-1;
 end
-ny_rec = round((ny-2*rec_margin_ny)/dny_rec);
+ny_rec = floor((ny-2*rec_margin_ny)/dny_rec);
 if mod(ny_rec,2) == 0
     ny_rec = ny_rec-1;
 end

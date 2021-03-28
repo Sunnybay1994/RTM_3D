@@ -1,5 +1,5 @@
 %% load files and parameters
-workdir = '2vs3_fault_800MHz_0.2m_0.04m_fdtd_2';
+workdir = '3layers_with_0.2m_fault_0o_300MHz_0.1x0.5_0_0.1x0.5_fdtd_4_0o';
 resultdir = fullfile(workdir,'Result');
 f_wavefield_corr = dir(fullfile(resultdir,'result_wavefield_corr*.dat'));
 
@@ -63,15 +63,36 @@ wslicez = slices_iz / x_outstep;
 
 %% Draw slices
 slice_reload = false;
-
+%%
 slicey = {[]};
 slicey_sum = {[]};
+fig_para = [0.1, true];
 for i =1:length(slices_iy)
     f_slice = dir(fullfile(resultdir,sprintf('result_ycorr_????_%02d.dat',i-1)));
     slice_tag = [sprintf("y=%gm",y(slices_iy(i))),"x(m)","depth(m)"];
-    [slicey{i},slicey_sum{i}] =  slice_summation(f_slice,x,z,slice_tag,fig_result_dir,slice_reload);
+    [slicey{i},slicey_sum{i}] =  slice_summation(f_slice,x,z,slice_tag,fig_result_dir,slice_reload,fig_para);
 end
+% model
+% dot1 = [1.8 0 1];
+% dot2 = [0.2 1.6 0];
+% dot3 = [0.8 0 0];
+% % dot1 = [1.2 1.6 1];
+% % dot2 = [0.2 1.6 0.2];
+% % dot3 = [1.8 0 0.2];
+% n_plane = cross((dot3-dot1),(dot2-dot1));
+% yi = y(slices_iy(i));
+% zi = -(n_plane(1)*(x-dot1(1)) + n_plane(2)*(yi-dot1(2)))/n_plane(3)+ dot1(3);
+% zi(zi<0.3) = 0.3;
+% zi(zi>0.8) = 0.8;
+% % zi(zi<0.1) = 0.1;
+% % zi(zi>0.9) = 0.9;
 
+
+% hold on
+% plot(x,zi,'r--')
+% hold off
+% export_fig(fullfile(fig_result_dir,"slice_" + slice_tag(1) + "_with_model.png"))
+%%
 slicex = {[]};
 slicex_sum = {[]};
 for i =1:length(slices_ix)
@@ -79,7 +100,7 @@ for i =1:length(slices_ix)
     slice_tag = [sprintf("x=%gm",x(slices_ix(i))),"y(m)","depth(m)"];
     [slicex{i},slicex_sum{i}] =  slice_summation(f_slice,y,z,slice_tag,fig_result_dir,slice_reload);
 end
-
+%%
 slicez = {[]};
 slicez_sum = {[]};
 for i =1:length(slices_iz)
@@ -89,7 +110,7 @@ for i =1:length(slices_iz)
 end
 
 %% Draw wavefields
-reload_wvf = true;
+reload_wvf = false;
 
 amp_para.fac1 = 0;
 amp_para.fac2 = 0;
@@ -119,7 +140,17 @@ end
 % end
 
 %%
-function [slice,slice_sum] = slice_summation(f_slice,x1,x2,slice_tag,fig_out_dir,reload)
+function [slice,slice_sum] = slice_summation(f_slice,x1,x2,slice_tag,fig_out_dir,reload,fig_para)
+    if nargin < 6
+        reload = false;
+    end
+    if nargin < 7
+        zmin = -inf;
+        ifagc = false;
+    else
+        zmin = fig_para(1);
+        ifagc = fig_para(2);
+    end
     nx1 = length(x1);
     nx2 = length(x2);
     outdir = f_slice(1).folder;
@@ -142,7 +173,10 @@ function [slice,slice_sum] = slice_summation(f_slice,x1,x2,slice_tag,fig_out_dir
     set(gcf,'Unit','centimeters')
     set(gcf,'Position',[0,0,29.7,21])
     set(gca,'fontsize',30,'fontname','Times')
-    imagesc(x1,x2,slice_sum')
+    if ifagc
+        slice_sum = agc(slice_sum')';
+    end
+    imagesc(x1,x2(x2>zmin),slice_sum(:,x2>zmin)')
 %     title("slice at " + slice_tag(1))
     daspect([1,1,1])
     xlabel(slice_tag(2));ylabel(slice_tag(3))
