@@ -238,7 +238,7 @@ def blackharrispulse(fmax, dt):
     p = p / np.max(np.abs(p))
     plt.plot(p)
     plt.savefig(os.path.join(workdir,'blackharrispulse.png'))
-    return p
+    return p,t
 
 
 def gaussian(dt, t0, nt):
@@ -252,7 +252,10 @@ def gaussian(dt, t0, nt):
 
 
 def ricker(f, length, dt):
-    t = np.linspace(-length / 2, (length - dt) / 2, length / dt)
+    nt_src = int(length // dt)
+    # t = np.linspace(-length / 2, (length - dt) / 2, length // dt)
+    logger.info('ricker pulse: f=%g,dt=%g,T=%g,nt=%d'%(f,dt,length,nt_src))
+    t = np.array(range(nt_src)) * dt - length / 2
     y = (1.0 - 2.0 * (np.pi ** 2) * (f ** 2) * (t ** 2)) * \
         np.exp(-(np.pi ** 2) * (f ** 2) * (t ** 2))
     try:
@@ -262,7 +265,7 @@ def ricker(f, length, dt):
     else:
         plt.plot(t, y)
         plt.savefig(os.path.join(workdir,'ricker.png'))
-    return y
+    return y,t
 
 
 def check_dx(srcpulse):
@@ -492,10 +495,6 @@ if __name__ == '__main__':
         dirlist1 += [rtm0_dir]
         dirlist2 += [rtm0_indir]
         dirlist3 += [rtm0_outdir]
-        if not os.path.exists(rtm0_statusdir):
-            os.mkdir(rtm0_statusdir)
-        else:
-            cleanfiles(rtm0_statusdir,'y')
 
     cleanlist = []
     for dirlist in [dirlist1,dirlist2,dirlist3]:
@@ -505,6 +504,11 @@ if __name__ == '__main__':
             elif not idir in dirlist1:
                 cleanlist += [idir]
     cleanfiles(cleanlist,noprompt)
+    if 'z' in  mode:
+        if not os.path.exists(rtm0_statusdir):
+            os.mkdir(rtm0_statusdir)
+        else:
+            cleanfiles(rtm0_statusdir,'y')
 
     if forward_method == 'fdtd':
         forward_fn = "FDTD_MPI.exe" # useless
@@ -555,8 +559,12 @@ if __name__ == '__main__':
     ### gird paraeter end ###
 
     ### source ###
-    srcpulse = blackharrispulse(fmax, dt)
-    # srcpulse = ricker(fmax,4*1/fmax,dt)
+    # srcpulse,t_src = blackharrispulse(fmax, dt)
+    srcpulse,t_src = ricker(fmax,4*1/fmax,dt)
+    with open(os.path.join(workdir,'src_t.txt'),'w') as fo:
+        fo.write('t,srcpulse\n')
+        for i in range(len(t_src)):
+            fo.write('%g,%g\n'%(t_src[i],srcpulse[i]))
     nt_src = len(srcpulse)
     logger.info("nt=%d, nt_src=%d"%(nt, nt_src))
     dx_max = check_dx(srcpulse)
