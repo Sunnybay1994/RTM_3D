@@ -7,20 +7,23 @@ if [[ $1 == '1' ]];then
     for((i=$min_core;i<=$max_core;i++));
     do
         echo tasks-$i
-        python model_em.py --np $i --server freeosc -n --steps g
-        cd tasks/TvsC_800MHz_1.2m_1.2m_fdtd_$i/log
-        sh sub.sh
-        cd ../../..
+        python model_em.py --server freeosc -p $i --max_cpu 400 -m z --model make_model/test.mat --steps g
+        python model_em.py --server freeosc -p $i --max_cpu 400 -m z --model make_model/test.mat --steps g --pstd
+        cd ../tasks/test_800MHz_0.4x0.4_2_0.04x0.04_fdtd_${i}_0o/log
+        sbatch script_0004.sh
+        cd ../../test_800MHz_0.4x0.4_2_0.04x0.04_pstd_${i}_0o/log
+        sbatch script_0004.sh
+        cd ../../../rtm_3d
     done
 elif [[ $1 == '2' ]];then
-    ffdtd=tasks/time_fdtd.txt
-    fpstd=tasks/time_pstd.txt
+    ffdtd=../tasks/time_fdtd.txt
+    fpstd=../tasks/time_pstd.txt
     rm $ffdtd
     rm $fpstd
     for((i=$min_core;i<=$max_core;i++));
     do
-        tail -3 tasks/TvsC_800MHz_1.2m_1.2m_fdtd_$i/Output/0.out >> $ffdtd
-        # tail -1 pstdtest_800MHz_2.0m_0.5m_pstd/$i.out >> $fpstd
+        tail -3 ../tasks/test_800MHz_0.4x0.4_2_0.04x0.04_fdtd_${i}_0o/Output/*.out >> $ffdtd
+        tail -1 ../tasks/test_800MHz_0.4x0.4_2_0.04x0.04_pstd_${i}_0o/Output/*.out >> $fpstd
     done
 else
     echo $1

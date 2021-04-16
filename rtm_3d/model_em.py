@@ -555,7 +555,7 @@ if __name__ == '__main__':
     # backward wavefield will coincide perfectly when doing cross-correlation.
     nt += outstep_t_wavefield + 1 - nt%outstep_t_wavefield
     logger.info("dt: %fns"%(dt/1e-9))
-    assert dt < dt_max, 'dt too big!!! (%f>%f)'%(dt,dt_max)
+    assert dt < dt_max, 'dt too big!!! (%g>%g)'%(dt/1e-9,dt_max/1e-9)
     ### gird paraeter end ###
 
     ### source ###
