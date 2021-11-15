@@ -1,5 +1,15 @@
 %% load files and parameters
-homedir = '3layers_with_0.2m_fault_0o_300MHz_0.1x0.5_0_0.1x0.5_pstd_4_0o';
+homedir = '3layers_with_0.2m_fault_0o_300MHz_0.1x0.5_0_0.1x0.5_pstd_8_0o';
+% srcpulse_type = 'ricker';
+srcpulse_type = 'blackharris';
+it0_ori = 0;
+if strcmp(srcpulse_type,'ricker')
+    if contains(homedir,'100MHz')
+        it0_ori = 401;
+    elseif contains(homedir,'400MHz')
+        it0_ori = 101;
+    end
+end
 % workdir = fullfile(homedir);
 workdir = fullfile(homedir,'RTM0');
 inputdir = fullfile(workdir,'Input');
@@ -9,6 +19,10 @@ fyslice = dir(fullfile(result_dir,'sly*.bin'));
 fzslice = dir(fullfile(result_dir,'slz*.bin'));
 fwave = dir(fullfile(result_dir,'wvf*.bin'));
 outdir = workdir;
+slicedir = fullfile(workdir,'slices');
+if ~exist(slicedir,'dir')
+    mkdir(slicedir)
+end
 
 modelfiles = dir(fullfile(homedir,'model.mat'));
 modelfn = fullfile(modelfiles.folder,modelfiles.name);
@@ -41,7 +55,8 @@ dx = dx_ori * x_outstep;
 dy = dy_ori * x_outstep;
 dz = dz_ori * x_outstep;
 
-dt = dt_ori/t_outstep;
+dt = dt_ori*t_outstep;
+it0 = round(it0_ori / t_outstep);
 
 %% behavier
 draw_slices = true;
@@ -78,10 +93,32 @@ else
 end
 %%
 for i = slicey
+    figure(10)
+    set(gcf,'Unit','centimeters')
+    set(gcf,'Position',[0,0,29.7,21])
     yi = i*dy_ori;
-    imagesc(flipud(squeeze(pre_rtm_gathers(:,i,:))'))
-    title(['y = ' num2str(yi) ' m']);colorbar
-    saveas(gca,fullfile(outdir,['pre_yslice_at_y=' num2str(yi) 'm.png']))
+    slicey_pre = flipud(squeeze(pre_rtm_gathers(:,i,:))');
+    x_pre = (0:size(slicey_pre,2)) * dx_ori;
+    t_pre = (0:size(slicey_pre,1)) * dt_ori / 1e-9;
+    imagesc(x_pre,t_pre,slicey_pre)
+    xlabel('x(m)');ylabel('t(ns)');
+%     title(['Input: y = ' num2str(yi) ' m']);colorbar
+    export_fig(gcf,fullfile(outdir,['pre_yslice_at_y=' num2str(yi) 'm.png']),'-transparent')
+%     pause(0.1)
+end
+%%
+for i = 1260
+    figure(10)
+    set(gcf,'Unit','centimeters')
+    set(gcf,'Position',[0,0,29.7,21])
+    ti = i*dt_ori/1e-9;
+    slicet_pre = squeeze(pre_rtm_gathers(:,:,i))';
+    x_pre = (0:size(slicey_pre,2)) * dx_ori;
+%     t_pre = (0:size(slicey_pre,1)) * dt_ori / 1e-9;
+    imagesc(x_pre,x_pre,slicet_pre)
+    xlabel('x(m)');ylabel('y(m)');
+%     title(['Input: y = ' num2str(yi) ' m']);colorbar
+    export_fig(gcf,fullfile(outdir,['pre_tslice_at_t=' num2str(ti) 'ns.png']),'-transparent')
 %     pause(0.1)
 end
 
@@ -89,7 +126,7 @@ end
 outf = fullfile(outdir,'result.mat');
 if ~exist(outf,'file')
     xslice={[]};yslice={[]};zslice={[]};wavefield={[]};
-    for i = 1:length(fyslice)
+   parfor i = 1:length(fyslice)
         xfid = fopen(fullfile(result_dir,fxslice(i).name));
         xslice{i} = fread(xfid,[ny_ori,nz_ori],'float');
         fclose(xfid);
@@ -108,28 +145,39 @@ if ~exist(outf,'file')
 else
     load(outf)
 end
-
+%%
+nt = length(xslice);
+ti = (1:nt) - nt + it0;
+t = ti*dt/1e-9;
 %%
 if draw_slices
     x = (1:nx_ori)*dx_ori;
     y = (1:ny_ori)*dy_ori;
     z = ((1:nz_ori)-nz_air_ori)*dz_ori;
-    for i = 1:length(xslice)
+    for i = length(xslice)-2*it0 : length(xslice)
         figure(11)
         imagesc(y,z,xslice{i}');colorbar;
         xlabel('y/m');ylabel('z/m');
         title(['xslice t=' num2str(dt*(i-1)) 'ns'])
         daspect([1,1,1])
-%         saveas(gca,fullfile(outdir,['slices/xslice(' num2str(slicex*dx_ori) 'm) at time_step=' num2str(i) '.png']))
+        saveas(gca,fullfile(slicedir,['xslice(' num2str(slicex*dx_ori) 'm) at t=' num2str(t(i)) 'ns.png']))
 
 %%
         figure(12)
+        set(gcf,'Unit','centimeters')
+        set(gcf,'Position',[0,0,29.7,21])
+%         set(gca,'fontsize',24,'fontname','Times')
 %         imagesc(x,z(z>=0),amp_gain_distance(yslice{i}(z>=0,:),[2.5,2.5,0]));colorbar;
         sly = yslice{i}';
-        imagesc(x,z,agc(sly));colorbar;
+        sly(z>0.5&z<2.7,:) = agc(sly(z>0.5&z<2.7,:));%%forr model 3layers with fault
+        imagesc(x,z(z>0),sly(z>0,:));colorbar;
         xlabel('x/m');ylabel('z/m');
-        title(['yslice at y=' num2str(slicey*dy_ori) 'm'])
+%         title(['yslice at y=' num2str(slicey*dy_ori) 'm'])
 
+        set(gca,'fontsize',24,'fontname','Times')
+        fn = fullfile(slicedir,['yslice(' num2str(slicey*dy_ori) 'm) at t=' num2str(t(i)) 'ns.png']);
+        export_fig(fn,'-transparent')
+        
         % outline model, should add manully
         hold on
         yi = 2.5;
@@ -182,30 +230,52 @@ if draw_slices
 %         % draw fault: 7.5*(x-2)-0.75*y-2.5*(z-0.8)=0
 %         zm = (7.5*(x-2)-0.75*yi)/2.5 + 0.8;
 %         plot(x,zm,'r-.')
-%         plot(x,1*ones(size(x)),'k')% show where zslice locate.
+        plot(x,0.92*ones(size(x)),'k')% show where zslice locate.
         hold off
         
         daspect([1,1,1])
         xlabel('x(m)');ylabel('depth(m)')
-%         saveas(gca,fullfile(outdir,['slices/yslice(' num2str(slicey*dy_ori) 'm) at time_step=' num2str(i) '.png']))
+        
+%         % model
+%         dot1 = [3.3 0 1];
+%         dot2 = [1.7 1.6 0];
+%         dot3 = [2.3 0 0];
+%         n_plane = cross((dot3-dot1),(dot2-dot1));
+%         yi = y(slicey(1));
+%         zi = -(n_plane(1)*(x-dot1(1)) + n_plane(2)*(yi-dot1(2)))/n_plane(3)+ dot1(3);
+%         zi1 = zi;
+%         zi1(zi1<0.7) = 0.7;
+%         zi1(zi1>0.9) = 0.9;
+%         zi2 = zi;
+%         zi2(zi2<0.9) = 0.9;
+%         zi2(zi2>1.1) = 1.1;
+%         hold on
+%         plot(x,zi1,'r--')
+%         plot(x,zi2,'r--')
+%         hold off
+        set(gca,'fontsize',24,'fontname','Times')
+        export_fig(fullfile(slicedir,['yslice(' num2str(slicey*dy_ori) 'm) at t=' num2str(t(i)) 'ns_with_model.png']),'-transparent')
 %% 
         figure(13)
+        set(gcf,'Unit','centimeters')
+        set(gcf,'Position',[0,0,29.7,21])
+        set(gca,'fontsize',24,'fontname','Times')
         imagesc(x,y,zslice{i}');colorbar;
         xlabel('x/m');ylabel('y/m');
         title(['zslice at z=' num2str((slicez-nz_air_ori)*dz_ori) 'm'])
         
-        % outline model, should add manully
-        hold on
-        zi = 1;
-        % 7.5*(x-2)-0.75*y-2.5*(z-0.8)=0
-        ym = (7.5*(x-2)-2.5*(zi-0.8))/0.75;
-        plot(x,ym,'r--')
-%         plot(x,2.5*ones(size(x)),'k')% show where yslice locate.
-        hold off
+%         % outline model, should add manully
+%         hold on
+%         zi = 1;
+%         % 7.5*(x-2)-0.75*y-2.5*(z-0.8)=0
+%         ym = (7.5*(x-2)-2.5*(zi-0.8))/0.75;
+%         plot(x,ym,'r--')
+% %         plot(x,2.5*ones(size(x)),'k')% show where yslice locate.
+%         hold off
 
         daspect([1,1,1])
         xlabel('x(m)');ylabel('y(m)')
-%         saveas(gca,fullfile(outdir,['slices/zslice(' num2str((slicez-nz_air_ori)*dz_ori) 'm) at time_step=' num2str(i) '.png']))
+        saveas(gca,fullfile(slicedir,['zslice(' num2str((slicez-nz_air_ori)*dz_ori) 'm) at t=' num2str(t(i)) 'ns.png']))
 %         pause(0.1)
     end
 end
@@ -216,8 +286,11 @@ y = (1:ny)*dy;
 z = ((1:nz)-nz_air)*dz;
 %%
 if draw_wyslice
-    figure(15)
-    for i = 12:10:113
+    figure(12)
+    set(gcf,'Unit','centimeters')
+    set(gcf,'Position',[0,0,29.7,21])
+    set(gca,'fontsize',30,'fontname','Times')
+    for i = 63
         yi = i*dy;
         wyslice = squeeze(wavefield{end}(:,i,:))';
         wyslice1 = agc(wyslice);
@@ -278,6 +351,7 @@ if draw_wyslice
 %         plot(x,zm,'r-.')
         hold off
         
+        set(gca,'fontsize',30,'fontname','Times')
         saveas(gcf,fullfile(outdir,['yslice at y=' num2str(yi) 'm.png']))
         pause(0.1)
     end
@@ -285,6 +359,10 @@ end
 
 %% wv_zslice
 if draw_wzslice
+    figure(13)
+    set(gcf,'Unit','centimeters')
+    set(gcf,'Position',[0,0,29.7,21])
+    set(gca,'fontsize',30,'fontname','Times')
     for i = 28
         zi = (i-nz_air)*dz;
         wzslice = squeeze(wavefield{end}(:,:,i))';
@@ -301,7 +379,9 @@ if draw_wzslice
         daspect([1,1,1])
         xlabel('x(m)');ylabel('y(m)')
         
-        saveas(gcf,fullfile(outdir,['zslice at z=' num2str(zi) 'm.png']))
+        set(gca,'fontsize',24,'fontname','Times')
+        fn = fullfile(outdir,['zslice at z=' num2str(zi) 'm.png']);
+        export_fig(fn,'-transparent')
         pause(0.1)
     end
 end

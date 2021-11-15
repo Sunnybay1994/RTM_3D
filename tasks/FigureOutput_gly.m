@@ -1,52 +1,62 @@
 %% files and parameters
-xspan = 5;yspan = 5;
+xspan = 2;yspan = 5;
 nxb = 5 + round(xspan/2);nyb = 5 + round(yspan/2); % boundary
-workdir_4 = 'gly_400MHz_3.0_0.05_0.1_0.02';
-nx0_4 = 1200+10; ny0_4 = 125+10; nz0_4 = 310; nz0_air_4 = 10;
-dx0_4 = 0.05; dy0_4 = 0.1; dz0_4 = 0.02;
+ldy = 0.5; % cross-line spatial
+
+workdir_4 = 'gly400ep6dz0.02_400MHz_30.25x3.375_15_30.25x3.375_fdtd_24_0o';
+modelfiles = dir(fullfile(workdir_4,'model.mat'));
+modelfn = fullfile(modelfiles.folder,modelfiles.name);
+m = load(modelfn);
+nx0_4 = m.nx; ny0_4 = m.ny; nz0_4 = m.nz; nz0_air_4 = m.nz_air;
+dx0_4 = m.dx; dy0_4 = m.dy; dz0_4 = m.dz;
 x0_4 = ((1:nx0_4)-nxb) * dx0_4;
-y0_4 = ((1:ny0_4)-nyb) * dy0_4;
+% 0:11 -> -1:12 -> -1:0.5*12  (*ldy)
+y0_4 = ((1:ny0_4)-nyb) * dy0_4 + (-1)*ldy; % 1 trace south than 100MHz survey
 z0_4 = ((1:nz0_4) - nz0_air_4) * dz0_4;
-dt0_4 = 0.0587e-9;
-result_dir_4 = fullfile(workdir_4,'Output');
+% dt0_4 = 0.0587e-9;
+result_dir_4 = fullfile(workdir_4,'RTM0','Output');
 outdir_4 = fullfile(workdir_4,'result');
 mkdir(outdir_4)
 
-workdir_1 = 'gly_100MHz_3.0_0.05_0.1_0.04';
-nx0_1 = nx0_4; ny0_1 = 105+10; nz0_1 = 310; nz0_air_1 = 10;
-dx0_1 = dx0_4; dy0_1 = dy0_4; dz0_1 = 0.04;
+workdir_1 = 'gly100ep6dz0.04_100MHz_30.25x2.875_15_30.25x2.875_fdtd_24_0o';
+modelfiles = dir(fullfile(workdir_1,'model.mat'));
+modelfn = fullfile(modelfiles.folder,modelfiles.name);
+m = load(modelfn);
+nx0_1 = m.nx; ny0_1 = m.ny; nz0_1 = m.nz; nz0_air_1 = m.nz_air;
+dx0_1 = m.dx; dy0_1 = m.dy; dz0_1 = m.dz;
 x0_1 = ((1:nx0_1)-nxb) * dx0_1;
+% 1:9 -> 0:10 -> 0:0.5*10  (*ldy)
 y0_1 = ((1:ny0_1)-nyb) * dy0_1;
 z0_1 = ((1:nz0_1) - nz0_air_1) * dz0_1;
-dt0_1 = 0.1466;
-result_dir_1= fullfile(workdir_1,'Output');
+% dt0_1 = 0.1466e-9;
+result_dir_1= fullfile(workdir_1,'RTM0','Output');
 outdir_1 = fullfile(workdir_1,'result');
 mkdir(outdir_1)
 
-
+%%
 wstep = 2;%wavefiled output position step
 
-nx_4 = round(nx0_4/wstep);
-ny_4 = round(ny0_4/wstep);
-nz_4 = nz0_4/wstep;
+nx_4 = floor(nx0_4/wstep);
+ny_4 = floor(ny0_4/wstep);
+nz_4 = floor(nz0_4/wstep);
 nz_air_4 = nz0_air_4/wstep;
 dx_4 = dx0_4 * wstep;
 dy_4 = dy0_4 * wstep;
 dz_4 = dz0_4 * wstep;
-x_4 = ((1:nx_4)-nxb/wstep) * dx_4;
-y_4 = ((1:ny_4)-nyb/wstep) * dy_4;
-z_4 = ((1:nz_4) - nz_air_4) * dz_4;
+x_4 = x0_4(1):dx_4:x0_4(end);
+y_4 = (0:ny_4-1)*dy_4 + y0_4(1);
+z_4 = z0_4(1):dz_4:z0_4(end);
 
-nx_1 = round(nx0_1/wstep);
-ny_1 = round(ny0_1/wstep);
-nz_1 = nz0_1/wstep;
+nx_1 = floor(nx0_1/wstep);
+ny_1 = floor(ny0_1/wstep);
+nz_1 = floor(nz0_1/wstep);
 nz_air_1 = nz0_air_1/wstep;
 dx_1 = dx0_1 * wstep;
 dy_1 = dy0_1 * wstep;
 dz_1 = dz0_1 * wstep;
-x_1 = ((1:nx_1)-nxb/wstep) * dx_1;
-y_1 = ((1:ny_1)-nyb/wstep) * dy_1;
-z_1 = ((1:nz_1) - nz_air_1) * dz_1;
+x_1 = x0_1(1):dx_1:x0_1(end);
+y_1 = (0:ny_1-1)*dy_1 + y0_1(1);
+z_1 = z0_1(1):dz_1:z0_1(end);
 
 
 % tstep = 4;%wavefiled and xys slice output time step
@@ -55,61 +65,75 @@ z_1 = ((1:nz_1) - nz_air_1) * dz_1;
 
 
 %% load data
-result_exist = true;
-[wavefields_4,xslice_4,yslice_4,zslice_4] = load_result(result_dir_4,outdir_4,nx0_4,ny0_4,nz0_4,wstep,result_exist);
-[wavefields_1,xslice_1,yslice_1,zslice_1] = load_result(result_dir_1,outdir_1,nx0_1,ny0_1,nz0_1,wstep,result_exist);
+[wavefields_4,xslice_4,yslice_4,zslice_4] = load_result(result_dir_4,outdir_4,nx0_4,ny0_4,nz0_4,wstep);
+[wavefields_1,xslice_1,yslice_1,zslice_1] = load_result(result_dir_1,outdir_1,nx0_1,ny0_1,nz0_1,wstep);
 %% draw slices
-% use_agc = true;
-% show_all = false;
-% draw_slices(outdir_4,xslice_4,yslice_4,zslice_4,x0_4,y0_4,z0_4,use_agc,show_all);
-% draw_slices(outdir_1,xslice_1,yslice_1,zslice_1,x0_1,y0_1,z0_1,use_agc,show_all);
+use_agc = true;
+show_all = false;
+draw_slices(outdir_4,xslice_4,yslice_4,zslice_4,x0_4,y0_4,z0_4,use_agc,show_all);
+draw_slices(outdir_1,xslice_1,yslice_1,zslice_1,x0_1,y0_1,z0_1,use_agc,show_all);
 %% interp wavefields to look pretty
-dxx = 0.05; dyy = dy_1; dzz = 0.04;
-[wi4,xx_4,yy_4,zz_4] = interp_wavefield(wavefields_4{end},x_4,y_4,z_4,0,dxx,dyy,dzz,[0.5,x_4(end)-0.5],[],[0,5]);
-[wi1,xx_1,yy_1,zz_1] = interp_wavefield(wavefields_1{end},x_1,y_1,z_1,0.8,dxx,dyy,dzz,[0.5,x_1(end)-0.5],[],[0,6]);
+dxx = dx0_4; dyy = dy0_4; dzz = dz0_4;
+[wi4,xx_4,yy_4,zz_4] = interp_wavefield(wavefields_4{end},x_4,y_4,z_4,0,dxx,dyy,dzz,[0,x_4(end-nxb)],[-0.5,5.5],[0,5]);
+[wi1,xx_1,yy_1,zz_1] = interp_wavefield(wavefields_1{end},x_1,y_1,z_1,0,dxx,dyy,dzz,[0,x_1(end-nxb)],[0,5],[0,10]);
 
-%% draw wavefield slices
-% draw_wavefield_yslice(outdir_1,wi1,1:round(1/dyy):length(yy_1),xx_1,yy_1,zz_1,false,[])
-% draw_wavefield_yslice(outdir_4,wi4,1:round(1/dyy):length(yy_4),xx_4,yy_4,zz_4,false,[])
 %%
 info = get(0);
 win_size = info.ScreenSize;% 获取显示屏的像素尺寸
-fh = figure();
+fh = figure(10);
+clf
 set(fh, 'outerposition', win_size);	% 设置图形窗口位置和外尺寸为屏幕大小
 %%
 y1_min = 0;
-y1_max = 10;
+y1_max = 5;
 y4_min = 0;
-y4_max = 12;
+y4_max = 5.5;
 z1_min = 0;
 z1_max = 6;
 z4_min = 0;
 z4_max = 5;
-h1 = (y1_max - y1_min)/2;
-h2 = (y4_max - y4_min)/2;
-h3 = (z1_max - z1_min)*2;
-h4 = (z4_max - z4_min)*2;
-ha = h1+h2+h3+h4;
-
+h(1) = (y1_max - y1_min)/2;
+h(2) = (y4_max - y4_min)/2;
+h(3) = (z1_max - z1_min)*2;
+h(4) = (z4_max - z4_min)*2;
+h = h*4;
+ha = sum(h);
+%% draw wavefield slices
+fh = figure(1);
+set(gcf,'Unit','centimeters')
+set(gcf,'Position',[0,0,29.7,21])
+set(gca,'fontsize',24,'fontname','Times')
+draw_wavefield_yslice(outdir_1,wi1,8:round(0.5/dyy):length(yy_1),xx_1,yy_1,zz_1,false,[z1_min,z1_max],[],fh);
+%%
+fh = figure(2);
+set(gcf,'Unit','centimeters')
+set(gcf,'Position',[0,0,29.7,21])
+set(gca,'fontsize',24,'fontname','Times')
+draw_wavefield_yslice(outdir_4,wi4,8:round(0.5/dyy):length(yy_4),xx_4,yy_4,zz_4,false,[z4_min,z4_max],[],fh);
+%%
 z_slice1 = 0.8;
 iz_zslice1 = find(abs(zz_1-z_slice1)<(dzz/2));
-draw_wavefield_zslice(outdir_1,wi1,iz_zslice1,xx_1,yy_1,zz_1,[y1_min,y1_max],[ha,1,[1,h1]],fh);
+draw_wavefield_zslice(outdir_1,wi1,iz_zslice1,xx_1,yy_1,zz_1,[y1_min,y1_max],[ha,1,[1,h(1)]],fh,[]);
 set(gca,'XTick',[])
-z_slice4 = 0.8;
+z_slice4 = 0.85;
 iz_zslice4 = find(abs(zz_1-z_slice4)<(dzz/2));
-draw_wavefield_zslice(outdir_4,wi4,iz_zslice4,xx_4,yy_4,zz_4,[y4_min,y4_max],[ha,1,[h1+1,h1+h2]],fh);
+draw_wavefield_zslice(outdir_4,wi4,iz_zslice4,xx_4,yy_4,zz_4,[y4_min,y4_max],[ha,1,[h(1)+1,h(1)+h(2)]],fh,[-0.6e4,0.6e4]);
 set(gca,'XTick',[])
-
+%%
 y_slice = 4;
 iy1_yslice = find(abs(yy_1-y_slice)<(dyy/2));
 iy4_yslice = find(abs(yy_4-(y_slice+1))<(dyy/2)); % survey lines of 400MHz is 1m south of those of 100MHz
-draw_wavefield_yslice(outdir_1,wi1,iy1_yslice,xx_1,yy_1,zz_1,z_slice1,[z1_min,z1_max],[ha,1,[h1+h2+1,h1+h2+h3]],fh);
+draw_wavefield_yslice(outdir_1,wi1,iy1_yslice,xx_1,yy_1,zz_1,z_slice1,[z1_min,z1_max],[ha,1,[h(1)+h(2)+1,h(1)+h(2)+h(3)]],fh);
 set(gca,'XTick',[])
-draw_wavefield_yslice(outdir_4,wi4,iy4_yslice,xx_4,yy_4,zz_4,z_slice4,[z4_min,z4_max],[ha,1,[h1+h2+h3+1,h1+h2+h3+h4]],fh);
+draw_wavefield_yslice(outdir_4,wi4,iy4_yslice,xx_4,yy_4,zz_4,z_slice4,[z4_min,z4_max],[ha,1,[h(1)+h(2)+h(3)+1,h(1)+h(2)+h(3)+h(4)]],fh);
 xlabel('x(m)','fontsize',20);
 %%
-export_fig(fh,fullfile(outdir_4,['y=' num2str(y_slice) 'm, z=' num2str(z_slice1) 'm.png']))
+export_fig(fullfile(outdir_4,['y=' num2str(y_slice) 'm, z=' num2str(z_slice1) 'm.png']),'-transparent')
 
+%% temp1
+z_slice4 = 0.85;
+iz_zslice4 = find(abs(zz_1-z_slice4)<(dzz/2));
+draw_wavefield_zslice(outdir_4,wi4,iz_zslice4,xx_4,yy_4,zz_4,[y4_min,y4_max],[],fh,[-0.6e4,0.6e4]);
 
 %% 3D figure
 if true
@@ -124,54 +148,43 @@ if true
     set(gca,'fontsize',20);
     xlabel('x(m)');ylabel('y(m)');zlabel('depth(m)');
     set(gca,'zdir','reverse','fontsize',20)
-    export_fig(fh,fullfile(outdir_1,['3D.png']))
+    export_fig(fullfile(outdir_1,['3D.png']),'-transparent')
 end
 
 
 %%
-function [wavefields,xslice,yslice,zslice] = load_result(result_dir,outdir,nx0,ny0,nz0,wstep,result_exist)
+function [wavefield,xslice,yslice,zslice] = load_result(result_dir,outdir,nx0,ny0,nz0,wstep)
     fprintf('loading result from "%s" to "%s"...\n',result_dir,outdir)
-    if ~result_exist
-        nx = round(nx0/wstep);
-        ny = round(ny0/wstep);
-        nz = nz0/wstep;
-        fxslice = dir(fullfile(result_dir,'xSlice*.dat*'));
-        fyslice = dir(fullfile(result_dir,'ySlice*.dat*'));
-        fzslice = dir(fullfile(result_dir,'zSlice*.dat*'));
-        fwave = dir(fullfile(result_dir,'Wave*.dat*'));
-        xslice={[]};yslice={[]};zslice={[]};wavefields={[]};
-        parfor i = 1:length(fyslice)
-            fprintf('reading %d/%d...\r',i,length(fyslice))
+    outf = fullfile(outdir,'result.mat');
+    fxslice = dir(fullfile(result_dir,'slx*.bin'));
+    fyslice = dir(fullfile(result_dir,'sly*.bin'));
+    fzslice = dir(fullfile(result_dir,'slz*.bin'));
+    fwave = dir(fullfile(result_dir,'wvf*.bin'));
+    nx = floor(nx0/wstep);
+    ny = floor(ny0/wstep);
+    nz = floor(nz0/wstep);
+    if ~exist(outf,'file')
+        xslice={[]};yslice={[]};zslice={[]};wavefield={[]};
+       parfor i = 1:length(fyslice)
             xfid = fopen(fullfile(result_dir,fxslice(i).name));
-            xcell = textscan(xfid,'%f');
-            xslice0 = xcell{1};
-            xslice{i} = reshape(xslice0,[nz0,ny0]);
+            xslice{i} = fread(xfid,[ny0,nz0],'float');
             fclose(xfid);
             yfid = fopen(fullfile(result_dir,fyslice(i).name));
-            ycell = textscan(yfid,'%f');
-            yslice0 = ycell{1};
-            yslice{i} = reshape(yslice0,[nz0,nx0]);
+            yslice{i} = fread(yfid,[nx0,nz0],'float');
             fclose(yfid);
             zfid = fopen(fullfile(result_dir,fzslice(i).name));
-            zcell = textscan(zfid,'%f');
-            zslice0 = zcell{1};
-            zslice{i} = reshape(zslice0,[ny0,nx0]);
+            zslice{i} = fread(zfid,[nx0,ny0],'float');
             fclose(zfid);
             wfid = fopen(fullfile(result_dir,fwave(i).name));
-            wcell = textscan(wfid,'%f');
-            wavefields0 = wcell{1};
-            wavefields{i} = reshape(wavefields0,[nz,ny,nx]);
+            wvf = fread(wfid,nz*ny*nx,'float');
+            wavefield{i} = reshape(wvf,[nx,ny,nz]);
             fclose(wfid);
         end
         disp('saving...')
-        save(fullfile(outdir,'result'),'xslice','yslice','zslice','wavefields','-v7.3')
+        save(outf,'xslice','yslice','zslice','wavefield','-v7.3')
     else
         disp('loading existing file...')
-        r_s = load(fullfile(outdir,'result'));
-        xslice = r_s.xslice;
-        yslice = r_s.yslice;
-        zslice = r_s.zslice;
-        wavefields = r_s.wavefields;
+        load(outf)
     end
 end
     
@@ -184,28 +197,36 @@ function [fhx,fhy,fhz] = draw_slices(outdir,xslice,yslice,zslice,x0,y0,z0,use_ag
     
 %     zind = z0>=0;%&z<3;
 %     xind = x0>=0;%> 0.5 & x < x(end) - 0.5;
-    fhx = figure();
-    fhy = figure();
-    fhz = figure();
+    fhx = figure(11);
+    set(gcf,'Unit','centimeters')
+    set(gcf,'Position',[0,0,29.7,21])
+    fhy = figure(12);
+    set(gcf,'Unit','centimeters')
+    set(gcf,'Position',[0,0,29.7,21])
+    fhz = figure(13);
+    set(gcf,'Unit','centimeters')
+    set(gcf,'Position',[0,0,29.7,21])
     for i = iseq
         figure(fhx)
         xslicei = xslice{i};
         if use_agc
-            xslicei = agc(xslicei);
+            xslicei = agc(xslicei)';
             fxnote = 'xslice(agc)';
         else
             fxnote = 'xslice';
         end
         imagesc(y0,z0,xslicei);colorbar;
         xlabel('y/m');ylabel('z/m');
-        title(fxnote)
+        daspect([1,1,1])
+%         title(fxnote)
+        set(gca,'fontsize',24,'fontname','Times')
         if i == length(xslice)
             saveas(fhx,fullfile(outdir,[fxnote '.png']))
         end
 
         figure(fhy)
 %         imagesc(x0(xind),z0(zind),agc(yslice{i}(zind,xind)));colorbar;
-        yslicei = yslice{i};
+        yslicei = yslice{i}';
         if use_agc
             yslicei = agc(yslicei);
             fynote = 'yslice(agc)';
@@ -213,16 +234,21 @@ function [fhx,fhy,fhz] = draw_slices(outdir,xslice,yslice,zslice,x0,y0,z0,use_ag
             fynote = 'yslice';
         end
         imagesc(x0,z0,agc(yslicei));colorbar;
+        daspect([4,1,1])
         xlabel('x/m');ylabel('z/m');
-        title(fynote)
+%         title(fynote)
+        set(gca,'fontsize',24,'fontname','Times')
         if i == length(yslice)
             saveas(fhy,fullfile(outdir,[fynote '.png']))
         end
         
         figure(fhz) 
-        imagesc(x0,y0,zslice{i});colorbar;
+        imagesc(x0,y0,zslice{i}');colorbar;
+        daspect([1,1,1])
         xlabel('x/m');ylabel('y/m');
-        title(['zslice at z=1m'])
+%         title(['zslice at z=1m'])
+        set(gca,'fontsize',16,'fontname','Times')
+        set(gca,'ydir','normal')
         if i == length(xslice)
             saveas(fhz,fullfile(outdir,'zslice.png'))
         end
@@ -233,7 +259,7 @@ end
 
 function [wavefield_interp,xx,yy,zz] = interp_wavefield(wavefield,x,y,z,z0,dxx,dyy,dzz,xlim,ylim,zlim)
     disp('Interpolating wavefield...')
-    [Y,Z,X] = meshgrid(y,z-z0,x);
+    [Y,X,Z] = meshgrid(y,x,z-z0);
     xx = x(1):dxx:x(end);
     yy = y(1):dyy:y(end);
     zz = z(1):dzz:z(end);
@@ -246,11 +272,11 @@ function [wavefield_interp,xx,yy,zz] = interp_wavefield(wavefield,x,y,z,z0,dxx,d
     if xlim
         zz = zz(zz > zlim(1) & zz < zlim(2));
     end
-    [YY,ZZ,XX] = meshgrid(yy,zz,xx);
-    wavefield_interp = interp3(Y,Z,X,wavefield,YY,ZZ,XX);
+    [YY,XX,ZZ] = meshgrid(yy,xx,zz);
+    wavefield_interp = interp3(Y,X,Z,wavefield,YY,XX,ZZ);
 end
 
-function fh = draw_wavefield_zslice(outdir,wavefield,izseq,xx,yy,zz,yrange,subp_para,figh)
+function fh = draw_wavefield_zslice(outdir,wavefield,izseq,xx,yy,zz,yrange,subp_para,figh,ca)
     if ~isempty(subp_para)
         fh = figh;
         subplot(subp_para(1),subp_para(2),subp_para(3:end))
@@ -262,7 +288,7 @@ function fh = draw_wavefield_zslice(outdir,wavefield,izseq,xx,yy,zz,yrange,subp_
     end
     
     for iz = izseq
-        imagesc(xx,yy,squeeze(wavefield(iz,:,:)))
+        imagesc(xx,yy,squeeze(wavefield(:,:,iz)))
         ylim(yrange)
         if isempty(subp_para)
             xlabel('x(m)','fontsize',20);
@@ -273,8 +299,13 @@ function fh = draw_wavefield_zslice(outdir,wavefield,izseq,xx,yy,zz,yrange,subp_
         set(gca,'ydir','normal','FontSize',16)
         ylabel('y(m)','fontsize',20)
         daspect([1 1 1])
+        if ~isempty(ca)
+            caxis(ca);
+        else
+            disp(caxis);
+        end
         if isempty(subp_para)
-            export_fig(fh,fullfile(outdir,['zslice at z=' num2str(zz(iz)) 'm.png']))
+            export_fig(fullfile(outdir,['zslice at z=' num2str(zz(iz)) 'm.png']),'-transparent')
             pause(0.1)
         else
 %             set(gca,'XTick',[])
@@ -298,7 +329,7 @@ function fh = draw_wavefield_yslice(outdir,wavefield,iyseq,xx,yy,zz,aux_line,zra
     
     for i = iyseq
 %         iline = yy(i)-yy(1);
-        wyslice = squeeze(wavefield(:,i,:));
+        wyslice = squeeze(wavefield(:,i,:))';
 %         wyslice1 = zscore(wyslice')';
 %         wyslice1 = trace_equal(wyslice1);
         op_length = zz(end)/8;
@@ -325,7 +356,7 @@ function fh = draw_wavefield_yslice(outdir,wavefield,iyseq,xx,yy,zz,aux_line,zra
             hold off
         end
         if isempty(subp_para)
-            export_fig(gcf,fullfile(outdir,['yslice at y=' num2str(yy(i)) 'm.png']))
+            export_fig(fullfile(outdir,['yslice at y=' num2str(yy(i)) 'm.png']),'-transparent')
             pause(0.1)
         end
         

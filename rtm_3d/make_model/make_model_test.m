@@ -13,9 +13,6 @@ epr_min = 1;
 miur_max = 1;
 miur_min = 1;
 freq_src = 800*1e6;
-dxmax = finddx(epr_max, miur_max, freq_src);
-disp(['dxmax=' num2str(dxmax) 'm'])
-
 X = 2;
 Y = 1.6;
 Z = 1;
@@ -24,6 +21,9 @@ T = 30 * 1e-9;%s
 dx = 0.01; %m
 dy = dx;
 dz = dx;
+
+dxmax = finddx(epr_max, miur_max, freq_src);
+fprintf('dxmax=%.2gm,dx=%gm(%.2g%%),dy=%gm(%.2g%%),dz=%gm(%.2g%%)\n',dxmax,dx,dx/dxmax*100,dy,dy/dxmax*100,dz,dz/dxmax*100);
 
 nx = round(X/dx);
 ny = round(Y/dy);
@@ -38,10 +38,12 @@ outstep_t_wavefield = 5;
 outstep_x_wavefield = 2;
 outstep_slice = 5;
 
-% dtmax = finddt(epr_min, miur_min, dx, dy, dz);
-% disp(['dt_max=' num2str(dtmax/1e-9) 'ns']);
 dt = 0.01 *1e-9;
 nt = T/dt;
+
+dtmax = finddt(epr_min, miur_min, dx, dy, dz);
+fprintf('dt_max=%.2gns.dt=%gns(%.2g%%)\n',dtmax/1e-9,dt/1e-9,dt/dtmax*100);
+
 
 %% background model
 ep_bg = ones(nx,ny,nz) * 9;

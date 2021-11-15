@@ -180,7 +180,7 @@ function [slice,slice_sum] = slice_summation(f_slice,x1,x2,slice_tag,fig_out_dir
 %     title("slice at " + slice_tag(1))
     daspect([1,1,1])
     xlabel(slice_tag(2));ylabel(slice_tag(3))
-    set(gca,'fontsize',20,'fontname','Times')
+    set(gca,'fontsize',24,'fontname','Times')
     export_fig(fullfile(fig_out_dir,"slice_" + slice_tag(1) + ".png"))
     pause(0.1)
 end
