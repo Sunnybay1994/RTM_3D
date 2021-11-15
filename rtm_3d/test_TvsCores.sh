@@ -8,22 +8,22 @@ if [[ $1 == '1' ]];then
     do
         echo tasks-$i
         python model_em.py --server freeosc -p $i --max_cpu 400 -m z --model make_model/test.mat --steps g
-        python model_em.py --server freeosc -p $i --max_cpu 400 -m z --model make_model/test.mat --steps g --pstd
+        # python model_em.py --server freeosc -p $i --max_cpu 400 -m z --model make_model/test.mat --steps g --pstd
         cd ../tasks/test_800MHz_0.4x0.4_2_0.04x0.04_fdtd_${i}_0o/log
         sbatch script_0004.sh
-        cd ../../test_800MHz_0.4x0.4_2_0.04x0.04_pstd_${i}_0o/log
-        sbatch script_0004.sh
+        # cd ../../test_800MHz_0.4x0.4_2_0.04x0.04_pstd_${i}_0o/log
+        # sbatch script_0004.sh
         cd ../../../rtm_3d
     done
 elif [[ $1 == '2' ]];then
     ffdtd=../tasks/time_fdtd.txt
-    fpstd=../tasks/time_pstd.txt
+    # fpstd=../tasks/time_pstd.txt
     rm $ffdtd
-    rm $fpstd
+    # rm $fpstd
     for((i=$min_core;i<=$max_core;i++));
     do
         tail -3 ../tasks/test_800MHz_0.4x0.4_2_0.04x0.04_fdtd_${i}_0o/Output/*.out >> $ffdtd
-        tail -1 ../tasks/test_800MHz_0.4x0.4_2_0.04x0.04_pstd_${i}_0o/Output/*.out >> $fpstd
+        # tail -1 ../tasks/test_800MHz_0.4x0.4_2_0.04x0.04_pstd_${i}_0o/Output/*.out >> $fpstd
     done
 else
     echo $1
