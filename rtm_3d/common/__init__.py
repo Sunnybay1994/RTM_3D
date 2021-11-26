@@ -123,6 +123,7 @@ def parser_ini(mode=0):
 
     group1 = parser.add_argument_group(title='model_em.py parameter', description='Parameters only used in step1.')
     group1.add_argument('--model',default=os.path.join(modelpath,'model.mat'),help='Path to the .mat file stores all the parameters for simulated data for RTM.')
+    group1.add_argument('--no_x_check',action='store_const',const=True,default=False,help="Don't check dx setting, may cause serious numerical dispersion.")
     group1.add_argument('-f','--freq',type=float,default=-1.0,help='Appoint the main frequency (MHz) of the source to replace the one in the model file.')
     group1.add_argument('--dx_src',type=float,default=-1.0,help='Appoint the x space interval (m) of the source to replace the one in the model file.')
     group1.add_argument('--dy_src',type=float,default=-1.0,help='Appoint the y space interval (m) of the source to replace the one in the model file.')

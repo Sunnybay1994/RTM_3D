@@ -14,6 +14,7 @@ import batchgen
 # constant
 mu0 = 1.2566370614e-6
 ep0 = 8.8541878176e-12
+c = 299792458
 
 def src_rec(dnx_src,dny_src=False,dnx_rec=False,dny_rec=False,nzp_src=False,nzp_rec=False,nx_src=False,ny_src=False,nx_rec=False,ny_rec=False,nshift=0,marginx=0,marginy=False,marginx_rec=False,marginy_rec=False,half_span=2):
     logger.info('adding source and receiver...')
@@ -206,23 +207,39 @@ def eps_sig_mu(meps=1,meps_bg=False,msig=1e-5,msig_bg=False,mmiu=1,mmiu_bg=False
 
 
 ##############################################################################
-def finddt(epmin, mumin, dx, dy, dz):
+def check_stability(epmin, mumin, dt, dx, dy, dz, method='fdtd'):
+    logger.info('## Stability Check ##')
     epmin = epmin * ep0
     mumin = mumin * mu0
-    dtmax = 6.0 / 7.0 * \
+    if method == 'fdtd':
+        a = 6.0 / 7.0
+    elif method == 'pstd':
+        a = 2.0 / np.pi
+    dtmax = a * \
         np.sqrt(epmin * mumin / (1.0 / dx ** 2 + 1.0 / dy ** 2 + 1.0 / dz ** 2))
-    logger.info("max dt = %fns"%(dtmax/1e-9))
-    return dtmax
+    logger.info("dt=%gns, dt_max=%gns"%(dt/1e-9,dtmax/1e-9))
+    return dt < dtmax
 
-
-def finddx(epmax, mumax, fmax):
+def findWavelenth(epmax, mumax, f):
     epmax = epmax * ep0
     mumax = mumax * mu0
-    wlmin = 1 / (fmax * np.sqrt(epmax * mumax))
-    dxmax = wlmin
-    logger.info("max dx = %fm"%dxmax)
-    return dxmax
+    wlmin = 1 / (f * np.sqrt(epmax * mumax))
+    logger.info("Wavelenth = %fm"%wlmin)
+    return wlmin
 
+def check_dispersion_x(dx,fmax,cmin):
+    #  No need to check dispersion of dt, because it is rather small due to stability requisition.
+    logger.info('## Dispersion Check ##')
+    w = 2 * np.pi * fmax
+    k0 = w/cmin
+    a = k0 * dx / 2.0
+    b = np.sin(a) / a
+    c = 1/b
+    if np.abs(1-c) > 0.1:
+        logger.warning('k/k0≈%g, dx dispersion too big!!!'%c)
+    else:
+        logger.info('k/k0≈%g'%c)
+    return c
 
 def blackharrispulse(fmax, dt):
     a = [0.35322222, -0.488, 0.145, -0.010222222]
@@ -258,33 +275,34 @@ def ricker(f, length, dt):
     t = np.array(range(nt_src)) * dt - length / 2
     y = (1.0 - 2.0 * (np.pi ** 2) * (f ** 2) * (t ** 2)) * \
         np.exp(-(np.pi ** 2) * (f ** 2) * (t ** 2))
+    width = 2*0.88521/(2*np.pi*f)
     try:
         plt.figure()
     except Exception as e:
         logger.error(e)
     else:
-        plt.plot(t, y)
+        plt.plot(t, y,[t[1],-width/2],[0.5,0.5],'r--',[-width/2,width/2],[0.5,0.5],'r-')
         plt.savefig(os.path.join(workdir,'ricker.png'))
     return y,t
 
 
-def check_dx(srcpulse):
+def check_dx(srcpulse,thr=0.85):
     n = int(round(2 ** np.ceil(np.log2(len(srcpulse)))))
     freqs = np.linspace(0, int(1 / dt / 2), int(n / 2) + 1)
     sp = np.fft.rfft(srcpulse, n) / n
     W = abs(sp)
-    fmax2 = max(freqs[W > max(W) / 10.0])
+    f_thr = max(freqs[W > (1-thr) * max(W) ])
     logger.info("Src's main frequency: %fMHz" % (freqs[np.argmax(W)]/1e6))
-    logger.info("!!check dx again (src_fmax(within 90%% of max amplitude)=%fMHz):"%(fmax2/1e6))
-    dx_max = finddx(epmax, mumax, fmax2)
+    logger.info("!!check dx again (src_fmax(within %g%% of max amplitude)=%fMHz):"%(thr*100,f_thr/1e6))
+    dx_max = findWavelenth(epmax, mumax, f_thr)
     try:
         plt.figure()
-        plt.plot(freqs, W)
+        plt.plot(freqs[freqs<2*f_thr], W[freqs<2*f_thr], [f_thr,f_thr], [0,max(W)], '--')
         plt.title('frequency spectrum of source')
         plt.savefig(os.path.join(workdir,'spectral_src.png'))
     except Exception as e:
         logger.error(e)
-    return dx_max
+    return dx_max, f_thr
 
 def distance(x, y, z, x0, y0, z0):
     return np.sqrt((x - x0) ** 2 + (y - y0) ** 2 + (z - z0) ** 2)
@@ -401,6 +419,7 @@ if __name__ == '__main__':
     gen_model = not args.no_gen_model
     noprompt = args.noprompt
     pnum = args.np
+    no_x_check = args.no_x_check
 
     ### load model ###
     try:
@@ -428,9 +447,9 @@ if __name__ == '__main__':
         half_span = args.half_span
     epmin = 1.0
     mumin = 1.0
-    epmax = 15.0
+    epmax = 9.0
     mumax = 1.0
-    fmax = freq #Hz
+    fmain = freq #Hz
     ### parameter end ###
 
 
@@ -533,7 +552,7 @@ if __name__ == '__main__':
     outstep_x_wavefield = dic_model['outstep_x_wavefield']
     outstep_slice = dic_model['outstep_slice']
 
-    dx_max = finddx(epmax, mumax, fmax)
+    dx_max = findWavelenth(epmax, mumax, fmain)
     dx = float(dic_model['dx'])
     dy = float(dic_model['dy'])
     dz = float(dic_model['dz'])
@@ -548,28 +567,28 @@ if __name__ == '__main__':
     nz = int(dic_model['nz'])
     logger.info('nx=%d, ny=%d, nz=%d(include nz_air =%d)'%(nx, ny, nz, nz_air))
 
-    dt_max = finddt(epmin, mumin, dx, dy, dz)
     dt = float(dic_model['dt'])
     nt = round(float(dic_model['T'])/dt)
     # nt better be k*outstep_t_wavefield+1(k is integer), so that forward wavefield and
     # backward wavefield will coincide perfectly when doing cross-correlation.
     nt += outstep_t_wavefield + 1 - nt%outstep_t_wavefield
-    logger.info("dt: %fns"%(dt/1e-9))
-    assert dt < dt_max, 'dt too big!!! (%g>%g)'%(dt/1e-9,dt_max/1e-9)
+    assert check_stability(epmin, mumin, dt, dx, dy, dz, forward_method), 'Stability Check failed.'
     ### gird paraeter end ###
 
     ### source ###
-    # srcpulse,t_src = blackharrispulse(fmax, dt)
-    srcpulse,t_src = ricker(fmax,4*1/fmax,dt)
+    # srcpulse,t_src = blackharrispulse(fmain, dt)
+    srcpulse,t_src = ricker(fmain,4*1/fmain,dt)
     with open(os.path.join(workdir,'src_t.txt'),'w') as fo:
         fo.write('t,srcpulse\n')
         for i in range(len(t_src)):
             fo.write('%g,%g\n'%(t_src[i],srcpulse[i]))
     nt_src = len(srcpulse)
     logger.info("nt=%d, nt_src=%d"%(nt, nt_src))
-    dx_max = check_dx(srcpulse)
-    assert np.max([dx,dy,dz]) < dx_max, 'dx,dy,dz too big!!!'
+    dx_max, fmax = check_dx(srcpulse)
+    if not no_x_check:
+        assert np.max([dx,dy,dz]) < dx_max, 'dx,dy,dz too big!!!'
     ### source end ###
+    check_dispersion_x(dx,fmax,c/np.sqrt(epmax*mumax))
 
     ### generate src & rec ###
     dnx_src = round(dx_src/dx)

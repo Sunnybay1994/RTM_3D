@@ -220,7 +220,7 @@ class rtm_workflow_freeosc(rtm_workflow):
 ##SBATCH --mail-user=username@pku.edu.cn
 
 ######### set job's name
-#SBATCH --job-name=({isrc}){taskname}
+#SBATCH --job-name={method}{isrc}_{taskname}
 ##SBATCH --output=slurm-%j.out
 ##SBATCH --error=slurm-%j.err
 
@@ -238,7 +238,7 @@ echo "JOB_NODELIST: ${{SLURM_JOB_NODELIST}}"
     def __init__(self,taskname='default',nsrc=1,job_cap=60,proc_num=4,method='fdtd',mode='z',steps='gfbizc',mpipath='$MPI_HOME/bin/mpiexec',subcmd='sbatch {script_name}',script_name='script{s_isrc}.sh',add_head=additional_head_txt,add_tail=''):
         rtm_workflow.__init__(self,taskname,nsrc,job_cap,proc_num,method,mode,steps,mpipath,subcmd,script_name,add_head,add_tail)
     def gen_txt_head(self,isrc,txt=''):
-        return self.txt_head.format(isrc=isrc,additional_head_txt=txt.format(isrc=isrc,taskname=self._taskname,np=self._proc_num))
+        return self.txt_head.format(isrc=isrc,additional_head_txt=txt.format(isrc=isrc,method=self._method[0],taskname=self._taskname,np=self._proc_num))
 
 def batchgen(args):
     if args.steps:

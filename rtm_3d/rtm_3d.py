@@ -96,6 +96,6 @@ class task_path(rtm_base):
     @property
     def config(self):
         config = rtm_base.config
-        config.add_section('task'):
+        config.add_section('task')
         config.set('task','taskname',self.taskname)
         config.set('task','mode',self.mode)
