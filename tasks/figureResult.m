@@ -1,5 +1,5 @@
 %% load files and parameters
-workdir = '3layers_with_0.2m_fault_0o_300MHz_0.1x0.5_0_0.1x0.5_fdtd_4_0o';
+workdir = 'dotmodel_griddx=0.05m_800MHz_0.5x0.5_2_0.1x0.1_pstd_8';
 resultdir = fullfile(workdir,'Result');
 f_wavefield_corr = dir(fullfile(resultdir,'result_wavefield_corr*.dat'));
 
@@ -41,9 +41,9 @@ wdz = dz * x_outstep;
 wx = (1:wnx)*wdx;
 wy = (1:wny)*wdy;
 wz = ((1:wnz)-wnz_air)*wdz;
-wslicex = slices_ix / x_outstep;
-wslicey = slices_iy / x_outstep;
-wslicez = slices_iz / x_outstep;
+wslicex = round(slices_ix / x_outstep);
+wslicey = round(slices_iy / x_outstep);
+wslicez = round(slices_iz / x_outstep);
 
 % %% read middle result of wavefield
 % out_folder = fullfile(workdir,'RTM','Output');
@@ -63,16 +63,16 @@ wslicez = slices_iz / x_outstep;
 
 %% Draw slices
 slice_reload = false;
+fig_para = [0.1, false];
 %%
 slicey = {[]};
 slicey_sum = {[]};
-fig_para = [0.1, true];
 for i =1:length(slices_iy)
     f_slice = dir(fullfile(resultdir,sprintf('result_ycorr_????_%02d.dat',i-1)));
     slice_tag = [sprintf("y=%gm",y(slices_iy(i))),"x(m)","depth(m)"];
     [slicey{i},slicey_sum{i}] =  slice_summation(f_slice,x,z,slice_tag,fig_result_dir,slice_reload,fig_para);
 end
-% model
+% % model
 % dot1 = [1.8 0 1];
 % dot2 = [0.2 1.6 0];
 % dot3 = [0.8 0 0];
@@ -86,8 +86,8 @@ end
 % zi(zi>0.8) = 0.8;
 % % zi(zi<0.1) = 0.1;
 % % zi(zi>0.9) = 0.9;
-
-
+% 
+% 
 % hold on
 % plot(x,zi,'r--')
 % hold off
@@ -108,7 +108,15 @@ for i =1:length(slices_iz)
     slice_tag = [sprintf("z=%gm",z(slices_iz(i))),"x(m)","y(m)"];
     [slicez{i},slicez_sum{i}] =  slice_summation(f_slice,x,y,slice_tag,fig_result_dir,slice_reload);
 end
-
+% model
+r=1;
+theta = 0:0.1:2*pi;
+x_t = 2.5+r * cos(theta);
+y_t = 2.5+r * sin(theta);
+hold on
+plot(x_t,y_t,'r--')
+hold off
+export_fig(fullfile(fig_result_dir,"slice_" + slice_tag(1) + "_with_model.png"))
 %% Draw wavefields
 reload_wvf = false;
 
@@ -186,7 +194,7 @@ function [slice,slice_sum] = slice_summation(f_slice,x1,x2,slice_tag,fig_out_dir
 end
 
 %%
-function [wavefield,wavefield_sum] = wavefield_summation(f_wavefield_corr,fig_result_dir,x,y,z,amp_para,slicex,slicey,slicez,reload)
+function [wavefield,wavefield_sum] = wavefield_summation(f_wavefield_corr,fig_result_dir,x,y,z,amp_para,wslicex,wslicey,wslicez,reload)
     nx = length(x);
     ny = length(y);
     nz = length(z);
@@ -251,8 +259,8 @@ function [wavefield,wavefield_sum] = wavefield_summation(f_wavefield_corr,fig_re
     set(gcf,'Unit','centimeters')
     set(gcf,'Position',[0,0,29.7,21])
     set(gca,'fontsize',30,'fontname','Times')
-    if slicez
-        for i = slicez
+    if wslicez
+        for i = wslicez
             zi = z(i);
             zslice = squeeze(wavefield_amp_sum(:,:,i));
             imagesc(x,y,zslice');
@@ -277,8 +285,8 @@ function [wavefield,wavefield_sum] = wavefield_summation(f_wavefield_corr,fig_re
     end
     
     %%
-    if slicex
-        for i = slicex
+    if wslicex
+        for i = wslicex
             xi = x(i);
             xslice = squeeze(wavefield_amp_sum(i,:,:));
             xslice1 = agc(xslice);
@@ -300,8 +308,8 @@ function [wavefield,wavefield_sum] = wavefield_summation(f_wavefield_corr,fig_re
         end
     end
     %%
-    if slicey
-        for i = slicey
+    if wslicey
+        for i = wslicey
             yi = y(i);
             zind = z>0;
             xind = x>0;%x>0.4&x<5-0.4;
