@@ -21,13 +21,13 @@ def myprint(*args,**kwargs):
 
 
 def read_slice(fname):
-    with open(fname) as fslice:
-        slice_nx,slice_ny,slice_nz = fslice.readline().split(',')
-        slice_x = [int(x) for x in fslice.readline().split(',')[0:-1]]
-        slice_y = [int(x) for x in fslice.readline().split(',')[0:-1]]
-        slice_z = [int(x) for x in fslice.readline().split(',')[0:-1]]
-        slice_nx = int(slice_nx);slice_ny = int(slice_ny);slice_nz = int(slice_nz)
-        return slice_nx,slice_ny,slice_nz,slice_x,slice_y,slice_z
+    lines = [line.strip() for line in open(fname).readlines()]
+    lines.reverse()
+    slice_nx,slice_ny,slice_nz = [int(n) for n in lines.pop().split(',')]
+    slice_x = [int(lines.pop().split(',')[0]) for i in range(slice_nx)]
+    slice_y = [int(lines.pop().split(',')[0]) for i in range(slice_ny)]
+    slice_z = [int(lines.pop().split(',')[0]) for i in range(slice_nz)] 
+    return slice_nx,slice_ny,slice_nz,slice_x,slice_y,slice_z
 
 def read_par(workdir='.'):
     global nx,ny,nz,slice_nx,slice_ny,slice_nz,slice_x,slice_y,slice_z,nt,dx,dy,dz,dt,step_t_wavefield,step_x_wavefield

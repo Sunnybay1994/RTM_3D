@@ -38,18 +38,21 @@ def corr_wavefield(isrc, workdir, path1,path2,list1,list2, outdir,logger):
     np.savetxt(os.path.join(outdir,rtmfn.result_wavefield_f_fn.format(isrc=isrc)),np.reshape(data_forward,[wvf_nx*wvf_ny,wvf_nz]))
     np.savetxt(os.path.join(outdir,rtmfn.result_wavefield_b_fn.format(isrc=isrc)),np.reshape(data_backward,[wvf_nx*wvf_ny,wvf_nz]))
     logger.info('Figureing wavefield of src%d'%(isrc))
-    plt.clf()
-    plt.imshow(corr_data[int(slice_x[0]/step_x_wavefield),:,:].T, interpolation='none')
-    plt.colorbar()
-    plt.savefig(os.path.join(outdir,rtmfn.result_wavefield_fn.format(isrc=isrc) + '_slx0.png'))
-    plt.clf()
-    plt.imshow(corr_data[:,int(slice_y[0]/step_x_wavefield),:].T, interpolation='none')#,vmin = -0.002, vmax = 0.002)
-    plt.colorbar()
-    plt.savefig(os.path.join(outdir,rtmfn.result_wavefield_f_fn.format(isrc=isrc) + '_sly0.png'))
-    plt.clf()
-    plt.imshow(corr_data[:,:,int(slice_z[0]/step_x_wavefield)].T, interpolation='none')
-    plt.colorbar()
-    plt.savefig(os.path.join(outdir,rtmfn.result_wavefield_b_fn.format(isrc=isrc) + '_slz0.png'))
+    for i in range(slice_nx):
+        plt.clf()
+        plt.imshow(corr_data[int(slice_x[i]/step_x_wavefield),:,:].T, interpolation='none')
+        plt.colorbar()
+        plt.savefig(os.path.join(outdir,rtmfn.result_wavefield_fn.format(isrc=isrc) + '_slx%d.png'%i))
+    for i in range(slice_ny):
+        plt.clf()
+        plt.imshow(corr_data[:,int(slice_y[i]/step_x_wavefield),:].T, interpolation='none')#,vmin = -0.002, vmax = 0.002)
+        plt.colorbar()
+        plt.savefig(os.path.join(outdir,rtmfn.result_wavefield_fn.format(isrc=isrc) + '_sly%d.png'%i))
+    for i in range(slice_nz):
+        plt.clf()
+        plt.imshow(corr_data[:,:,int(slice_z[i]/step_x_wavefield)].T, interpolation='none')
+        plt.colorbar()
+        plt.savefig(os.path.join(outdir,rtmfn.result_wavefield_fn.format(isrc=isrc) + '_slz%d.png'%i))
 
     logger.info('corr_wavefield src%d done.'%isrc)
     return 0
