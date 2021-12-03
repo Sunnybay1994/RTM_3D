@@ -53,7 +53,7 @@ program SGPSTD3D
 
     
     real(4), parameter   :: pi       = 3.14159265358979
-    real(4), parameter   :: epsl0    = 8.85*1e-12
+    real(4), parameter   :: epsl0    = 8.85*1e-12/4
     real(4), parameter   :: mu0      = 4*pi*1e-7
     
     integer     :: Nx, Ny, Nz
