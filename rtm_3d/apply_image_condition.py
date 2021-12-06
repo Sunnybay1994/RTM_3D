@@ -4,6 +4,7 @@ from image_condition.get_filename_list import *
 from image_condition.corr_RTM_wavefield_sub import *
 from image_condition.corr_RTM_slice_sub import *
 from image_condition.clean import *
+from multiprocessing import Process
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Apply cross-correlation imaging method for RTM and conduct the clean stuff.',conflict_handler='resolve')
@@ -19,9 +20,12 @@ if __name__ == "__main__":
         if ('m' in args.mode) and (not args.nocorr):
             path1,path2,listx1,listx2,listy1,listy2,listz1,listz2,listw1,listw2 = get_isrc_filenames_rtm(isrc,workdir)
             # corr slice
-            corr_RTM_slice_sub(isrc,workdir,path1,path2,listx1,listx2,listy1,listy2,listz1,listz2)
+            # corr_RTM_slice_sub(isrc,workdir,path1,path2,listx1,listx2,listy1,listy2,listz1,listz2)
+            p = Process(target=corr_RTM_slice_sub,args=(isrc,workdir,path1,path2,listx1,listx2,listy1,listy2,listz1,listz2))
+            p.start()
             # corr wavefield
             corr_RTM_wavefield_sub(isrc,workdir,path1,path2,listw1,listw2)
+            p.join()
         # clean
         if not args.noclean:
             clean(isrc,workdir,args.mode)
