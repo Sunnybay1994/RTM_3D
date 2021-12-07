@@ -6,8 +6,8 @@ result_slice_fn = 'result_{xyz}corr_{isrc:0>4d}_{islice:0>2d}.dat'
 result_slice_nf_fn = 'result_{xyz}corr_norm_forward_{isrc:0>4d}_{islice:0>2d}.dat'
 result_slice_nb_fn = 'result_{xyz}corr_norm_backward_{isrc:0>4d}_{islice:0>2d}.dat'
 result_wavefield_fn = 'result_wavefield_corr_{isrc:0>4d}.dat'
-result_wavefield_f_fn = 'result_wavefield_corr_{isrc:0>4d}.dat'
-result_wavefield_b_fn = 'result_wavefield_corr_{isrc:0>4d}.dat'
+result_wavefield_f_fn = 'result_wavefield_forward_corr_{isrc:0>4d}.dat'
+result_wavefield_b_fn = 'result_wavefield_backward_corr_{isrc:0>4d}.dat'
 
 def gen_patterns(isrc):
     pattern_slx = re.compile(r'slx_Ey_%04d_[0-9]{5}\.bin'%isrc)
