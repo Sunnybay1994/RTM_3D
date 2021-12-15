@@ -1,6 +1,7 @@
 function [wavefield,factor1,factor2] = amp_gain_distance(wavefield0,src_pos,x,y,z,mul1,mute_angle,mul2)
 %amp_gain_distance Amplitude gain according to distance from source
 %   Assume a Spherical propagation
+    disp('amp_gain_distance')
     [nz,ny,nx]=size(wavefield0);
     srcx = src_pos(1);
     srcy = src_pos(2);

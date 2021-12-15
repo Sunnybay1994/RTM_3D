@@ -1,10 +1,13 @@
 %% load files and parameters
-workdir = 'dotmodel_griddx=0.05m_800MHz_0.5x0.5_2_0.1x0.1_pstd_8';
+% zd = 2;
+% workdir = sprintf('pdm%d_g0.025m_400MHz_0.5x0.5_2_0.1x0.1_fdtd_8',zd);
+% % workdir = sprintf('pdm%d_g0.05m_400MHz_0.5x0.5_2_0.1x0.1_fdtd_4',zd);
+workdir = "test_dot_400MHz_0.5x0.5_0_0.1x0.1_fdtd_4";
 resultdir = fullfile(workdir,'Result');
-f_wavefield_corr = dir(fullfile(resultdir,'result_wavefield_corr*.dat'));
+f_wavefield_corr = dir(fullfile(resultdir,'result_wavefield_corr*.???'));
 
 fig_result_dir = workdir;%fullfile(workdir,'Result');
-
+%%
 modelfiles = dir(fullfile(workdir,'model.mat'));
 modelfn = fullfile(modelfiles.folder,modelfiles.name);
 m = load(modelfn);
@@ -13,18 +16,23 @@ m = load(modelfn);
 dx = m.dx;
 dy = m.dy;
 dz = m.dz;
+dt = m.dt;
 
 nx = m.nx;
 ny =m.ny;
 nz_air = m.nz_air;
 nz = m.nz;
 
+npmlx = m.npmlx;
+npmly = m.npmly;
+npmlz = m.npmlz;
+
 slices_ix = m.slicex;
 slices_iy = m.slicey;
 slices_iz = m.slicez;
 
-x = (1:nx)*dx;
-y = (1:ny)*dy;
+x = ((1:nx)-npmlx)*dx;
+y = ((1:ny)-npmly)*dy;
 z = ((1:nz)-nz_air)*dz;
 
 slice_outstop = m.outstep_slice;
@@ -38,87 +46,211 @@ wnz_air = nz_air / x_outstep;
 wdx = dx * x_outstep;
 wdy = dy * x_outstep;
 wdz = dz * x_outstep;
-wx = (1:wnx)*wdx;
-wy = (1:wny)*wdy;
-wz = ((1:wnz)-wnz_air)*wdz;
+wx = x(1:x_outstep:end);
+wy = y(1:x_outstep:end);
+wz = z(1:x_outstep:end);
 wslicex = round(slices_ix / x_outstep);
 wslicey = round(slices_iy / x_outstep);
 wslicez = round(slices_iz / x_outstep);
 
 % %% read middle result of wavefield
-% out_folder = fullfile(workdir,'RTM','Output');
-% f_wavefield_out = dir(fullfile(out_folder,'wvf_Ey_0031_*.bin'));
-% for i = 1:length(f_wavefield_out)
-%     fname = fullfile(out_folder,f_wavefield_out(i).name);
-%     disp("loading " + fname + "...");
-%     fo = fopen(fname);
-%     temp = fread(fo,[nx*ny*nz],'single');
+% workdirf = 'test_dot_400MHz_0.5x0.5_0_0.1x0.1_fdtd_8';
+% workdirp = 'test_dot_400MHz_0.5x0.5_0_0.1x0.1_pstd_8';
+% % workdirf = 'dm_g0.025m_400MHz_0.5x0.5_2_0.1x0.1_fdtd_8';
+% % workdirp = 'dm_g0.025m_400MHz_0.5x0.5_2_0.1x0.1_pstd_8';
+% out_folder_p = fullfile(workdirp,'Output');
+% out_folder_f = fullfile(workdirf,'Output');
+% f_wavefield_out_p = dir(fullfile(out_folder_p,'wvf_Ey_0040_*.bin'));
+% f_wavefield_out_f = dir(fullfile(out_folder_f,'wvf_Ey_0040_*.bin'));
+% it0 = 0;%floor(172/t_outstep);
+% for i = 1:(length(f_wavefield_out_p)-it0)
+%     fname_p = fullfile(out_folder_p,f_wavefield_out_p(i+it0).name);
+%     disp("loading " + fname_p + "...");
+%     fo = fopen(fname_p);
+%     temp_p = fread(fo,[wnx*wny*wnz],'single');
 %     fclose(fo);
-%     wvf{i} = reshape(temp,nx,ny,nz);
-%     imagesc(squeeze(wvf{i}(:,:,12))');colorbar
+%     wvf_p{i} = reshape(temp_p,wnx,wny,wnz);
+%     fname_f = fullfile(out_folder_f,f_wavefield_out_f(it0+i).name);
+%     disp("loading " + fname_f + "...");
+%     fo = fopen(fname_f);
+%     temp_f = fread(fo,[wnx*wny*wnz],'single');
+%     fclose(fo);
+%     wvf_f{i} = reshape(temp_f,wnx,wny,wnz);
+%     subplot(1,2,1)
+%     imagesc(squeeze(wvf_p{i}(wnx/2,:,:))');colorbar
+%     title(sprintf("PSTD:t=%gns,it=%d",dt*t_outstep*i/1e-9,i*t_outstep));
+%     daspect([1,1,1])
+% %     caxis([-0.1,0.1])
+%     subplot(1,2,2)
+%     imagesc(squeeze(wvf_f{i}(wnx/2,:,:))');colorbar
+%     title(sprintf("FDTD:t=%gns,it=%d",dt*t_outstep*i/1e-9,i*t_outstep));
+%     daspect([1,1,1])
 % %     caxis([-0.1,0.1])
 % %     imagesc(wvf{i})
-%     pause(0.1)
+%     pause(0.05)
 % end
+
 
 %% Draw slices
 slice_reload = false;
-fig_para = [0.1, false];
-%%
+fig_para = [0.5, 0];
+% %% model
+% r1=0.1;
+% r2=0.5;
+% theta = 0:0.1:2*pi;
+% h=0.1;% half thikness
+% % xslice
+% ym1x = y(slices_iy(1)) + r1 * cos(theta);
+% zm1x = z(slices_iz(1)) + r1 * sin(theta);
+% ym2x = y(slices_iy(1)) + [-r2,r2];
+% zm2x = z(slices_iz(1)) + [-h,h];
+% % yslice
+% xm1y = x(slices_ix(1)) + r1 * cos(theta);
+% zm1y = z(slices_iz(1)) + r1 * sin(theta);
+% xm2y = x(slices_ix(2)) + [-r2,r2];
+% zm2y = z(slices_iz(1)) + [-h,h];
+% % zslice
+% xm1z = x(slices_ix(1)) + r1 * cos(theta);
+% ym1z = y(slices_iy(1)) + r1 * sin(theta);
+% xm2z = x(slices_ix(2)) + r2 * cos(theta);
+% ym2z = y(slices_iy(1)) + r2 * sin(theta);
+
+%% Slices
+close all
 slicey = {[]};
 slicey_sum = {[]};
 for i =1:length(slices_iy)
-    f_slice = dir(fullfile(resultdir,sprintf('result_ycorr_????_%02d.dat',i-1)));
+    f_slice = dir(fullfile(resultdir,sprintf('result_ycorr_????_%02d.???',i-1)));
     slice_tag = [sprintf("y=%gm",y(slices_iy(i))),"x(m)","depth(m)"];
     [slicey{i},slicey_sum{i}] =  slice_summation(f_slice,x,z,slice_tag,fig_result_dir,slice_reload,fig_para);
 end
 % % model
-% dot1 = [1.8 0 1];
-% dot2 = [0.2 1.6 0];
-% dot3 = [0.8 0 0];
-% % dot1 = [1.2 1.6 1];
-% % dot2 = [0.2 1.6 0.2];
-% % dot3 = [1.8 0 0.2];
-% n_plane = cross((dot3-dot1),(dot2-dot1));
-% yi = y(slices_iy(i));
-% zi = -(n_plane(1)*(x-dot1(1)) + n_plane(2)*(yi-dot1(2)))/n_plane(3)+ dot1(3);
-% zi(zi<0.3) = 0.3;
-% zi(zi>0.8) = 0.8;
-% % zi(zi<0.1) = 0.1;
-% % zi(zi>0.9) = 0.9;
-% 
-% 
 % hold on
-% plot(x,zi,'r--')
+% plot(xm1y,zm1y,'r--')
+%     plot(xm2y,[zm2y(1),zm2y(1)],'r--')
+%     plot(xm2y,[zm2y(2),zm2y(2)],'r--')
+%     plot([xm2y(1),xm2y(1)],zm2y,'r--')
+%     plot([xm2y(2),xm2y(2)],zm2y,'r--')
 % hold off
-% export_fig(fullfile(fig_result_dir,"slice_" + slice_tag(1) + "_with_model.png"))
+% export_fig(fullfile(fig_result_dir,"slice_" + slice_tag(1) + "_with_model.png"),'-transparent')
+% % export_fig(fullfile(fig_result_dir,"slice_" + slice_tag(1) + "_with_model.pdf"),'-transparent')
 %%
 slicex = {[]};
 slicex_sum = {[]};
 for i =1:length(slices_ix)
-    f_slice = dir(fullfile(resultdir,sprintf('result_xcorr_????_%02d.dat',i-1)));
+    f_slice = dir(fullfile(resultdir,sprintf('result_xcorr_????_%02d.???',i-1)));
     slice_tag = [sprintf("x=%gm",x(slices_ix(i))),"y(m)","depth(m)"];
-    [slicex{i},slicex_sum{i}] =  slice_summation(f_slice,y,z,slice_tag,fig_result_dir,slice_reload);
+    [slicex{i},slicex_sum{i}] =  slice_summation(f_slice,y,z,slice_tag,fig_result_dir,slice_reload,fig_para);
+% % model
+%     if i == 1
+%         hold on
+%         plot(ym1x,zm1x,'r--')
+%         hold off
+%     elseif i == 2
+%         hold on
+%         plot(ym2x,[zm2x(1),zm2x(1)],'r--')
+%         plot(ym2x,[zm2x(2),zm2x(2)],'r--')
+%         plot([ym2x(1),ym2x(1)],zm2x,'r--')
+%         plot([ym2x(2),ym2x(2)],zm2x,'r--')
+%         hold off
+%     end
+%     export_fig(fullfile(fig_result_dir,"slice_" + slice_tag(1) + "_with_model.png"),'-transparent')
+% %     export_fig(fullfile(fig_result_dir,"slice_" + slice_tag(1) + "_with_model.pdf"),'-transparent')
 end
 %%
 slicez = {[]};
 slicez_sum = {[]};
+fig_paraz = [-inf, fig_para(2)];
 for i =1:length(slices_iz)
-    f_slice = dir(fullfile(resultdir,sprintf('result_zcorr_????_%02d.dat',i-1)));
+    f_slice = dir(fullfile(resultdir,sprintf('result_zcorr_????_%02d.???',i-1)));
     slice_tag = [sprintf("z=%gm",z(slices_iz(i))),"x(m)","y(m)"];
-    [slicez{i},slicez_sum{i}] =  slice_summation(f_slice,x,y,slice_tag,fig_result_dir,slice_reload);
+    [slicez{i},slicez_sum{i}] =  slice_summation(f_slice,x,y,slice_tag,fig_result_dir,slice_reload,fig_paraz);
 end
-% model
-r=1;
-theta = 0:0.1:2*pi;
-x_t = 2.5+r * cos(theta);
-y_t = 2.5+r * sin(theta);
-hold on
-plot(x_t,y_t,'r--')
-hold off
-export_fig(fullfile(fig_result_dir,"slice_" + slice_tag(1) + "_with_model.png"))
+% % model
+% hold on
+% plot(xm1z,ym1z,'r--',xm2z,ym2z,'r--')
+% hold off
+% export_fig(fullfile(fig_result_dir,"slice_" + slice_tag(1) + "_with_model.png"),'-transparent')
+% % export_fig(fullfile(fig_result_dir,"slice_" + slice_tag(1) + "_with_model.pdf"),'-transparent')
+
+
+% %% draw slice in one figure
+% slicey = {[]};
+% slicey_sum = {[]};
+% for i =1:length(slices_iy)
+%     f_slice = dir(fullfile(resultdir,sprintf('result_ycorr_????_%02d.dat',i-1)));
+%     slice_tag = [sprintf("y=%gm",y(slices_iy(i))),"x(m)","depth(m)"];
+%     [slicey{i},slicey_sum{i}] =  slice_summation(f_slice,x,z,slice_tag,fig_result_dir,slice_reload,fig_para,subplot(2,2,3));
+% end
+% hold on
+% plot(xm1y,zm1y,'r--')
+%     plot(xm2y,[zm2y(1),zm2y(1)],'r--')
+%     plot(xm2y,[zm2y(2),zm2y(2)],'r--')
+%     plot([xm2y(1),xm2y(1)],zm2y,'r--')
+%     plot([xm2y(2),xm2y(2)],zm2y,'r--')
+% hold off
+% xlabel('x(m)');ylabel('depth(m)');
+% xlim([0,8]);set(gca,'XTick',(0:8))
+% daspect([1,1,1]);
+% ca = caxis;
+% set(gca,'fontsize',20,'fontname','Times')
+% set(gca,'Position',[0.05,0.02,0.4,0.5])
+% 
+% i = 2;
+% f_slice = dir(fullfile(resultdir,sprintf('result_xcorr_????_%02d.dat',i-1)));
+% slice_tag = [sprintf("x=%gm",x(slices_ix(i))),"y(m)","depth(m)"];
+% [slicex2,slicex_sum2] =  slice_summation(f_slice,y,z,slice_tag,fig_result_dir,slice_reload,fig_para,subplot(2,2,4));
+% hold on
+% plot(ym2x,[zm2x(1),zm2x(1)],'r--')
+% plot(ym2x,[zm2x(2),zm2x(2)],'r--')
+% plot([ym2x(1),ym2x(1)],zm2x,'r--')
+% plot([ym2x(2),ym2x(2)],zm2x,'r--')
+% hold off
+% xlim([0,5]);set(gca,'XTick',(0:5));
+% xlabel('y(m)');ylabel('depth(m)');
+% daspect([1,1,1]);
+% set(gca,'fontsize',20,'fontname','Times')
+% set(gca,'Position',[0.5,0.02,0.25,0.5])
+% 
+% slicex = {[]};
+% slicex_sum = {[]};
+% i = 1;
+% f_slice = dir(fullfile(resultdir,sprintf('result_xcorr_????_%02d.dat',i-1)));
+% slice_tag = [sprintf("x=%gm",x(slices_ix(i))),"y(m)","depth(m)"];
+% [slicex1,slicex_sum1] =  slice_summation(f_slice,y,z,slice_tag,fig_result_dir,slice_reload,fig_para,subplot(2,2,2));
+% hold on
+% plot(ym1x,zm1x,'r--')
+% hold off
+% ylabel('depth(m)');xlabel('')
+% xlim([0,5]);set(gca,'XTickLabel','')
+% daspect([1,1,1]);
+% set(gca,'fontsize',20,'fontname','Times')
+% set(gca,'Position',[0.5,0.28,0.25,0.5])
+% 
+% slicez = {[]};
+% slicez_sum = {[]};
+% fig_paraz = [-inf, fig_para(2)];
+% for i =1:length(slices_iz)
+%     f_slice = dir(fullfile(resultdir,sprintf('result_zcorr_????_%02d.dat',i-1)));
+%     slice_tag = [sprintf("z=%gm",z(slices_iz(i))),"x(m)","y(m)"];
+%     [slicez{i},slicez_sum{i}] =  slice_summation(f_slice,x,y,slice_tag,fig_result_dir,slice_reload,fig_paraz,subplot(2,2,1));
+% end
+% % model
+% hold on
+% plot(xm1z,ym1z,'r--',xm2z,ym2z,'r--')
+% hold off
+% ylabel('y(m)');xlabel('')
+% xlim([0,8]);ylim([0,5])
+% set(gca,'XTickLabel','')
+% daspect([1,1,1])
+% set(gca,'fontsize',20,'fontname','Times')
+% set(gca,'Position',[0.05,0.35,0.4,0.5])
+% %%
+% export_fig(fullfile(fig_result_dir,"slices_with_model.png"),'-transparent')
+% export_fig(fullfile(fig_result_dir,"slices_with_model.pdf"),'-transparent')
+
 %% Draw wavefields
-reload_wvf = false;
+reload_wvf = true;
 
 amp_para.fac1 = 0;
 amp_para.fac2 = 0;
@@ -147,17 +279,108 @@ end
 %     pause(0.1)
 % end
 
+%% test
+% for i = 1: length(wavefield)
+%     wf = squeeze(wavefield{i}(:,wslicey,:));
+%     imagesc(wf');colorbar
+%     title(sprintf("%d",i))
+%     pause(0.1)
+% end
+
+%% gathers
+% workdirp2 = 'dm_g0.025m_400MHz_0.5x0.5_2_0.1x0.1_pstd_8';
+% workdirf2 = 'dm_g0.025m_400MHz_0.5x0.5_2_0.1x0.1_fdtd_8';
+% workdirp4 = 'dm4_g0.025m_400MHz_0.5x0.5_2_0.1x0.1_pstd_8';
+% workdirf4 = 'dm4_g0.025m_400MHz_0.5x0.5_2_0.1x0.1_fdtd_8';
+% % [pgather2,pgather_std2] = getGather(workdirp2,49,49,41);
+% % [fgather2,fgather_std2] = getGather(workdirf2,49,49,41);
+% % [pgather4,pgather_std4] = getGather(workdirp4,49,49,41);
+% % [fgather4,fgather_std4] = getGather(workdirf4,49,49,41);
+% figure(10)
+% showGather(pgather2,pgather_std2,fgather2,fgather_std2)
+% figure(11)
+% showGather(pgather4,pgather_std4,fgather4,fgather_std4)
 %%
-function [slice,slice_sum] = slice_summation(f_slice,x1,x2,slice_tag,fig_out_dir,reload,fig_para)
+function [gather,gather_std] = getGather(workdir,nrecx,nrecy,i)
+%%
+    gatherDir = fullfile(workdir,'Output');
+    gatherStdDir = fullfile(workdir,'STD','Output');
+    f_gather = dir(fullfile(gatherDir,'merge_gather_*.dat'));
+    f_gatherstd = dir(fullfile(gatherStdDir,'merge_gather_*.dat'));
+    disp(['Loading ' num2str(i) 'th file:' f_gather(i).name])
+    gather1 = load(fullfile(f_gather(i).folder,f_gather(i).name));
+    nt_g = size(gather1,2);
+    gather2 = reshape(gather1,nrecy,nrecx,nt_g);
+    gather = permute(gather2,[2,1,3]);
+    
+    gather1_std = load(fullfile(f_gatherstd(i).folder,f_gatherstd(i).name));
+    gather2_std = reshape(gather1_std,nrecy,nrecx,nt_g);
+    gather_std = permute(gather2_std,[2,1,3]);
+end
+%%
+function showGather(gather1,gather1_std,gather2,gather2_std)
+%%
+%     global dt
+%     nrecy = size(gather1,1);
+%     nt_g = size(gather1,3);
+    subplot(2,2,1)
+    xsl = squeeze(gather1(25,:,:));
+    imagesc(xsl(:,500:end)')
+    colorbar
+%     hold on
+%     h = plot([2,nrecy-1],[1,1],'--');
+    subplot(2,2,3)
+    xslStd = squeeze(gather1_std(25,:,:));
+    imagesc(xslStd(:,1:end)')
+    colorbar
+%     hold on
+%     hstd = plot([2,nrecy-1],[1,1],'--');
+    subplot(2,2,2)
+    xsl = squeeze(gather2(25,:,:));
+    imagesc(xsl(:,500:end)')
+    colorbar
+%     hold on
+%     h = plot([2,nrecy-1],[1,1],'--');
+    subplot(2,2,4)
+    xslStd = squeeze(gather2_std(25,:,:));
+    imagesc(xslStd(:,1:end)')
+    colorbar
+
+    
+%     for it = 1:100:nt_g
+%         subplot(2,2,1)
+%         delete(h)
+%         h = plot([2,nrecy-1],[it,it],'r--');
+%         subplot(2,2,3)
+%         delete(hstd)
+%         hstd = plot([2,nrecy-1],[it,it],'r--');
+%         subplot(2,2,2)
+%         zsl = gather(:,:,it);
+%         imagesc(zsl)
+%         title(sprintf("t=%gns",dt*it/1e-9));
+%         subplot(2,2,4)
+%         zslstd = gather_std(:,:,it);
+%         imagesc(zslstd)
+%         pause(0.1)
+%     end
+end
+
+%%
+function [slice,slice_sum] = slice_summation(f_slice,x1,x2,slice_tag,fig_out_dir,reload,fig_para,figcmd)
     if nargin < 6
         reload = false;
     end
     if nargin < 7
         zmin = -inf;
-        ifagc = false;
+        enhance = 0;
     else
         zmin = fig_para(1);
-        ifagc = fig_para(2);
+        enhance = fig_para(2);
+% enhance: figure enhance mode - 0 for no enhance, 1 for agc, 2 for balance
+%           positive and negetive values.
+    end
+    if nargin < 8
+        figcmd = false;
     end
     nx1 = length(x1);
     nx2 = length(x2);
@@ -167,9 +390,29 @@ function [slice,slice_sum] = slice_summation(f_slice,x1,x2,slice_tag,fig_out_dir
     if ~exist(outf,'file') || reload
         slice = zeros(nx1,nx2,length(f_slice));
         slice_sum = zeros(nx1,nx2);
+        
+        nfslice = length(f_slice);
+        i = 1;
+        while i < nfslice
+            ext = f_slice(i).name(end-2:end);
+            if ~strcmp(ext,'bin') && ~strcmp(ext,'dat')
+                f_slice(i) = [];
+                i = i-1;
+                nfslice = nfslice-1;
+            end
+            i = i+1;
+        end
         parfor i = 1:length(f_slice)
+            ext = f_slice(i).name(end-2:end);
             disp(['Loading ' num2str(i) 'th file:' f_slice(i).name])
-            slicei = load(fullfile(outdir,f_slice(i).name))
+            if strcmp(ext,'dat')
+                slicei = load(fullfile(outdir,f_slice(i).name));
+            else
+                fid = fopen(fullfile(outdir,f_slice(i).name));
+                slicei = fread(fid,[nx2,nx1],'float');
+                slicei = slicei';
+                fclose(fid);
+            end
             slice(:,:,i) = slicei;
             slice_sum = slice_sum + slicei;
         end
@@ -177,20 +420,45 @@ function [slice,slice_sum] = slice_summation(f_slice,x1,x2,slice_tag,fig_out_dir
     else
         load(outf)
     end
-    figure(11)
+%     colormap gray
     set(gcf,'Unit','centimeters')
     set(gcf,'Position',[0,0,29.7,21])
     set(gca,'fontsize',30,'fontname','Times')
-    if ifagc
-        slice_sum = agc(slice_sum')';
+    if enhance == 1
+        slice_sum_en = agc(slice_sum')';
+    elseif enhance == 2
+        slice_sum_en = slice_sum;
+        rmax = max(max(slice_sum));
+        rmin = min(min(slice_sum));
+        slice_sum_en(slice_sum > 0) = slice_sum(slice_sum > 0)/rmax;
+        slice_sum_en(slice_sum < 0) = slice_sum(slice_sum < 0)/-rmin;
+    else
+        slice_sum_en = slice_sum;
+        colorbar
     end
-    imagesc(x1,x2(x2>zmin),slice_sum(:,x2>zmin)')
-%     title("slice at " + slice_tag(1))
-    daspect([1,1,1])
-    xlabel(slice_tag(2));ylabel(slice_tag(3))
-    set(gca,'fontsize',24,'fontname','Times')
-    export_fig(fullfile(fig_out_dir,"slice_" + slice_tag(1) + ".png"))
-    pause(0.1)
+    
+    if figcmd == false
+        figure(11)
+        clf;
+        imagesc(x1,x2(x2>zmin),slice_sum(:,x2>zmin)')
+        title("slice at " + slice_tag(1))
+        daspect([1,1,1]);colorbar
+        xlabel(slice_tag(2));ylabel(slice_tag(3))
+        set(gca,'fontsize',24,'fontname','Times')
+        export_fig(fullfile(fig_out_dir,"slice_" + slice_tag(1) + "_ori.png"),'-transparent')
+
+        imagesc(x1,x2(x2>zmin),slice_sum_en(:,x2>zmin)')
+        daspect([1,1,1])
+        xlabel(slice_tag(2));ylabel(slice_tag(3))
+        set(gca,'fontsize',24,'fontname','Times')
+        export_fig(fullfile(fig_out_dir,"slice_" + slice_tag(1) + ".png"),'-transparent')
+    else
+        figure(12)
+        imagesc(x1,x2(x2>zmin),slice_sum_en(:,x2>zmin)')
+        daspect([1,1,1])
+        xlabel(slice_tag(2));ylabel(slice_tag(3))
+        set(gca,'fontsize',24,'fontname','Times')
+    end
 end
 
 %%
@@ -205,13 +473,31 @@ function [wavefield,wavefield_sum] = wavefield_summation(f_wavefield_corr,fig_re
     if ~exist(f_wvf_sum,'file') || reload
         if ~exist(f_wvf,'file') || reload
             wavefield = {[]};
+            
+            nfwf = length(f_wavefield_corr);
+            i = 1;
+            while i <= nfwf
+                ext = f_wavefield_corr(i).name(end-2:end);
+                if ~strcmp(ext,'bin') && ~strcmp(ext,'dat')
+                    f_wavefield_corr(i) = [];
+                    i = i-1;
+                    nfwf = nfwf-1;
+                end
+                i = i+1;
+            end
             parfor i = 1:length(f_wavefield_corr)
+                ext = f_wavefield_corr(i).name(end-2:end);
                 disp(['Loading ' num2str(i) 'th file:' f_wavefield_corr(i).name])
-                wvf_tmp = reshape(load(fullfile(f_wavefield_corr(i).folder,f_wavefield_corr(i).name)),ny,nx,nz);
-                wavefield{i} = permute(wvf_tmp,[2,1,3]);
-    %             zsl = wavefield{i}(:,:,slicez(1));
-    %             imagesc(zsl)
-    %             pause(0.1)
+                if strcmp(ext,'dat')
+                    wvf_tmp = reshape(load(fullfile(f_wavefield_corr(i).folder,f_wavefield_corr(i).name)),ny,nx,nz);
+                    wavefield{i} = permute(wvf_tmp,[2,1,3]);
+                else
+                    fid = fopen(fullfile(f_wavefield_corr(i).folder,f_wavefield_corr(i).name));
+                    wvf_tmp = fread(fid,[nz,ny*nx],'float');
+                    fclose(fid);
+                    wvf_tmp = reshape(wvf_tmp,[nz,nx,ny]);
+                    wavefield{i} = permute(wvf_tmp,[3,2,1]);
+                end
             end
             save(f_wvf,'wavefield','-v7.3')
         else
@@ -256,30 +542,33 @@ function [wavefield,wavefield_sum] = wavefield_summation(f_wavefield_corr,fig_re
 
     %%
     figure(10)
+%     colormap gray
     set(gcf,'Unit','centimeters')
     set(gcf,'Position',[0,0,29.7,21])
     set(gca,'fontsize',30,'fontname','Times')
+    global xm1z ym1z xm2z ym2z
     if wslicez
         for i = wslicez
             zi = z(i);
-            zslice = squeeze(wavefield_amp_sum(:,:,i));
+            zslice = squeeze(wavefield_sum(:,:,i));
             imagesc(x,y,zslice');
 %             title(['zslice at z=' num2str(zi) 'm']);colorbar
 
-    %         % outline model, should add manully
-    %         hold on
-    %         % 7.5*(x-2)-0.75*y-2.5*(z-0.8)=0
-
-    %         ym = (7.5*(x-2)-2.5*(zi-0.8))/0.75;
-    %         plot(x,ym,'r--')
-    %         plot(x,2.52*ones(size(x)),'k')% show where yslice locate.
-    %         hold off
+            % outline model, should add manully
+            hold on
+            plot(xm1z,ym1z,'r--',xm2z,ym2z,'r--')
+            hold off
 
             daspect([1,1,1])
             xlabel('x(m)');ylabel('y(m)')
             set(gca,'fontsize',20,'fontname','Times')
+            
+            colorbar
+%             [camin,camax] = caxis;
+%             cabdr = (camax-camin)/2;
+%             caxis([-cabdr,cabdr]);
 
-            export_fig(fullfile(fig_result_dir,['wvf_zslice at z=' num2str(zi) 'm.png']))
+            export_fig(fullfile(fig_result_dir,['wvf_zslice at z=' num2str(zi) 'm.png']),'-transparent')
             pause(0.1)
         end
     end
@@ -288,7 +577,7 @@ function [wavefield,wavefield_sum] = wavefield_summation(f_wavefield_corr,fig_re
     if wslicex
         for i = wslicex
             xi = x(i);
-            xslice = squeeze(wavefield_amp_sum(i,:,:));
+            xslice = squeeze(wavefield_sum(i,:,:));
             xslice1 = agc(xslice);
             imagesc(y,z,xslice');
 %             title(['xslice at x=' num2str(xi) 'm']);colorbar;
@@ -297,13 +586,21 @@ function [wavefield,wavefield_sum] = wavefield_summation(f_wavefield_corr,fig_re
             set(gca,'fontsize',20,'fontname','Times')
 
     %         % outline model, should add manully
-    %         hold on
-    %         % 7.5*(x-2)-0.75*y-2.5*(z-0.8)=0
-    %         zm = (7.5*(xi-2)-0.75*y)/2.5 + 0.8;
-    %         plot(y,zm,'r--')
-    %         hold off
+% r=0.5;
+% theta = 0:0.1:2*pi;
+% x_t = 2.5+r * cos(theta);
+% global zd
+% z_t = zd+r * sin(theta);
+% hold on
+% plot(x_t,z_t,'r--')
+% hold off
 
-            export_fig(fullfile(fig_result_dir,['wvf_xslice at x=' num2str(xi) 'm.png']))
+    colorbar
+%     [camin,camax] = caxis;
+%     cabdr = (camax-camin)/2;
+%     caxis([-cabdr,cabdr]);
+
+            export_fig(fullfile(fig_result_dir,['wvf_xslice at x=' num2str(xi) 'm.png']),'-transparent')
             pause(0.1)
         end
     end
@@ -311,9 +608,9 @@ function [wavefield,wavefield_sum] = wavefield_summation(f_wavefield_corr,fig_re
     if wslicey
         for i = wslicey
             yi = y(i);
-            zind = z>0;
-            xind = x>0;%x>0.4&x<5-0.4;
-            yslice = squeeze(wavefield_amp_sum(xind,i,zind));
+            zind = z>-5;
+            xind = x>-5;%x>0.4&x<5-0.4;
+            yslice = squeeze(wavefield_sum(xind,i,zind));
             op_length = 8;
             yslice1 = agc(yslice);%,1:size(yslice,1),8,op_length/10,1);
             imagesc(x(xind),z(zind),yslice');
@@ -376,8 +673,13 @@ function [wavefield,wavefield_sum] = wavefield_summation(f_wavefield_corr,fig_re
             daspect([1,1,1])
             xlabel('x(m)');ylabel('depth(m)')
             set(gca,'fontsize',20,'fontname','Times')
-
-            export_fig(fullfile(fig_result_dir,['wvf_yslice at y=' num2str(yi) 'm.png']))
+            
+    colorbar
+%     [camin,camax] = caxis;
+%     cabdr = (camax-camin)/2;
+%     caxis([-cabdr,cabdr]);
+    
+            export_fig(fullfile(fig_result_dir,['wvf_yslice at y=' num2str(yi) 'm.png']),'-transparent')
             pause(0.1)
         end
     end

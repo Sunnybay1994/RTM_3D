@@ -6,9 +6,11 @@ c = 299792458;
 %% modelname
 dx = 0.025;
 freq_src = 400*1e6;
+dot_zPosition = 2;
 
 filename = mfilename;
-modelname = sprintf('dm_g%gm',dx);
+% modelname = sprintf('dm%g_g%gm',dot_zPosition,dx);
+modelname = 'test_dot';
 fprintf('\nmodelname=%s\n',modelname);
 % modelname = 'test_0o';
 % modelname = 'test_2d';
@@ -19,16 +21,16 @@ src_save = [fn '_src.png'];
 
 % wavelet
 [wl, twl, f_thr, wl_tw] = ricker_src(0.01 *1e-9,freq_src,0.85);
-export_fig(src_save)
+% export_fig(src_save)
 
 % Grid parameter
 epr_max = 10;
 epr_min = 1;
 miur_max = 1;
 miur_min = 1;
-ep0 = 9;
-wvl = 3e8/freq_src/sqrt(ep0);
-wl_w = wl_tw * 3e8/sqrt(ep0);
+epr0 = 1;
+wvl = 3e8/freq_src/sqrt(epr0);
+wl_w = wl_tw * 3e8/sqrt(epr0);
 fprintf('wavelet width=%gm\n',wl_w);
 
 disp('----------Grid Parameter----------')
@@ -61,7 +63,7 @@ Z = (nz-nz_air)*dz;
 
 % time prarameter
 disp('<Time Grid>')
-T_ref = sqrt(X^2+Y^2+(2*Z)^2)/(3e8/sqrt(ep0));%s
+T_ref = sqrt(X^2+Y^2+(2*Z)^2)/(3e8/sqrt(epr0));%s
 fprintf('Max 2-way traveltime=%gns\n',T_ref/1e-9)
 T = 1.1*T_ref;%s
 
@@ -82,13 +84,13 @@ outstep_slice = outstep_t_wavefield;
 disp('----------Grid Parameter End----------')
 
 %% background model
-ep_bg = ones(nx,ny,nz) * ep0;
+ep_bg = ones(nx,ny,nz) * epr0;
 ep_bg(:,:,1:nz_air) = 1; % air layer
 
 ep = ep_bg;
 
 %% slice
-slicez_z = 2;
+slicez_z = dot_zPosition;
 slicex = [nx/2];
 slicey = [ny/2];
 slicez = [round(slicez_z/dz) + nz_air];
@@ -107,7 +109,7 @@ for ix = 1:nx
                 zi = (iz-nz_air) * dz;
                     dot = dots{1};
                     if (xi - dot(1))^2 + (yi - dot(2))^2 + (zi - dot(3))^2 <= r^2
-                        ep(ix,iy,iz) = 1;
+                        ep(ix,iy,iz) = 6;
                     end
 %                     dot = dots{2};
 %                     if (xi - dot(1))^2 + (yi - dot(2))^2 + (zi - dot(3))^2 <= r^2
@@ -129,7 +131,7 @@ src_margin_nx = npmlx;
 src_margin_ny = npmly;
 rec_margin_nx = npmlx;
 rec_margin_ny = npmly;
-src_span = 2;
+src_span = 0;
 
 % place src and rec
 dnx_src = dx_src / dx;
@@ -288,7 +290,7 @@ function alpha = check_stability(dx, dt, cmax, dim)
         cmax = 299792458;%m/s
     end
     if length(dx) > 1
-        dx = 1/sqrt(sum(1./dx.^2));
+        dx = 1/sqrt(sum(dx.^-2));
     else
         if nargin < 4
             dim = 3;
