@@ -1,15 +1,21 @@
 destpath=bin/
+march=native
 
-all: fdtd pstd clean
+all: march fdtd pstd clean
+
+march:
+	@echo march=${march}
+# freeosc: skylake-avx512
+# 6800k: broadwell
 
 fdtdcc=mpicxx
-fdtdcflags=-O3 -march=skylake-avx512
+fdtdcflags=-O3 -march=${march}
 fdtdsrc=rtm_3d/forward_method/FDTD
 fdtd : $(fdtdsrc)/main.cpp $(fdtdsrc)/updateEH.cpp $(fdtdsrc)/input.cpp $(fdtdsrc)/output.cpp 
 	$(fdtdcc) $(fdtdcflags) -o $(destpath)FDTD_MPI.exe  $(fdtdsrc)/fdtd.h $(fdtdsrc)/main.cpp $(fdtdsrc)/updateEH.cpp $(fdtdsrc)/input.cpp $(fdtdsrc)/output.cpp
 
 pstdcc=ifort
-pstdcflags=-qopenmp -mkl -O3 -march=skylake-avx512
+pstdcflags=-qopenmp -qmkl -O3 -march=${march}
 pstdsrc=rtm_3d/forward_method/PSTD
 pstd : $(pstdsrc)/mkl_dfti.f90 $(pstdsrc)/sgpstd3d.f90
 	$(pstdcc) $(pstdcflags) -o $(destpath)PSTD.exe $(pstdsrc)/mkl_dfti.f90 $(pstdsrc)/sgpstd3d.f90
