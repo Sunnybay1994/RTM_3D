@@ -34,9 +34,12 @@ def corr_wavefield(isrc, workdir, path1,path2,list1,list2, outdir,logger):
             data_backward += data2 * data2
 
     logger.info('Saving wavefield of src%d'%(isrc))
-    np.savetxt(os.path.join(outdir,rtmfn.result_wavefield_fn.format(isrc=isrc)),np.reshape(corr_data,[wvf_nx*wvf_ny,wvf_nz]))
-    np.savetxt(os.path.join(outdir,rtmfn.result_wavefield_f_fn.format(isrc=isrc)),np.reshape(data_forward,[wvf_nx*wvf_ny,wvf_nz]))
-    np.savetxt(os.path.join(outdir,rtmfn.result_wavefield_b_fn.format(isrc=isrc)),np.reshape(data_backward,[wvf_nx*wvf_ny,wvf_nz]))
+    # np.savetxt(os.path.join(outdir,rtmfn.result_wavefield_fn.format(isrc=isrc)),np.reshape(corr_data,[wvf_nx*wvf_ny,wvf_nz]))
+    # np.savetxt(os.path.join(outdir,rtmfn.result_wavefield_f_fn.format(isrc=isrc)),np.reshape(data_forward,[wvf_nx*wvf_ny,wvf_nz]))
+    # np.savetxt(os.path.join(outdir,rtmfn.result_wavefield_b_fn.format(isrc=isrc)),np.reshape(data_backward,[wvf_nx*wvf_ny,wvf_nz]))
+    corr_data.astype('float32').tofile(os.path.join(outdir,rtmfn.result_wavefield_fn.format(isrc=isrc)))
+    data_forward.astype('float32').tofile(os.path.join(outdir,rtmfn.result_wavefield_f_fn.format(isrc=isrc)))
+    data_backward.astype('float32').tofile(os.path.join(outdir,rtmfn.result_wavefield_b_fn.format(isrc=isrc)))
     logger.info('Figureing wavefield of src%d'%(isrc))
     for i in range(slice_nx):
         plt.clf()

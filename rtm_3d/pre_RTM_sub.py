@@ -51,8 +51,8 @@ def merge_gather(wdir, isrc):
         for i in range(len(isum)):
             plt.plot(isum[i]/max(abs(isum[i]))+i)
         plt.savefig(os.path.join(idir, 'merge_gather_'+str(isrc).zfill(4)+'.png'))
-        with open(os.path.join(idir, 'merge_gather_'+str(isrc).zfill(4)+'.dat'),'w') as fp:
-            np.savetxt(fp,isum)
+        with open(os.path.join(idir, 'merge_gather_'+str(isrc).zfill(4)+'.bin'),'wb') as fp:
+            np.array(isum).astype('float32').tofile(fp)
         with open(os.path.join(idir, 'merge_gather_loc_'+str(isrc).zfill(4)+'.dat'),'w') as fp:
             np.savetxt(fp,iloc,'%d')
         for fname in ilist:

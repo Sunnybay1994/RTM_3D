@@ -103,9 +103,12 @@ def corr_slice(isrc, workdir, path1,path2,xlist1,xlist2,ylist1,ylist2,zlist1,zli
                 slice_data = zcorr_data[:,:,i]
                 slice_normal_forward = zcorr_normal_forward[:,:,i]
                 slice_normal_backward = zcorr_normal_backward[:,:,i]
-            np.savetxt(os.path.join(outdir, rtmfn.result_slice_fn.format(xyz=xyz,isrc=isrc,islice=i)), slice_data)
-            np.savetxt(os.path.join(outdir, rtmfn.result_slice_nf_fn.format(xyz=xyz,isrc=isrc,islice=i)), slice_normal_forward)
-            np.savetxt(os.path.join(outdir, rtmfn.result_slice_nb_fn.format(xyz=xyz,isrc=isrc,islice=i)), slice_normal_backward)
+            # np.savetxt(os.path.join(outdir, rtmfn.result_slice_fn.format(xyz=xyz,isrc=isrc,islice=i)), slice_data)
+            # np.savetxt(os.path.join(outdir, rtmfn.result_slice_nf_fn.format(xyz=xyz,isrc=isrc,islice=i)), slice_normal_forward)
+            # np.savetxt(os.path.join(outdir, rtmfn.result_slice_nb_fn.format(xyz=xyz,isrc=isrc,islice=i)), slice_normal_backward)
+            slice_data.astype('float32').tofile(os.path.join(outdir, rtmfn.result_slice_fn.format(xyz=xyz,isrc=isrc,islice=i)))
+            slice_normal_forward.astype('float32').tofile(os.path.join(outdir, rtmfn.result_slice_nf_fn.format(xyz=xyz,isrc=isrc,islice=i)))
+            slice_normal_backward.astype('float32').tofile(os.path.join(outdir, rtmfn.result_slice_nb_fn.format(xyz=xyz,isrc=isrc,islice=i)))
             logger.info('Figureing slice%s%d of src%d'%(xyz,i,isrc))
             plt.clf()
             plt.imshow(slice_data.T, interpolation='none')
