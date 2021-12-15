@@ -26,15 +26,15 @@ def check_file(isrc,workdir,logger,result_dir='Result'):
             nslice = slice_nz
         if dum_s:
             for i in range(nslice):
-                dum_s = os.path.isfile(os.path.join(result_dir, rtmfn.result_slice_fn.format(xyz=xyz,isrc=isrc,islice=i))) and dum_s
-                dum_s = os.path.isfile(os.path.join(result_dir, rtmfn.result_slice_nf_fn.format(xyz=xyz,isrc=isrc,islice=i))) and dum_s
-                dum_s = os.path.isfile(os.path.join(result_dir,  rtmfn.result_slice_nb_fn.format(xyz=xyz,isrc=isrc,islice=i))) and dum_s
+                dum_s = os.path.isfile(os.path.join(result_dir, rtmfn.result_slice_fn.format(xyz=xyz,isrc=isrc,islice=i,ext='bin'))) and dum_s
+                dum_s = os.path.isfile(os.path.join(result_dir, rtmfn.result_slice_nf_fn.format(xyz=xyz,isrc=isrc,islice=i,ext='bin'))) and dum_s
+                dum_s = os.path.isfile(os.path.join(result_dir,  rtmfn.result_slice_nb_fn.format(xyz=xyz,isrc=isrc,islice=i,ext='bin'))) and dum_s
                 if not dum_s:
                     break
         if dum_w:
-            dum_w = os.path.isfile(os.path.join(result_dir, rtmfn.result_wavefield_fn.format(isrc=isrc))) and dum_w
-            dum_w = os.path.isfile(os.path.join(result_dir, rtmfn.result_wavefield_f_fn.format(isrc=isrc))) and dum_w
-            dum_w = os.path.isfile(os.path.join(result_dir, rtmfn.result_wavefield_f_fn.format(isrc=isrc))) and dum_w
+            dum_w = os.path.isfile(os.path.join(result_dir, rtmfn.result_wavefield_fn.format(isrc=isrc,ext='bin'))) and dum_w
+            dum_w = os.path.isfile(os.path.join(result_dir, rtmfn.result_wavefield_f_fn.format(isrc=isrc,ext='bin'))) and dum_w
+            dum_w = os.path.isfile(os.path.join(result_dir, rtmfn.result_wavefield_f_fn.format(isrc=isrc,ext='bin'))) and dum_w
     return dum_s,dum_w
 
 def clean(isrc,workdir,mode):

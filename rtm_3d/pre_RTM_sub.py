@@ -11,6 +11,8 @@ def merge_gather(wdir, isrc):
     # global isum
     # global iloc
     idir = os.path.join(wdir,'Output')
+    fn_data = os.path.join(idir, 'merge_gather_'+str(isrc).zfill(4)+'.bin')
+    fn_data_ext = os.path.join(idir, 'ext','merge_gather_'+str(isrc).zfill(4)+'.bin')
     if 'win' in sys.platform:
         ilist = os.popen('dir/b/on '+ os.path.join(idir,'gather'+'_'+str(isrc).zfill(4)+'*')).readlines()
         logger.debug(ilist)
@@ -51,18 +53,26 @@ def merge_gather(wdir, isrc):
         for i in range(len(isum)):
             plt.plot(isum[i]/max(abs(isum[i]))+i)
         plt.savefig(os.path.join(idir, 'merge_gather_'+str(isrc).zfill(4)+'.png'))
-        with open(os.path.join(idir, 'merge_gather_'+str(isrc).zfill(4)+'.bin'),'wb') as fp:
-            np.array(isum).astype('float32').tofile(fp)
+        np.array(isum).astype('float32').tofile(fn_data)
         with open(os.path.join(idir, 'merge_gather_loc_'+str(isrc).zfill(4)+'.dat'),'w') as fp:
             np.savetxt(fp,iloc,'%d')
         for fname in ilist:
             os.remove(fname.strip('\n'))
     else:
         logger.info("merging gather: No files. Loading merge_gather.") 
-        with open(os.path.join(idir, 'merge_gather_'+str(isrc).zfill(4)+'.dat')) as fp:
-            isum = np.loadtxt(fp)
         with open(os.path.join(idir, 'merge_gather_loc_'+str(isrc).zfill(4)+'.dat')) as fp:
             iloc = np.loadtxt(fp)
+        nrec = iloc.shape[0]
+        isum = np.fromfile(fn_data,dtype='float32')
+        isum = isum.reshape(nrec,-1)
+    try:
+        with open(fn_data_ext,'rb') as fp:
+            logger.info("merging gather: Loading from external gathers.")
+            isum_ext = np.fromfile(fp,dtype='float32')
+            isum_ext = isum_ext.reshape(nrec,-1)
+        isum = isum_ext
+    except Exception as e:
+        logger.info('merging gather: no external gathers.%s'%e)
     return isum,iloc
 
 
@@ -92,7 +102,7 @@ def prepare_RTM(isum,iloc,isum_std,iloc_std,gather_rtm,isrc):
 
     if 'm' in mode:
         fn = os.path.join(rtmdir,'Input','src.in'+'_'+str(isrc).zfill(4))
-        srcinfos = [item.tolist()+[component] for item in iloc]
+        srcinfos = [item.tolist()+[component] for item in iloc_std]
         extend_and_write_sources(fn,srcinfos,gather_rtm)
 
     if 'z' in mode:
