@@ -59,20 +59,21 @@ def merge_gather(wdir, isrc):
         for fname in ilist:
             os.remove(fname.strip('\n'))
     else:
-        logger.info("merging gather: No files. Loading merge_gather.") 
+        logger.info("merging gather: No files. Loading merged gathers.") 
         with open(os.path.join(idir, 'merge_gather_loc_'+str(isrc).zfill(4)+'.dat')) as fp:
             iloc = np.loadtxt(fp)
         nrec = iloc.shape[0]
         isum = np.fromfile(fn_data,dtype='float32')
         isum = isum.reshape(nrec,-1)
     try:
+        nrec = np.array(iloc).shape[0]
         with open(fn_data_ext,'rb') as fp:
-            logger.info("merging gather: Loading from external gathers.")
+            logger.info("merging gather: Loading external merged gathers.")
             isum_ext = np.fromfile(fp,dtype='float32')
             isum_ext = isum_ext.reshape(nrec,-1)
         isum = isum_ext
     except Exception as e:
-        logger.info('merging gather: no external gathers.%s'%e)
+        logger.info('merging gather: %s'%e)
     return isum,iloc
 
 

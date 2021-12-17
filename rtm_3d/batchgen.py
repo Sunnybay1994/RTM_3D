@@ -112,13 +112,14 @@ echo  "=====Computing started at $(date)====="
 cd $WORKPATH
 echo "Current Directory = $WORKPATH"
 
-if [[ -f $WORKPATHRESULT/result_wavefield_corr_${{SISRC}}.dat && -f $WORKPATHRESULT/result_xcorr_${{SISRC}}_00.dat \\
-&& -f $WORKPATHRESULT/result_ycorr_${{SISRC}}_00.dat && -f $WORKPATHRESULT/result_zcorr_${{SISRC}}_00.dat ]]; then
+if [[ -f $WORKPATHRESULT/result_wavefield_corr_${{SISRC}}.bin && -f $WORKPATHRESULT/result_xcorr_${{SISRC}}_00.bin \\
+&& -f $WORKPATHRESULT/result_ycorr_${{SISRC}}_00.bin && -f $WORKPATHRESULT/result_zcorr_${{SISRC}}_00.bin ]]; then 
     doneflag=true
 else
     doneflag=false
 fi
 echo "($ISRC)doneflag=$doneflag"
+
 
 '''
         return txt
@@ -128,7 +129,7 @@ echo "($ISRC)doneflag=$doneflag"
     def gen_mpicmd_txt(self,wdir,execmd,isrctag='$ISRC'):
         return '{mpipath} -wdir {wdir} {execmd} {isrctag} > "{wdir}/Output/{isrctag}($NP).out"\n'.format(mpipath=self._mpipath,wdir=wdir,execmd=execmd,isrctag=isrctag)
     def gen_forward_txt(self,step):
-        head_txt = 'if [[ $STEPS =~ %s && $doneflag = "false" ]];then\n'%step
+        head_txt = 'if [[ $STEPS =~ %s || ( $STEPS =~ %s && $doneflag = "false" ) ]];then\n'%(step.upper(),step)
         exit_txt = '    exit_code=$?;echo exit_code=$exit_code\nfi\n'
         isrctag = '$ISRC'
         if step == 'g':
@@ -138,10 +139,11 @@ echo "($ISRC)doneflag=$doneflag"
             head_txt += '    echo "($(date))Calculating forward wavafield..."\n'
             path = '$WORKPATHSTD'
         elif step == 'b':
-            head_txt += '''    echo "($(date))Prepare for RTM..."
+            head_txt = '''if [[ $STEPS =~ P || ( $STEPS =~ p && $doneflag = "false" ) ]];then
+    echo "($(date))Prepare for RTM..."
     python $SRCPATH/pre_RTM_sub.py $METHOD_TAG $ISRC
-    echo "($(date))Calculating backward wavafield..."
-'''
+fi
+''' + head_txt + '    echo "($(date))Calculating backward wavafield..."\n'
             path = '$WORKPATHRTM'
         elif step == 'z':
             head_txt += '''    echo "($(date))Prepare for zero-offset RTM..."
@@ -168,13 +170,13 @@ echo "($ISRC)doneflag=$doneflag"
     def txt_tail(self):
         return '''
 
-if [[ $STEPS =~ i && $doneflag = "false" ]];then
+if [[ $STEPS =~ I || ($STEPS =~ i && $doneflag = "false") ]];then
     echo "($(date))Applying image condition..."
     corrflag=
 else
     corrflag='--nocorr'
 fi
-if [[ $STEPS =~ c ]];then
+if [[ $STEPS =~ c || $STEPS =~ C ]];then
     echo "($(date))clean files..."
     cleanflag=
 else
@@ -251,7 +253,7 @@ class rtm_workflow_freeosc(rtm_workflow):
 
 echo "JOB_NODELIST: ${{SLURM_JOB_NODELIST}}"
 '''
-    def __init__(self,taskname='default',nsrc=1,job_cap=60,proc_num=4,method='fdtd',mode='z',steps='gfbizc',mpipath='$MPI_HOME/bin/mpiexec',subcmd='sbatch --exclude=cu17 {script_name}',script_name='script{s_isrc}.sh',add_head=additional_head_txt,add_tail=''):
+    def __init__(self,taskname='default',nsrc=1,job_cap=60,proc_num=4,method='fdtd',mode='z',steps='gfbizc',mpipath='$MPI_HOME/bin/mpiexec',subcmd='sbatch {script_name}',script_name='script{s_isrc}.sh',add_head=additional_head_txt,add_tail=''):
         # command changing exists file: sed -i "s/sbatch script/sbatch --exclude=cu17 script/g" script_0*.sh 
         rtm_workflow.__init__(self,taskname,nsrc,job_cap,proc_num,method,mode,steps,mpipath,subcmd,script_name,add_head,add_tail)
     def gen_txt_head(self,isrc,txt=''):
@@ -265,9 +267,9 @@ def batchgen(args):
         if mode == 'z':
             steps = 'gfzc'
         elif mode == 'm':
-            steps = 'gfbic'
+            steps = 'gfpbic'
         elif mode == 'mz':
-            steps = 'gfbizc'
+            steps = 'gfpbizc'
     if args.max_cpu:
         job_cap = args.max_cpu//args.np
     else:
