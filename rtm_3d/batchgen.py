@@ -254,7 +254,7 @@ class rtm_workflow_freeosc(rtm_workflow):
 echo "JOB_NODELIST: ${{SLURM_JOB_NODELIST}}"
 '''
     def __init__(self,taskname='default',nsrc=1,job_cap=60,proc_num=4,method='fdtd',mode='z',steps='gfbizc',mpipath='$MPI_HOME/bin/mpiexec',subcmd='sbatch {script_name}',script_name='script{s_isrc}.sh',add_head=additional_head_txt,add_tail=''):
-        # command changing exists file: sed -i "s/sbatch script/sbatch --exclude=cu17 script/g" script_0*.sh 
+        # command changing exists file: sed -i "s/sbatch script/sbatch --exclude=cu17 script/g" *.sh 
         rtm_workflow.__init__(self,taskname,nsrc,job_cap,proc_num,method,mode,steps,mpipath,subcmd,script_name,add_head,add_tail)
     def gen_txt_head(self,isrc,txt=''):
         return self.txt_head.format(isrc=isrc,additional_head_txt=txt.format(isrc=isrc,method=self._method[0],taskname=self._taskname,np=self._proc_num,scriptname=self._name_script.format(s_isrc="_%04d"%isrc)))

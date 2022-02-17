@@ -30,7 +30,7 @@ def get_isrc_filenames_rtm(isrc,wdir,dir1='STD',dir2='RTM'):
     dir2=os.path.join(wdir,dir2)
     path1,listx1,listy1,listz1,listw1 = get_isrc_filenames(isrc,dir1)
     path2,listx2,listy2,listz2,listw2 = get_isrc_filenames(isrc,dir2)
-    assert len(listx1) == len(listx2), 'slicex number not equal'
+    assert len(listx1) == len(listx2), 'slicex number not equal (std%d-rtm%d)'
     assert len(listy1) == len(listy2), 'slicey number not equal'
     assert len(listz1) == len(listz2), 'slicez number not equal'
     assert len(listw1) == len(listw2), 'wavefield number not equal'
