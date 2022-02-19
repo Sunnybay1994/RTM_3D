@@ -16,6 +16,35 @@ mu0 = 1.2566370614e-6
 ep0 = 8.8541878176e-12
 c = 299792458
 
+def load_src_rec(srcinfo,recinfo,half_span=0):
+    logger.info('Loading source and receiver location...')
+    nsrc = np.size(srcinfo,1)
+    nrec = np.size(recinfo,1)
+
+    for i in range(nsrc):
+        fn_src = os.path.join(indir,'src.in_' + str(i).zfill(4))
+        extend_and_write_one_source(fn_src, [srcinfo[0][i],srcinfo[1][i],srcinfo[2][i],'Ey'], srcpulse,xhalfspan=half_span,yhalfspan=half_span)
+
+    with open(os.path.join(indir,'rec.in'), 'w') as frec:
+        frec.write("%d\n" % (nrec))
+        for i in range(nrec):
+            frec.write("%d,%d,%d,%s\n" %
+                       (recinfo[0][i], recinfo[1][i], recinfo[2][i], 'Ey'))
+
+    cp(os.path.join(indir,'src.in*'),std_indir)
+    cp(os.path.join(indir,'rec.in'),os.path.join(std_indir,'rec.in'))
+    if 'z' in mode:
+        with open(os.path.join(rtm0_indir,'rec.in'),'w+') as fo:
+            fo.write('1\n')
+            fo.write('%d,%d,%d,Ey\n'%(nx0,ny0,nz_air-2))
+    if 'm' in mode:
+        with open(os.path.join(rtm_indir,'rec.in'),'w+') as fo:
+            fo.write('1\n')
+            fo.write('%d,%d,%d,Ey\n'%(nx0,ny0,nz_air-2))
+
+    return nsrc,nrec
+
+
 def src_rec(dnx_src,dny_src=False,dnx_rec=False,dny_rec=False,nzp_src=False,nzp_rec=False,nx_src=False,ny_src=False,nx_rec=False,ny_rec=False,nshift=0,marginx=0,marginy=False,marginx_rec=False,marginy_rec=False,half_span=2):
     logger.info('adding source and receiver...')
     if not dny_src:
@@ -268,7 +297,7 @@ def gaussian(dt, t0, nt):
     return p
 
 
-def ricker(f, length, dt):
+def ricker(f, length, dt, reverse=False):
     nt_src = int(length // dt)
     # t = np.linspace(-length / 2, (length - dt) / 2, length // dt)
     logger.info('ricker pulse: f=%g,dt=%g,T=%g,nt=%d'%(f,dt,length,nt_src))
@@ -276,6 +305,8 @@ def ricker(f, length, dt):
     y = (1.0 - 2.0 * (np.pi ** 2) * (f ** 2) * (t ** 2)) * \
         np.exp(-(np.pi ** 2) * (f ** 2) * (t ** 2))
     width = 2*0.88521/(2*np.pi*f)
+    if reverse:
+        y = -y
     try:
         plt.figure()
     except Exception as e:
@@ -577,7 +608,7 @@ if __name__ == '__main__':
 
     ### source ###
     # srcpulse,t_src = blackharrispulse(fmain, dt)
-    srcpulse,t_src = ricker(fmain,4*1/fmain,dt)
+    srcpulse,t_src = ricker(fmain,4*1/fmain,dt,reverse=True)
     with open(os.path.join(workdir,'src_t.txt'),'w') as fo:
         fo.write('t,srcpulse\n')
         for i in range(len(t_src)):
@@ -591,19 +622,23 @@ if __name__ == '__main__':
     check_dispersion_x(dx,fmax,c/np.sqrt(epmax*mumax))
 
     ### generate src & rec ###
-    dnx_src = round(dx_src/dx)
-    dny_src = round(dy_src/dy)
-    dnx_rec = round(dx_rec/dx)
-    dny_rec = round(dy_rec/dy)
-    mx = float(dic_model['src_margin_nx'])
-    my = float(dic_model['src_margin_ny'])
-    mxr = float(dic_model['rec_margin_nx'])
-    myr = float(dic_model['rec_margin_ny'])
-    [nsrc,nrec] = src_rec(dnx_src,dny_src,dnx_rec,dny_rec,marginx=mx, marginy=my, marginx_rec=mxr,marginy_rec=myr,half_span=half_span)
-    msrcx = dic_model['srcx'][0]
-    mrecx = dic_model['recx'][0]
-    assert len(msrcx) == nsrc, "nsrc not correct: %d-%d "%(len(msrcx), nsrc)
-    assert len(mrecx) == nrec, "nrec not correct: %d-%d "%(len(mrecx), nrec)
+    try:
+        nsrc,nrec = load_src_rec(np.round(dic_model['srcinfo']).astype('int'),np.round(dic_model['recinfo']).astype('int'),half_span)
+    except Exception as e:
+        logger.info('%s:No loading src/rec location, Generating...'%e)
+        dnx_src = round(dx_src/dx)
+        dny_src = round(dy_src/dy)
+        dnx_rec = round(dx_rec/dx)
+        dny_rec = round(dy_rec/dy)
+        mx = float(dic_model['src_margin_nx'])
+        my = float(dic_model['src_margin_ny'])
+        mxr = float(dic_model['rec_margin_nx'])
+        myr = float(dic_model['rec_margin_ny'])
+        [nsrc,nrec] = src_rec(dnx_src,dny_src,dnx_rec,dny_rec,marginx=mx, marginy=my, marginx_rec=mxr,marginy_rec=myr,half_span=half_span)
+        msrcx = dic_model['srcx'][0]
+        mrecx = dic_model['recx'][0]
+        assert len(msrcx) == nsrc, "nsrc not correct: %d-%d "%(len(msrcx), nsrc)
+        assert len(mrecx) == nrec, "nrec not correct: %d-%d "%(len(mrecx), nrec)
     ### generate src & rec end ###
 
     ### generate model ###
