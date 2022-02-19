@@ -161,7 +161,7 @@ fi
         if self._method == 'fdtd':
             main_txt = '    ' + self.gen_mpicmd_txt(path,'-np $NP $BINPATH/FDTD_MPI.exe',isrctag)
         elif self._method == 'pstd':
-            main_txt = '    ' + self.gen_mpicmd_txt(path,'$BINPATH/PSTD.exe $NP',isrctag)
+            main_txt = '    ' + self.gen_mpicmd_txt(path,'-np 1 $BINPATH/PSTD.exe $NP',isrctag)
         return head_txt + main_txt + exit_txt
     def gen_txt_main(self):
         return ''.join([self.gen_forward_txt(step) for step in 'gfbz'])
