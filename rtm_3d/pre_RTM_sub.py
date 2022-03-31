@@ -185,10 +185,16 @@ def pre_RTM(list_src):
         nz = int(dic_model['nz'])
         v = 299792458/np.sqrt(epr)
         z = (np.array(range(nz)) - nz_air) * dz
-        srcxs = [int(round(x/dx)) for x in dic_model['srcx'][0].tolist()]
-        srcys = [int(round(y/dy)) for y in dic_model['srcy'][0].tolist()]
-        srcz = int(round(float(dic_model['srcz'])/dz + nz_air))
-        srclocs = [locxy+(srcz,) for locxy in zip(srcxs,srcys)]
+        try:
+            srcinfo = np.round(dic_model['srcinfo']).astype('int')
+            srclocs = [(srcinfo[0][i],srcinfo[1][i],srcinfo[2][i]) for i in range(np.size(srcinfo,1))]
+            logger.info('Loading src locations from srcx,srcy,srxz.')
+        except Exception as e:
+            logger.info('%s:Loading src locations from srcx,srcy,srxz.'%e)
+            srcxs = [int(round(x/dx)) for x in dic_model['srcx'][0].tolist()]
+            srcys = [int(round(y/dy)) for y in dic_model['srcy'][0].tolist()]
+            srcz = int(round(float(dic_model['srcz'])/dz + nz_air))
+            srclocs = [locxy+(srcz,) for locxy in zip(srcxs,srcys)]
 
         dsrc_grid = np.linalg.norm(np.array(srclocs[1])-np.array(srclocs[0]))
         max_offset = np.sqrt(2)*dsrc_grid
