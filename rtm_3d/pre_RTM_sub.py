@@ -13,6 +13,19 @@ def merge_gather(wdir, isrc):
     idir = os.path.join(wdir,'Output')
     fn_data = os.path.join(idir, 'merge_gather_'+str(isrc).zfill(4)+'.bin')
     fn_data_ext = os.path.join(idir, 'ext','merge_gather_'+str(isrc).zfill(4)+'.bin')
+    
+    try:
+        logger.info("merging gather: Try loading external merged gathers first.")
+        with open(os.path.join(idir, 'merge_gather_loc_'+str(isrc).zfill(4)+'.dat')) as fp:
+            iloc = np.loadtxt(fp)
+        nrec = np.array(iloc).shape[0]
+        with open(fn_data_ext,'rb') as fp:
+            isum_ext = np.fromfile(fp,dtype='float32')
+            isum_ext = isum_ext.reshape(nrec,-1)
+        return isum_ext,iloc
+    except Exception as e:
+        logger.info('merging external gather WRONG: %s'%e)
+
     if 'win' in sys.platform:
         ilist = os.popen('dir/b/on '+ os.path.join(idir,'gather'+'_'+str(isrc).zfill(4)+'*')).readlines()
         logger.debug(ilist)
@@ -65,28 +78,26 @@ def merge_gather(wdir, isrc):
         nrec = iloc.shape[0]
         isum = np.fromfile(fn_data,dtype='float32')
         isum = isum.reshape(nrec,-1)
-    try:
-        nrec = np.array(iloc).shape[0]
-        with open(fn_data_ext,'rb') as fp:
-            logger.info("merging gather: Loading external merged gathers.")
-            isum_ext = np.fromfile(fp,dtype='float32')
-            isum_ext = isum_ext.reshape(nrec,-1)
-        isum = isum_ext
-    except Exception as e:
-        logger.info('merging gather: %s'%e)
     return isum,iloc
 
 
-def remove_STD(gather,gather_std,isrc):
+def remove_STD(gather,gather_std,isrc,remove_std=True):
     # global gather_RTM
     logger.info("removing source: src%d"%isrc) 
-    gather_RTM = np.fliplr(np.array(gather) - np.array(gather_std))
-    # for i in range(len(gather_RTM[:,0])):
-    #     gather_RTM[i,:] = gather_RTM[i,:]/max(abs(gather_RTM[i,:]))
+    
+    gather_RTM = np.fliplr(np.array(gather))
     nt = gather_RTM.shape[1]
     plt.figure()
     plt.imshow(gather_RTM,cmap='gray',origin='lower',extent=(0,nt,0,nt/2))
-    plt.savefig(os.path.join(rtmdir,'Input','gather_without_src'+'_'+str(isrc).zfill(4)+'.png'))
+    plt.savefig(os.path.join(rtmdir,'Input','gather'+'_'+str(isrc).zfill(4)+'.png'))
+    if remove_std:
+        gather_RTM = np.fliplr(np.array(gather) - np.array(gather_std))
+        nt = gather_RTM.shape[1]
+        plt.figure()
+        plt.imshow(gather_RTM,cmap='gray',origin='lower',extent=(0,nt,0,nt/2))
+        plt.savefig(os.path.join(rtmdir,'Input','gather_without_src'+'_'+str(isrc).zfill(4)+'.png'))
+    # for i in range(len(gather_RTM[:,0])):
+    #     gather_RTM[i,:] = gather_RTM[i,:]/max(abs(gather_RTM[i,:]))
     return gather_RTM
 
 
@@ -189,7 +200,7 @@ def pre_RTM(list_src):
         logger.info('Prepare RTM for src%d.'%isrc)
         isum,iloc = merge_gather(workdir,i)
         isum_std,iloc_std = merge_gather(os.path.join(workdir,'STD'),i)
-        gather_rtm = remove_STD(isum,isum_std,i)
+        gather_rtm = remove_STD(isum,isum_std,i, rm_std)
         
         if 'z' in mode and len(list_src)==nsrc:
             nt,component,nmo_results = prepare_RTM(isum,iloc,isum_std,iloc_std,gather_rtm,i)
@@ -226,6 +237,7 @@ if __name__ == "__main__":
     parser.add_argument('--workdir',type=str,default='',help="The parent directory of 'OUTPUT' and 'STD'.")
     # parser.add_argument('--half_span',type=int,default=-1,help='Span the point source to a (1+2*half_span)x(1+2*half_span) source while forwarding. It helps to reduce the sideslobe in FDTD forwarding.')
     parser.add_argument('--nmo',action='store_const',const=False,dest='no_nmo',default=True,help="Use nmo to traansfer some CMP to zero_offset traces.")
+    parser.add_argument('--no_rm_std',action='store_const',const=False,dest='rm_std',default=True,help="Do not remove std(eg. direct waves) from gathers.")
     
     args = parser.parse_args()
     isrc = args.isrc
@@ -233,6 +245,7 @@ if __name__ == "__main__":
     forward_method = args.forward_method
     workdir = args.workdir
     no_nmo = args.no_nmo
+    rm_std = args.rm_std
 
     # logger
     logger=addlogger(os.path.basename(sys.argv[0]))

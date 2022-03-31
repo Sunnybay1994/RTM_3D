@@ -31,7 +31,12 @@ def load_src_rec(srcinfo,recinfo,half_span=0):
             frec.write("%d,%d,%d,%s\n" %
                        (recinfo[0][i], recinfo[1][i], recinfo[2][i], 'Ey'))
 
-    cp(os.path.join(indir,'src.in*'),std_indir)
+    if len(srcpulse)==len(srcpulse_rtm) and (srcpulse==srcpulse_rtm).all:
+        cp(os.path.join(indir,'src.in*'),std_indir)
+    else:
+        for i in range(nsrc):
+            fn_src = os.path.join(std_indir,'src.in_' + str(i).zfill(4))
+            extend_and_write_one_source(fn_src, [srcinfo[0][i],srcinfo[1][i],srcinfo[2][i],'Ey'], srcpulse_rtm,xhalfspan=half_span,yhalfspan=half_span)
     cp(os.path.join(indir,'rec.in'),os.path.join(std_indir,'rec.in'))
     if 'z' in mode:
         with open(os.path.join(rtm0_indir,'rec.in'),'w+') as fo:
@@ -45,7 +50,7 @@ def load_src_rec(srcinfo,recinfo,half_span=0):
     return nsrc,nrec
 
 
-def src_rec(dnx_src,dny_src=False,dnx_rec=False,dny_rec=False,nzp_src=False,nzp_rec=False,nx_src=False,ny_src=False,nx_rec=False,ny_rec=False,nshift=0,marginx=0,marginy=False,marginx_rec=False,marginy_rec=False,half_span=2):
+def src_rec(dnx_src,dny_src=False,dnx_rec=False,dny_rec=False,nzp_src=False,nzp_rec=False,nx_src=False,ny_src=False,nx_rec=False,ny_rec=False,nshift=0,marginx=0,marginy=False,marginx_rec=False,marginy_rec=False,half_span=0):
     logger.info('adding source and receiver...')
     if not dny_src:
         dny_src = dnx_src
@@ -109,7 +114,12 @@ def src_rec(dnx_src,dny_src=False,dnx_rec=False,dny_rec=False,nzp_src=False,nzp_
             frec.write("%d,%d,%d,%s\n" %
                        (rec[i][0], rec[i][1], rec[i][2], rec[i][3]))
 
-    cp(os.path.join(indir,'src.in*'),std_indir)
+    if len(srcpulse)==len(srcpulse_rtm) and (srcpulse==srcpulse_rtm).all:
+        cp(os.path.join(indir,'src.in*'),std_indir)
+    else:
+        for i in range(nsrc):
+            fn_src = os.path.join(std_indir,'src.in_' + str(i).zfill(4))
+            extend_and_write_one_source(fn_src, src[i], srcpulse_rtm,xhalfspan=half_span,yhalfspan=half_span)
     cp(os.path.join(indir,'rec.in'),os.path.join(std_indir,'rec.in'))
     if 'z' in mode:
         with open(os.path.join(rtm0_indir,'rec.in'),'w+') as fo:
@@ -483,36 +493,17 @@ if __name__ == '__main__':
     fmain = freq #Hz
     ### parameter end ###
 
-
-    ### src & rec ###
-    if args.dx_src > 0:
-        dx_src = args.dx_src
-    else:
-        dx_src = float(dic_model['dx_src'])
-    if args.dy_src > 0:
-        dy_src = args.dy_src
-    else:
-        dy_src = float(dic_model['dy_src'])
-    if args.dx_rec > 0:
-        dx_rec = args.dx_rec
-    else:
-        dx_rec = float(dic_model['dx_rec'])
-    if args.dy_rec > 0:
-        dy_rec = args.dy_rec
-    else:
-        dy_rec = float(dic_model['dy_rec'])
-    ### src & rec end ###
-
     ### init workdir ###
     dir_suffix = ''
     if forward_method == 'pstd':
-        dir_suffix += '_pstd_%d'%pnum
+        dir_suffix += '_pstd%d'%pnum
     elif forward_method == 'fdtd':
-        dir_suffix += '_fdtd_%d'%pnum
+        dir_suffix += '_fdtd%d'%pnum
     if mode=='z':
         dir_suffix += '_0o'
 
-    dirname = '%s_%dMHz_%gx%g_%d_%gx%g%s'%(modelname,freq/1e6,dx_src,dy_src,half_span,dx_rec,dy_rec, dir_suffix)
+    # dirname = '%s_%dMHz_%gx%g_%d_%gx%g%s'%(modelname,freq/1e6,dx_src,dy_src,half_span,dx_rec,dy_rec, dir_suffix)
+    dirname = '%s%s'%(modelname,dir_suffix)
     workdir = os.path.join(taskpath,dirname)
     ### init workdir end ###
 
@@ -607,25 +598,82 @@ if __name__ == '__main__':
     ### gird paraeter end ###
 
     ### source ###
-    # srcpulse,t_src = blackharrispulse(fmain, dt)
-    srcpulse,t_src = ricker(fmain,4*1/fmain,dt,reverse=True)
-    with open(os.path.join(workdir,'src_t.txt'),'w') as fo:
-        fo.write('t,srcpulse\n')
-        for i in range(len(t_src)):
-            fo.write('%g,%g\n'%(t_src[i],srcpulse[i]))
-    nt_src = len(srcpulse)
-    logger.info("nt=%d, nt_src=%d"%(nt, nt_src))
-    dx_max, fmax = check_dx(srcpulse)
-    if not no_x_check:
-        assert np.max([dx,dy,dz]) < dx_max, 'dx,dy,dz too big!!!'
-    ### source end ###
-    check_dispersion_x(dx,fmax,c/np.sqrt(epmax*mumax))
+    try:
+        srcpulse = dic_model['src_wl'][:,0]
+        t_src = dic_model['src_wl_t']
+        srcpulse_rtm = dic_model['src_wl_rtm'][:,0]
+        t_src_rtm = dic_model['src_wl_rtm_t']
+    except Exception as e:
+        logger.info('%s:No loading source wavelet, Generating...'%e)
+        # srcpulse,t_src = blackharrispulse(fmain, dt)
+        srcpulse,t_src = ricker(fmain,4*1/fmain,dt,reverse=True)
+        with open(os.path.join(workdir,'src_t.txt'),'w') as fo:
+            fo.write('t,srcpulse\n')
+            for i in range(len(t_src)):
+                fo.write('%g,%g\n'%(t_src[i],srcpulse[i]))
+        dx_max, fmax = check_dx(srcpulse)
+        if not no_x_check:
+            assert np.max([dx,dy,dz]) < dx_max, 'dx,dy,dz too big!!!'
+        ### source end ###
+        check_dispersion_x(dx,fmax,c/np.sqrt(epmax*mumax))
+        srcpulse_rtm = srcpulse
+        nt_src = len(srcpulse)
+        logger.info("nt=%d, nt_src=%d"%(nt, nt_src))
+    else:
+        with open(os.path.join(workdir,'src_t.txt'),'w') as fo:
+            fo.write('|%12s|%12s|%12s|\n'%('t(ns)','srcpulse','srcpulse_rtm'))
+            fo.write('|%12s|%12s|%12s|\n'%('','',''))
+            i = 0
+            j = 0
+            while True:
+                if i < len(t_src):
+                    ti = t_src[i]
+                    wli = srcpulse[i]
+                else:
+                    ti = tj + 1
+                if j < len(t_src_rtm):
+                    tj = t_src_rtm[j]
+                    wlj = srcpulse_rtm[j]
+                else:
+                    tj = ti + 1
+                if ti == tj:
+                    fo.write('|%12g|%12g|%12g|\n'%(ti,wli,wlj))
+                    i += 1
+                    j += 1
+                elif ti<tj:
+                    fo.write('|%12g|%12g|%12s|\n'%(ti,wli,''))
+                    i += 1
+                elif ti>tj:
+                    fo.write('|%12g|%12s|%12g|\n'%(tj,'',wlj))
+                    j += 1
+                if i>=len(t_src) and j >= len(t_src_rtm):
+                    break
+        nt_src = len(srcpulse)
+        logger.info("nt=%d, nt_src=%d, nt_src_rtm=%d"%(nt, nt_src,len(srcpulse_rtm)))
 
     ### generate src & rec ###
     try:
         nsrc,nrec = load_src_rec(np.round(dic_model['srcinfo']).astype('int'),np.round(dic_model['recinfo']).astype('int'),half_span)
     except Exception as e:
         logger.info('%s:No loading src/rec location, Generating...'%e)
+        ### src & rec ###
+        if args.dx_src > 0:
+            dx_src = args.dx_src
+        else:
+            dx_src = float(dic_model['dx_src'])
+        if args.dy_src > 0:
+            dy_src = args.dy_src
+        else:
+            dy_src = float(dic_model['dy_src'])
+        if args.dx_rec > 0:
+            dx_rec = args.dx_rec
+        else:
+            dx_rec = float(dic_model['dx_rec'])
+        if args.dy_rec > 0:
+            dy_rec = args.dy_rec
+        else:
+            dy_rec = float(dic_model['dy_rec'])
+        ### src & rec end ###
         dnx_src = round(dx_src/dx)
         dny_src = round(dy_src/dy)
         dnx_rec = round(dx_rec/dx)

@@ -1,5 +1,6 @@
 %% load files and parameters
-homedir = 'cntc_400MHz_5x5_0_0.1x0.5_pstd_6';
+homedir = 'MOtest3_pstd6_std';
+% load(fullfile(homedir,'pdata_agc.mat'))
 % srcpulse_type = 'ricker';
 srcpulse_type = 'ricker';
 it0_ori = 0;
@@ -11,7 +12,7 @@ if strcmp(srcpulse_type,'ricker')
     end
 end
 % workdir = fullfile(homedir);
-workdir = fullfile(homedir,'STD');
+workdir = fullfile(homedir,'.');
 inputdir = fullfile(workdir,'Input');
 outputdir = fullfile(workdir,'Output');
 fxslice = dir(fullfile(outputdir,'slx*.bin'));
@@ -77,23 +78,64 @@ draw_3D_view = false;
 
 %% figure gathers
 gatherf = fullfile(outputdir,'gather.mat');
-xx = 0:0.1:8;
-xx0 = [6:dx:9.6,10.3:dx:14.2]-6;
+xx = unique(recinfo(1,:));
+y = unique(recinfo(2,:));
 tt = (1:nt)*dt_ori/1e-9;
 if ~exist(gatherf,'file')
-    gfid = fopen(fullfile(outputdir,'gather_0000_00000.bin'),'r');
+    gfid = fopen(fullfile(outputdir,'merge_gather_0000.bin'),'r');
     gatherData = fread(gfid,[nt,nrec],'float');
     fclose(gfid);
-    ntr = [81,81,81,81,77];
-    figure(1);gather{1} = gatherData(:,1:81);
-    imagesc(xx,tt,gather{1})
-    gather{2} = gatherData(:,81*4+(1:77));
-    figure(2);imagesc(xx0,tt,gather{2})
-    for i = 3:5
-        gather{i} = gatherData(:,81*(i-2)+(1:81));
-        figure(i);imagesc(xx,tt,gather{i})
-    end
+    gatherData_agc = agc(gatherData);
+% for i = 1:length(y)
+%     ind{i} = ((1:length(xx))-1)*length(y) + i;
+%     gather{i} = gatherData(:,ind{i});
+%     gather_agc{i} = gatherData_agc(:,ind{i});
+% %     t_mean = mean(gather{i},'all');
+% %     t_std = std(gather{i},0,'all');
+% %     logic_tr_b = abs(gather{i}) > 6 * t_std;
+% %     gather{i}(logic_tr_b) = 0;
+%     figure(i);imagesc(gather{i})
+%     figure(length(y)+i);imagesc(gather_agc{i})
+%     pause(0.1)
+% end
 %     save(gatherf,'pre_rtm_gathers','ntr','nt','gather_infos','-v7.3')
 else
     load(gatherf)
 end
+
+figure(1);clf;
+set(gcf,'Unit','centimeters')
+set(gcf,'Position',[0,0,29.7,21])
+subplot(2,1,1)
+imagesc(gatherData)
+subplot(2,1,2)
+imagesc(gatherData_agc)
+%%
+snr = 100;
+gatherData_temp = gatherData;
+t_std = std(gatherData_temp,0,'all');
+logic_tr_b = abs(gatherData_temp) > t_std;
+gatherData_temp(logic_tr_b) = 0;
+figure(10);imagesc(gatherData_temp)
+gatherData_noise = awgn(gatherData_temp,snr) - gatherData_temp + gatherData;
+gatherData_noise_agc = agc(gatherData_noise);
+figure(2);clf;
+set(gcf,'Unit','centimeters')
+set(gcf,'Position',[0,0,29.7,21])
+subplot(2,1,1)
+imagesc(gatherData_noise)
+subplot(2,1,2)
+imagesc(gatherData_noise_agc)
+
+gfid = fopen(fullfile(outputdir,sprintf('merge_gather_0000_snr%d.bin',snr)),'w');
+fwrite(gfid,gatherData_noise_agc,'float');
+fclose(gfid);
+
+%%
+gfid = fopen(fullfile(outputdir,'merge_gather_0000_AGC.bin'),'w');
+fwrite(gfid,gatherData_agc,'float');
+fclose(gfid);
+gatherData0 = zeros(size(gatherData));
+gfid = fopen(fullfile(outputdir,'merge_gather_0000_ZERO.bin'),'w');
+fwrite(gfid,gatherData0,'float');
+fclose(gfid);
