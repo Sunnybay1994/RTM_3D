@@ -19,6 +19,7 @@ old/test/*
 *.exe
 *.txt
 *.bin
+*temp*
 
 ## C++
 # Prerequisites

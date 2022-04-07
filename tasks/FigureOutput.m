@@ -1,7 +1,7 @@
 %% load files and parameters
-homedir = '3layers_with_0.2m_fault_0o_300MHz_0.1x0.5_0_0.1x0.5_pstd_8_0o';
+homedir = 'MOtest2_zo_pstd8_0o';
 % srcpulse_type = 'ricker';
-srcpulse_type = 'blackharris';
+srcpulse_type = 'ricker';
 it0_ori = 0;
 if strcmp(srcpulse_type,'ricker')
     if contains(homedir,'100MHz')
@@ -102,25 +102,26 @@ for i = slicey
     t_pre = (0:size(slicey_pre,1)) * dt_ori / 1e-9;
     imagesc(x_pre,t_pre,slicey_pre)
     xlabel('x(m)');ylabel('t(ns)');
+    set(gca,'fontsize',24,'fontname','Times')
 %     title(['Input: y = ' num2str(yi) ' m']);colorbar
     export_fig(gcf,fullfile(outdir,['pre_yslice_at_y=' num2str(yi) 'm.png']),'-transparent')
 %     pause(0.1)
 end
-%%
-for i = 1260
-    figure(10)
-    set(gcf,'Unit','centimeters')
-    set(gcf,'Position',[0,0,29.7,21])
-    ti = i*dt_ori/1e-9;
-    slicet_pre = squeeze(pre_rtm_gathers(:,:,i))';
-    x_pre = (0:size(slicey_pre,2)) * dx_ori;
-%     t_pre = (0:size(slicey_pre,1)) * dt_ori / 1e-9;
-    imagesc(x_pre,x_pre,slicet_pre)
-    xlabel('x(m)');ylabel('y(m)');
-%     title(['Input: y = ' num2str(yi) ' m']);colorbar
-    export_fig(gcf,fullfile(outdir,['pre_tslice_at_t=' num2str(ti) 'ns.png']),'-transparent')
-%     pause(0.1)
-end
+% %%
+% for i = 1260
+%     figure(10)
+%     set(gcf,'Unit','centimeters')
+%     set(gcf,'Position',[0,0,29.7,21])
+%     ti = i*dt_ori/1e-9;
+%     slicet_pre = squeeze(pre_rtm_gathers(:,:,i))';
+%     x_pre = (0:size(slicey_pre,2)) * dx_ori;
+% %     t_pre = (0:size(slicey_pre,1)) * dt_ori / 1e-9;
+%     imagesc(x_pre,x_pre,slicet_pre)
+%     xlabel('x(m)');ylabel('y(m)');
+% %     title(['Input: y = ' num2str(yi) ' m']);colorbar
+%     export_fig(gcf,fullfile(outdir,['pre_tslice_at_t=' num2str(ti) 'ns.png']),'-transparent')
+% %     pause(0.1)
+% end
 
 %%
 outf = fullfile(outdir,'result.mat');

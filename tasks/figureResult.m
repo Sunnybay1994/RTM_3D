@@ -1,6 +1,7 @@
 %% load files and parameters
 zd = 2;
-workdir = sprintf('MOtest2_snr150_pstd6');
+workdir = sprintf('MOtest2_1
+_pstd6');
 resultdir = fullfile(workdir,'Result');
 f_wavefield_corr = dir(fullfile(resultdir,'result_wavefield_corr*.???'));
 
@@ -102,6 +103,7 @@ for i =1:length(slices_ix)
 % model
     hold on
     plot(ym1x,zm1x,'r--')
+    plot(ym1x,zm1x+0.3,'r--')
     hold off
     export_fig(fullfile(fig_result_dir,"slice_" + slice_tag(1) + "_with_model.png"),'-transparent')
 %     export_fig(fullfile(fig_result_dir,"slice_" + slice_tag(1) + "_with_model.pdf"),'-transparent')
