@@ -494,7 +494,7 @@ if __name__ == '__main__':
     ### parameter end ###
 
     ### init workdir ###
-    dir_suffix = ''
+    dir_suffix = args.suffix
     if forward_method == 'pstd':
         dir_suffix += '_pstd%d'%pnum
     elif forward_method == 'fdtd':

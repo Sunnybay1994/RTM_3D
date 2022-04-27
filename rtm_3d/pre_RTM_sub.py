@@ -12,10 +12,17 @@ def merge_gather(wdir, isrc):
     # global iloc
     idir = os.path.join(wdir,'Output')
     fn_data = os.path.join(idir, 'merge_gather_'+str(isrc).zfill(4)+'.bin')
-    fn_data_ext = os.path.join(idir, 'ext','merge_gather_'+str(isrc).zfill(4)+'.bin')
+    pattern_fn_data_ext = re.compile(r'merge_gather_%04d.*\.bin'%isrc)
     
     try:
         logger.info("merging gather: Try loading external merged gathers first.")
+        ext_path = os.path.join(idir, 'ext')
+        fn_data_exts = filename_re_match(ext_path,'file',pattern_fn_data_ext)[0]
+        if len(fn_data_exts) > 0:
+            logger.info('Find external files:%s. Use the first one.'%'; '.join(fn_data_exts))
+        else:
+            logger.info('No external files.')
+        fn_data_ext = os.path.join(ext_path,fn_data_exts[0])
         with open(os.path.join(idir, 'merge_gather_loc_'+str(isrc).zfill(4)+'.dat')) as fp:
             iloc = np.loadtxt(fp)
         nrec = np.array(iloc).shape[0]
@@ -24,7 +31,7 @@ def merge_gather(wdir, isrc):
             isum_ext = isum_ext.reshape(nrec,-1)
         return isum_ext,iloc
     except Exception as e:
-        logger.info('merging external gather WRONG: %s'%e)
+        logger.info('Loading external gather WRONG: %s'%e)
 
     if 'win' in sys.platform:
         ilist = os.popen('dir/b/on '+ os.path.join(idir,'gather'+'_'+str(isrc).zfill(4)+'*')).readlines()
