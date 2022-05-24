@@ -15,7 +15,7 @@ def merge_gather(wdir, isrc):
     pattern_fn_data_ext = re.compile(r'merge_gather_%04d.*\.bin'%isrc)
     
     try:
-        logger.info("merging gather: Try loading external merged gathers first.")
+        logger.info("merging gather %s: Try loading external merged gathers first."%wdir)
         ext_path = os.path.join(idir, 'ext')
         fn_data_exts = filename_re_match(ext_path,'file',pattern_fn_data_ext)[0]
         if len(fn_data_exts) > 0:

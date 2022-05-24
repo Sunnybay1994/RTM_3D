@@ -486,10 +486,10 @@ if __name__ == '__main__':
             half_span = 0
     else:
         half_span = args.half_span
-    epmin = 1.0
-    mumin = 1.0
-    epmax = 9.0
-    mumax = 1.0
+    epmin = np.min(dic_model['ep'])
+    mumin = 4.0
+    epmax = np.max(dic_model['ep'])
+    mumax = 4.0
     fmain = freq #Hz
     ### parameter end ###
 
@@ -510,6 +510,7 @@ if __name__ == '__main__':
     # logger
     global logger
     logger=addlogger(os.path.basename(sys.argv[0]),dirname,path=logpath)
+    logger.info(' '.join(sys.argv))
     logger.info('workdir="%s"'%(workdir))
 
     ### directories ###
@@ -613,7 +614,8 @@ if __name__ == '__main__':
                 fo.write('%g,%g\n'%(t_src[i],srcpulse[i]))
         dx_max, fmax = check_dx(srcpulse)
         if not no_x_check:
-            assert np.max([dx,dy,dz]) < dx_max, 'dx,dy,dz too big!!!'
+            if not np.max([dx,dy,dz]) < dx_max:
+                logger.warning('dx,dy,dz too big!!!')
         ### source end ###
         check_dispersion_x(dx,fmax,c/np.sqrt(epmax*mumax))
         srcpulse_rtm = srcpulse

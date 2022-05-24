@@ -139,20 +139,24 @@ echo "($ISRC)doneflag=$doneflag"
             head_txt += '    echo "($(date))Calculating forward wavafield..."\n'
             path = '$WORKPATHSTD'
         elif step == 'b':
-            head_txt = '''if [[ $STEPS =~ P || ( $STEPS =~ p && $doneflag = "false" ) ]];then
+            head_txt = '''if [[ ${STEPS,,} =~ pb ]];then
     echo "($(date))Prepare for RTM..."
     python $SRCPATH/pre_RTM_sub.py $METHOD_TAG $ISRC
 fi
 ''' + head_txt + '    echo "($(date))Calculating backward wavafield..."\n'
             path = '$WORKPATHRTM'
         elif step == 'z':
-            head_txt += '''    echo "($(date))Prepare for zero-offset RTM..."
-    python $SRCPATH/pre_RTM_sub.py -m z $METHOD_TAG $ISRC
-    status=$?;echo status=$status
+            head_txt += '''    if [[ ${STEPS,,} =~ pz ]];then
+        echo "($(date))Prepare for zero-offset RTM..."
+        python $SRCPATH/pre_RTM_sub.py -m z $METHOD_TAG $ISRC
+        status=$?;echo status=$status
+    else
+        status=100
+    fi
     if [ $status -eq 100 ];then
     echo "($(date))Calculating backward wavafield..."
 '''
-            exit_txt += 'fi\n'
+            exit_txt = '    fi\n' + exit_txt
             path = '$WORKPATHRTM0'
             isrctag = '0'
         else:
@@ -169,14 +173,13 @@ fi
     @property
     def txt_tail(self):
         return '''
-
 if [[ $STEPS =~ I || ($STEPS =~ i && $doneflag = "false") ]];then
     echo "($(date))Applying image condition..."
     corrflag=
 else
     corrflag='--nocorr'
 fi
-if [[ $STEPS =~ c || $STEPS =~ C ]];then
+if [[ ${{STEPS,,}} =~ c ]];then
     echo "($(date))clean files..."
     cleanflag=
 else
@@ -243,9 +246,7 @@ class rtm_workflow_freeosc(rtm_workflow):
 #SBATCH --error={scriptname}-%j.out
 
 ######### set NODE and TASK values(CORES = nodes * ntasks-per-node * cpus-per-task)
-#SBATCH --nodes=1
-#SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task={np}
+#SBATCH --ntasks={np}
 
 ######### set Parallel Environment
 ## load environment before submitting this job
@@ -260,23 +261,27 @@ echo "JOB_NODELIST: ${{SLURM_JOB_NODELIST}}"
         return self.txt_head.format(isrc=isrc,additional_head_txt=txt.format(isrc=isrc,method=self._method[0],taskname=self._taskname,np=self._proc_num,scriptname=self._name_script.format(s_isrc="_%04d"%isrc)))
 
 def batchgen(args):
+    global logger
+    logger=addlogger(os.path.basename(sys.argv[0]),args.dirname,path=logpath)
+    logger.info(' '.join(sys.argv))
+
     if args.steps:
         steps = ''.join(args.steps)
     else:
         mode = args.mode
         if mode == 'z':
-            steps = 'gfzc'
+            steps = 'gfpzc'
         elif mode == 'm':
             steps = 'gfpbic'
         elif mode == 'mz':
-            steps = 'gfpbizc'
+            steps = 'gfpbipzc'
     if args.max_cpu:
         job_cap = args.max_cpu//args.np
     else:
         job_cap = args.max_job
     if job_cap > args.src_num:
         job_cap = args.src_num
-    print('Job capacity:%d\nforward method: %s\nsteps: %s\n'%(job_cap,args.forward_method,steps))
+    logger.info('Job capacity:%d\nforward method: %s\nsteps: %s\n'%(job_cap,args.forward_method,steps))
 
     if args.server == 'freeosc':
         workflow = rtm_workflow_freeosc(args.dirname,args.src_num,job_cap,args.np,args.forward_method,args.mode,steps)
