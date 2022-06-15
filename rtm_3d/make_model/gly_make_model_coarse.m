@@ -4,21 +4,17 @@ mu0 = 1.2566370614e-6;
 ep0 = 8.8541878176e-12;
 c = 299792458;
 
-%% modelname
+% modelname
 zmode = true;
-fault_model = 2;
-freq_src = 400*1e6;
+freq = 1
+00;
+freq_src = freq * 1e6;
 filename = mfilename;
 
 suffix = '';
-if freq_src~=400e6
-    suffix = [suffix, sprintf('fq%g',freq_src/100e6)];
-end
-if zmode
-    suffix = [suffix, 'z'];
-end
+suffix = [suffix, sprintf('f%g',freq/100)];
     
-modelname = [ sprintf('l3f%g',fault_model),suffix ];
+modelname = [ sprintf('glyc'),suffix ];
 fprintf('\nmodelname=%s\n',modelname);
 fn = modelname;
 fn_save = [fn '.mat'];
@@ -27,12 +23,13 @@ src_save = [fn '_src.png'];
 
 
 % Grid parameter
-epr_max = 12;
+epr_bg = 3 * 4;% half v in media
+
+epr_max = epr_bg;
 epr_min = 1;
 miur_max = 1;
 miur_min = 1;
 
-epr_bg = 9;
 
 % source wavelet
 [wl, twl, f_thr, wl_tw] = ricker_src(0.01 *1e-9,freq_src,0.85);
@@ -40,15 +37,28 @@ wvl = 3e8/freq_src/sqrt(epr_bg);
 wl_w = wl_tw * 3e8/sqrt(epr_bg);
 fprintf('wavelet width in medium=%gm\n',wl_w);
 
-disp('â†“â†“â†“â†“â†“â†“â†“â†“â†“â†“Grid Parameterâ†“â†“â†“â†“â†“â†“â†“â†“â†“â†“')
+disp('¡ı¡ı¡ı¡ı¡ı¡ı¡ı¡ı¡ı¡ıGrid Parameter¡ı¡ı¡ı¡ı¡ı¡ı¡ı¡ı¡ı¡ı')
 disp('<Space Grid>')
-X0 = 5;
-Y0 = 5;
-Z0 = 3;
-
-dx = 0.02; %m
+dx = 0.1; %m
 dy = dx;
-dz = dx;
+
+X = 60;
+% nx = 1210;
+if freq == 100
+    Y = 5; % 0.5:0.5:4.5
+%     ny = 115;
+    Z = 12;
+    dz = 0.04;
+    dt = 0.1466*10^-9/4;
+    nt = 3693;
+elseif freq == 400
+    Y = 6; % 0.5:0.5:5.5
+%     ny = 135;
+    Z = 6;
+    dz = 0.02;
+    nt = 1903;
+    dt = 0.0587*10^-9/2;
+end
 
 dxmax = finddx(epr_max, miur_max, freq_src);
 fprintf('dxmax=%.2gm,dx=%gm(%.2g%%),dy=%gm(%.2g%%),dz=%gm(%.2g%%)\n',dxmax,dx,dx/dxmax*100,dy,dy/dxmax*100,dz,dz/dxmax*100);
@@ -58,14 +68,11 @@ npmlx = 8;
 npmly = npmlx;
 npmlz = npmlx;
 
-nx = round(X0/dx) + 2 * npmlx;
-ny = round(Y0/dy) + 2 * npmly;
+nx = round(X/dx) + 2 * npmlx;
+ny = round(Y/dy) + 2 * npmly;
 nz_air = 2 + npmlz;
-nz = round(Z0/dz) + npmlz + nz_air;
-
-X = nx*dx;
-Y = ny*dy;
-Z = (nz-nz_air)*dz;
+nz = round(Z/dz) + nz_air;
+% dx/y/z,dt,nt,npmlx/y/z,nz_air, shold be same with prep_3d
 
 
 % time prarameter
@@ -74,21 +81,21 @@ T_ref = sqrt(X^2+Y^2+(2*Z)^2)/(3e8/sqrt(epr_bg));%s
 fprintf('Max 2-way traveltime=%gns\n',T_ref/1e-9)
 
 dtmax = finddt(epr_min, miur_min, dx, dy, dz);
-dt = 0.9*dtmax/2;
-nt = ceil(T_ref/dt);
+% dt = 0.9*dtmax/2;
+% nt = ceil(T_ref/dt);
 T = dt*nt;%s
 fprintf('t_total=%gns.dt=%gns,nt=%g\n',T/1e-9,dt/1e-9,nt);
 fprintf('Period=%gns(%gdt)\n',1e9/freq_src,1/(dt*freq_src));
 
 check_dispersion(dx,dt,f_thr,c/sqrt(epr_max*miur_max));
-check_stability(dx,dt);
+check_stability(min([dx,dy,dz]),dt,c,1);
 
-outstep_x_wavefield = ceil((nx*ny*nz/150^3)^(1/3));
+outstep_x_wavefield = 1;
 fprintf('outstep_x_wavefield=%g\n',outstep_x_wavefield)
-outstep_t_wavefield = 5;
+outstep_t_wavefield = 4;
 outstep_slice = outstep_t_wavefield;
 
-disp('â†‘â†‘â†‘â†‘â†‘â†‘â†‘â†‘â†‘â†‘Grid Parameter Endâ†‘â†‘â†‘â†‘â†‘â†‘â†‘â†‘â†‘â†‘')
+disp('¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡üGrid Parameter End¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü¡ü')
 
 %% model
 %% background model
@@ -98,140 +105,13 @@ ep_bg(:,:,1:nz_air) = 1; % air layer
 ep = ep_bg;
 
 %% slice, src&rec
-slicex_x = X0/2;
+slicex_x = X/2;
 slicex = round(slicex_x/dx+npmlx);
-slicey_y = Y0/2;
+slicey_y = Y/2;
 slicey = round((slicey_y)/dy+npmly);
 % slicez_z = [0.1,0.5,1];
-slicez_z = [1];
+slicez_z = [0.9];
 slicez = round(slicez_z/dz+nz_air);
-
-%% layers
-x = ((1:nx)-npmlx)*dx;
-y = ((1:ny)-npmly)*dy;
-z = ((1:nz)-nz_air)*dz;
-surf_ep = [6,9,12];
-surf_pos = [0.9,1.5,2.4]; %m
-for i = 1:length(surf_pos)
-    layer_z_begin = surf_pos(i);
-    if i ~= length(surf_pos)
-        layer_z_end = surf_pos(i+1);
-    else
-        layer_z_end = z(end);
-    end
-    ep(:,:,z >= layer_z_begin & z<=layer_z_end) = surf_ep(i);
-end
-%% faults model
-if fault_model == 1
-    dot1 = [2 0 0.8];
-    dot2 = [2.5 0 2.3];
-    dot3 = [3 5 2.3];
-    % 7.5*(x-2)-0.75*y-2.5*(z-0.8)=0
-elseif fault_model == 2
-    dot1 = [0 0 0.5];
-    dot2 = [5 0 3];
-    dot3 = [0.5 5 0.5];
-    % 1*x-0.1*y-2*(z-0.5)=0
-elseif fault_model == 3
-    dot1 = [2 0 0.8];
-    dot2 = [2 0 2.3];
-    dot3 = [3 5 2.3];
-end
-
-dh = 0.2; %m
-idh = round(dh / dz);
-
-ep1 = ep;
-for iz = (1+nz_air):nz
-    ep1(:,:,iz) = ep(:,:,iz-idh);
-end
-
-for ix = 1:nx
-    xi = (ix-1)*dx;
-    for iy = 1:ny
-        yi = (iy-1)*dy;
-        for iz = nz:-1:(nz_air+1+idh)
-            zi = (iz-nz_air)*dz;
-            doti = [xi,yi,zi];
-            if dot(cross((dot3-dot1),(dot2-dot1)),(doti-dot1)) > 0
-                ep(ix,iy,iz) = ep1(ix,iy,iz);
-            end
-        end
-    end
-end
-
-% figure
-figure(11)
-clf;
-set(gcf,'Unit','centimeters')
-set(gcf,'Position',[0,0,29.7,21])
-x = ((1:nx)-npmlx)*dx;
-y = ((1:ny)-npmlx)*dy;
-z = ((1:nz)-nz_air)*dz;
-for ix = slicex(1)
-    subplot(2,2,2)
-    imagesc(y,z,squeeze(ep(ix,:,:))');colorbar
-    caxis([epr_min,epr_max])
-    xlabel('y');ylabel('z');
-    daspect([1,1,1]);
-    set(gca,'fontsize',20,'fontname','Times')
-%     export_fig(sprintf("%s_x=%gm.png",fn,ix*dx))
-end
-for iy = slicey(1)
-    subplot(2,2,3)
-    imagesc(x,z,squeeze(ep(:,iy,:))');colorbar
-    caxis([epr_min,epr_max])
-    xlabel('x');ylabel('z');
-    daspect([1,1,1]);
-    set(gca,'fontsize',20,'fontname','Times')
-%     export_fig(sprintf("%s_y=%gm.png",fn,iy*dy))
-end
-for iz = slicez(1)
-    subplot(2,2,1)
-    imagesc(x,y,squeeze(ep(:,:,iz))');colorbar
-    caxis([epr_min,epr_max])
-    xlabel('x');ylabel('y');
-    daspect([1,1,1])
-    set(gca,'fontsize',20,'fontname','Times')
-%     export_fig(sprintf("%s_z=%gm.png",fn,iz*dz))
-end
-export_fig(sprintf("%s_slice.png",fn),'-transparent')
-% figure rtm
-figure(12)
-clf;
-set(gcf,'Unit','centimeters')
-set(gcf,'Position',[0,0,29.7,21])
-x = ((1:nx)-npmlx)*dx;
-y = ((1:ny)-npmlx)*dy;
-z = ((1:nz)-nz_air)*dz;
-for ix = slicex(1)
-    subplot(2,2,2)
-    imagesc(y,z,squeeze(ep_bg(ix,:,:))');colorbar
-    caxis([epr_min,epr_max])
-    xlabel('y');ylabel('z');
-    daspect([1,1,1]);
-    set(gca,'fontsize',20,'fontname','Times')
-%     export_fig(sprintf("%s_x=%gm.png",fn,ix*dx))
-end
-for iy = slicey(1)
-    subplot(2,2,3)
-    imagesc(x,z,squeeze(ep_bg(:,iy,:))');colorbar
-    caxis([epr_min,epr_max])
-    xlabel('x');ylabel('z');
-    daspect([1,1,1]);
-    set(gca,'fontsize',20,'fontname','Times')
-%     export_fig(sprintf("%s_y=%gm.png",fn,iy*dy))
-end
-for iz = slicez(1)
-    subplot(2,2,1)
-    imagesc(x,y,squeeze(ep_bg(:,:,iz))');colorbar
-    caxis([epr_min,epr_max])
-    xlabel('x');ylabel('y');
-    daspect([1,1,1])
-    set(gca,'fontsize',20,'fontname','Times')
-%     export_fig(sprintf("%s_z=%gm.png",fn,iz*dz))
-end
-export_fig(sprintf("%s_slice_rtm.png",fn),'-transparent')
 
 
 %%
@@ -265,8 +145,8 @@ export_fig(sprintf("%s_src.png",fn),'-transparent')
 
 %% src and rec para
 if zmode
-    dy_src = 0.5;
-    dx_src = 0.1;
+    dy_src = Y/2;
+    dx_src = X/2;
     src_margin_nx = 0.5/dx;
     src_margin_ny = 0.5/dy;
     dx_rec = dx_src;
@@ -381,60 +261,60 @@ save(fn_save,'filename','modelname','dx','dy','dz','nx','ny','nz','nz_air',...
 %     pause(0.1)
 % end
 
-%% 3D-view
-figure(10)
-clf;
-set(gcf,'Unit','centimeters')
-set(gcf,'Position',[0,0,29.7,21])
-set(gca,'fontsize',30,'fontname','Times')
-x = ((1:nx)-npmlx)*dx;
-y = ((1:ny)-npmlx)*dy;
-z = ((1:nz)-nz_air)*dz;
-[X,Y,Z] = meshgrid(y,x,z);
-% p0 = patch(isosurface(Y,X,Z,ep,epr1));
-% isonormals(X,Y,Z,ep,p0)
-% p0.FaceColor = 'black';
-% p0.EdgeColor = 'none';
-p1 = patch(isosurface(Y,X,Z,ep,epr_bg-0.1));
-isonormals(X,Y,Z,ep,p1)
-p1.FaceColor = 'black';
-p1.EdgeColor = 'none';
-% p3 = patch(isosurface(X,Y,Z,ep,ep0-3));
-% isonormals(X,Y,Z,ep,p3)
-% p3.FaceColor = 'magenta';
-% p3.EdgeColor = 'none';
-p5 = patch(isosurface(Y,X,Z,ep,11.9));
-isonormals(X,Y,Z,ep,p5)
-p5.FaceColor = 'black';
-p5.EdgeColor = 'none';
-daspect([1,1,1])
-view(3); alpha(.3);axis tight
-set(gca,'ZDir','reverse')
-set(gca,'YDir','reverse')
-xlim([x(npmlx),x(end-npmlx)]);
-ylim([y(npmly),y(end-npmly)]);
-zlim([z(npmlz),z(end-npmlz)]);
-% title('layers with fault')
-set(gca,'fontsize',20);
-xlabel('x(m)','Fontsize',24);ylabel('y(m)','Fontsize',24);zlabel('depth(m)','Fontsize',24);
-camlight('headlight') 
-lighting gouraud
-camlight('right')
-lighting gouraud
-
-hold on
-if zmode
-    plot3(Xs,Ys,Zs,'r.')
-else
-plot3(Xs,Ys,Zs,'r^')
-plot3(Xr,Yr,Zr,'b.')
-end
-% plot3(Xr2,Yr2,Zr2,'b.')
-% xlim([0 10]);ylim([0 10]);zlim([-0.5 5])
-hold off
-set(gca,'fontsize',20,'fontname','Times')
-%%
-export_fig(fig_save,'-transparent')
+% %% 3D-view
+% figure(10)
+% clf;
+% set(gcf,'Unit','centimeters')
+% set(gcf,'Position',[0,0,29.7,21])
+% set(gca,'fontsize',30,'fontname','Times')
+% x = ((1:nx)-npmlx)*dx;
+% y = ((1:ny)-npmlx)*dy;
+% z = ((1:nz)-nz_air)*dz;
+% [X,Y,Z] = meshgrid(y,x,z);
+% % p0 = patch(isosurface(Y,X,Z,ep,epr1));
+% % isonormals(X,Y,Z,ep,p0)
+% % p0.FaceColor = 'black';
+% % p0.EdgeColor = 'none';
+% p1 = patch(isosurface(Y,X,Z,ep,epr_bg-0.1));
+% isonormals(X,Y,Z,ep,p1)
+% p1.FaceColor = 'black';
+% p1.EdgeColor = 'none';
+% % p3 = patch(isosurface(X,Y,Z,ep,ep0-3));
+% % isonormals(X,Y,Z,ep,p3)
+% % p3.FaceColor = 'magenta';
+% % p3.EdgeColor = 'none';
+% p5 = patch(isosurface(Y,X,Z,ep,11.9));
+% isonormals(X,Y,Z,ep,p5)
+% p5.FaceColor = 'black';
+% p5.EdgeColor = 'none';
+% daspect([1,1,1])
+% view(3); alpha(.3);axis tight
+% set(gca,'ZDir','reverse')
+% set(gca,'YDir','reverse')
+% xlim([x(npmlx),x(end-npmlx)]);
+% ylim([y(npmly),y(end-npmly)]);
+% zlim([z(npmlz),z(end-npmlz)]);
+% % title('layers with fault')
+% set(gca,'fontsize',20);
+% xlabel('x(m)','Fontsize',24);ylabel('y(m)','Fontsize',24);zlabel('depth(m)','Fontsize',24);
+% camlight('headlight') 
+% lighting gouraud
+% camlight('right')
+% lighting gouraud
+% 
+% hold on
+% if zmode
+%     plot3(Xs,Ys,Zs,'r.')
+% else
+% plot3(Xs,Ys,Zs,'r^')
+% plot3(Xr,Yr,Zr,'b.')
+% end
+% % plot3(Xr2,Yr2,Zr2,'b.')
+% % xlim([0 10]);ylim([0 10]);zlim([-0.5 5])
+% hold off
+% set(gca,'fontsize',20,'fontname','Times')
+% %%
+% export_fig(fig_save,'-transparent')
 
 
 % %%
@@ -504,7 +384,7 @@ function [wavelet,t_wavelet,f_thr,width] = ricker_src(dt,f,thr,tlength)
 end
 
 function [cx,ct] = check_dispersion(dx,dt,fmax,cmin)
-    disp('â†“â†“â†“â†“â†“â†“Dispersion Checkâ†“â†“â†“â†“â†“â†“')
+    disp('¡ı¡ı¡ı¡ı¡ı¡ıDispersion Check¡ı¡ı¡ı¡ı¡ı¡ı')
     w = 2*pi*fmax;
     k0 = w/cmin;
     ax = k0*dx/2;
@@ -514,12 +394,12 @@ function [cx,ct] = check_dispersion(dx,dt,fmax,cmin)
     cx = 1/bx;
     ct = bt;
     fprintf("kdx/2=%g, wdt/2=%g (should be both << 1)\n",ax,at);
-    fprintf("k/k0â‰ˆ%g(for dx), k/k0=%g(for dt)\n",cx,ct);
-    disp('â†‘â†‘â†‘â†‘â†‘â†‘Dispersion Check Endâ†‘â†‘â†‘â†‘â†‘â†‘')
+    fprintf("k/k0¡Ö%g(for dx), k/k0=%g(for dt)\n",cx,ct);
+    disp('¡ü¡ü¡ü¡ü¡ü¡üDispersion Check End¡ü¡ü¡ü¡ü¡ü¡ü')
 end
 
 function alpha = check_stability(dx, dt, cmax, dim)
-    disp('â†“â†“â†“â†“â†“â†“Stability Checkâ†“â†“â†“â†“â†“â†“')
+    disp('¡ı¡ı¡ı¡ı¡ı¡ıStability Check¡ı¡ı¡ı¡ı¡ı¡ı')
     if nargin < 3
         cmax = 299792458;%m/s
     end
@@ -533,7 +413,7 @@ function alpha = check_stability(dx, dt, cmax, dim)
     end
     
     alpha = cmax*dt/dx;
-    fprintf("cdt/dx=%g, should â‰¤ 2/pi(PSTD) or 1(FDTD_Yee) or 6/7(FDTD_Zhu)\n",alpha);
+    fprintf("cdt/dx=%g, should ¡Ü 2/pi(PSTD) or 1(FDTD_Yee) or 6/7(FDTD_Zhu)\n",alpha);
     if alpha > 1
         disp('!!!Failed.!!!')
     elseif alpha > 6/7
@@ -543,12 +423,12 @@ function alpha = check_stability(dx, dt, cmax, dim)
     else
         disp('Success.')
     end
-    disp('â†‘â†‘â†‘â†‘â†‘â†‘Stability Check Endâ†‘â†‘â†‘â†‘â†‘â†‘')
+    disp('¡ü¡ü¡ü¡ü¡ü¡üStability Check End¡ü¡ü¡ü¡ü¡ü¡ü')
 end
 
 function dxmax = finddx(epr_max, miur_max, fmax)
-%UNTITLED æ­¤å¤„æ˜¾ç¤ºæœ‰å…³æ­¤å‡½æ•°çš„æ‘˜è¦
-%   æ­¤å¤„æ˜¾ç¤ºè¯¦ç»†è¯´æ˜
+%UNTITLED ´Ë´¦ÏÔÊ¾ÓĞ¹Ø´Ëº¯ÊıµÄÕªÒª
+%   ´Ë´¦ÏÔÊ¾ÏêÏ¸ËµÃ÷
     mu0 = 1.2566370614e-6;
     ep0 = 8.8541878176e-12;
     epmax = epr_max * ep0;
@@ -558,8 +438,8 @@ function dxmax = finddx(epr_max, miur_max, fmax)
 end
 
 function dtmax = finddt(epr_min, miur_min, dx, dy, dz)
-%UNTITLED3 æ­¤å¤„æ˜¾ç¤ºæœ‰å…³æ­¤å‡½æ•°çš„æ‘˜è¦
-%   æ­¤å¤„æ˜¾ç¤ºè¯¦ç»†è¯´æ˜
+%UNTITLED3 ´Ë´¦ÏÔÊ¾ÓĞ¹Ø´Ëº¯ÊıµÄÕªÒª
+%   ´Ë´¦ÏÔÊ¾ÏêÏ¸ËµÃ÷
     mu0 = 1.2566370614e-6;
     ep0 = 8.8541878176e-12;
     epmin = epr_min * ep0;

@@ -1,4 +1,5 @@
 ## special
+*.tif
 sub_00*.sh
 test.py
 test*.py
