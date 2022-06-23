@@ -2,4 +2,59 @@
 
 reverse time migration for ground penetrating radar
 
-The code isn't ready for public use, I only use GitHub as a git server to synchronize the code between different computers.
+## Prerequisites
+
+- Linux environment
+- python (version 3.x or above) with numpy, scipy, matplotlib;
+- C/C++ compiler for FDTD, fortran compiler (better be 'ifort') for PSTD;
+- Intel Math Kernel Library (MKL) for PSTD;
+- OpenMPI/MPICH for FDTD parallelization;
+- OpenMP for PSTD parallelization;
+- MATLAB for generate model and figure results.
+
+## compile
+
+Run the following command in root directory:
+
+```bash
+make all
+```
+
+## Directory Structure
+
+- RTM_3D/
+  - rtm_3d/  主要的代码和脚本
+    - common/
+      -  \_\_init__.py  通用函数，命令行参数分析
+      -  normal_moveout.py  NMO代码，没啥用现在
+      -  par_RTM.py  读取全局参数
+      -  writesource.py  在任务目录下生成发射源信息文件（包含位置和波形），可以将点源展成面源，以减弱旁瓣
+    - forward_method/  波场正演源代码
+    - image_condition/  
+      - corr_RTM_slice_sub.py  对切片应用互相关成像条件
+      - corr_RTM_wavefield_sub.py  对整个波场应用互相关成像条件
+      - clean.py  清理中间结果
+    - make_model/  模型生成目录
+    - model_em.py  根据模型生成工作目录及相关数据
+    - batchgen.py  生成批处理命令：对每个源生成相应的提交脚本
+    - pre_RTM_sub.py  预处理正演数据的接收波形，为计算反传波场作准备
+  - tasks/  任务目录，包含对结果作图的脚本
+    - figureResult.m  读取多偏移距模式下的RTM结果并将每个源的结果相加作为最终结果，然后作图
+    - FigureOutput.m  读取零偏移距模式下的RTM结果并作图
+
+## Usage
+ 
+1. 在make_model目录下用Matlab生成模型参数: *.mat
+2. 进入到rtm_3d目录下，运行model_em.py生成工作目录及相应的参数和数据，示例：
+```bash
+cd rtm_3d
+python model_em.py --max_cpu 256 --server freeosc --pstd -m z --np 8 --steps zc --model make_model/[modelname].mat
+# 各参数含义可通过‘-h’命令查看
+python model_em.py -h
+```
+3. 进入到task目录下对应的工作目录中的log文件夹下提交运行脚本:
+```bash
+cd ../tasks/[workdir]/log
+sh sub_script.sh
+```
+4. 在task目录下利用'figure*.mat'脚本读取结果并作图。
