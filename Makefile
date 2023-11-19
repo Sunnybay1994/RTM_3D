@@ -1,12 +1,13 @@
 destpath=bin/
 march=native
+# change it according to your CPU may bring a better performance, such as:
+# freeosc: skylake-avx512
+# 6800k: broadwell
 
 all: march fdtd pstd clean
 
 march:
 	@echo march=${march}
-# freeosc: skylake-avx512
-# 6800k: broadwell
 
 fdtdcc=mpicxx
 fdtdcflags=-O3 -march=${march}

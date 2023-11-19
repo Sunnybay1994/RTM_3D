@@ -4,21 +4,19 @@ reverse time migration for ground penetrating radar
 
 ## Prerequisites
 
-- Linux environment
-- python (version 3.x or above) with numpy, scipy, matplotlib;
-- C/C++ compiler for FDTD, fortran compiler (better be 'ifort') for PSTD;
-- Intel Math Kernel Library (MKL) for PSTD;
-- OpenMPI/MPICH for FDTD parallelization;
-- OpenMP for PSTD parallelization;
-- MATLAB for generate model and figure results.
-
-## compile
-
-Run the following command in root directory:
-
-```bash
-make all
+- **Linux** environment
+- **MATLAB** (version M2017 or above), and add the following tools into Matlab path:
+  - [CREWES Matlab® Toolbox](https://www.crewes.org/ResearchLinks/FreeSoftware/index.php)
+  - [export_fig](https://ww2.mathworks.cn/matlabcentral/fileexchange/23629-export_fig/)
+- **C/C++ compiler** and **OpenMP**, install them using the following code:
+```shell
+sudo apt install build-essential
 ```
+- **[OpenMPI](https://www.open-mpi.org/)/[MPICH](https://www.mpich.org/)**
+- **fortran compiler** (better be '[**ifort**](https://www.intel.com/content/www/us/en/developer/articles/tool/oneapi-standalone-components.html#fortran)');
+- [**Intel® Math Kernel Library (MKL)**](https://www.intel.com/content/www/us/en/developer/tools/oneapi/onemkl-download.html);
+- **python** (version 3.x or above) and the following packages:
+  - **numpy**, **scipy**, **matplotlib**
 
 ## Directory Structure
 
@@ -42,6 +40,22 @@ make all
     - figureResult.m  读取多偏移距模式下的RTM结果并将每个源的结果相加作为最终结果，然后作图
     - FigureOutput.m  读取零偏移距模式下的RTM结果并作图
 
+
+## compile
+
+1. Add the following line into your '*shrc' file（such as '~/.bashrc'） the first time you install ifort or MKL:
+```shell
+source /opt/intel/oneapi/setvars.sh # sudo install
+# or
+source ~/intel/oneapi/setvars.sh # user install
+```
+2. Run the following command in root directory:
+
+```shell
+mkdir bin
+make all
+```
+
 ## Usage
  
 1. 在make_model目录下用Matlab生成模型参数: *.mat
@@ -55,6 +69,6 @@ python model_em.py -h
 3. 进入到task目录下对应的工作目录中的log文件夹下提交运行脚本:
 ```bash
 cd ../tasks/[workdir]/log
-sh sub_script.sh
+bash sub_script.sh
 ```
-4. 在task目录下利用'figure*.mat'脚本读取结果并作图。
+4. 在task目录下利用'figure*.m'脚本读取结果并作图。
